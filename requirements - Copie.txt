@@ -1,9 +1,0 @@
-Django>=5.0,<6.0
-django-admin-rangefilter
-django-cors-headers
-reportlab
-Pillow
-djangorestframework
-
-
-#python -m pip install -r requirements.txt
