@@ -25,8 +25,12 @@ SECRET_KEY = 'django-insecure-eor15_=4kq-w2(x!6q*0!5*e6j9&(okt+wjf-z%8sitc4#9s#q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+#ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "lamane-project.onrender.com",
+    "localhost",
+    "127.0.0.1"
+]
 
 # Application definition
 
