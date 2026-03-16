@@ -14,12 +14,18 @@
     <i class="fas fa-arrow-left"></i> Retour aux achats
   </a>
   <div class="flex gap-3">
+    <a href="{% url 'ui_achat_edit' achat.pk %}" class="btn btn-ghost">
+      <i class="fas fa-edit"></i> Modifier
+    </a>
     <a href="{% url 'ui_projet_detail' achat.projet.id %}" class="btn btn-ghost">
       <i class="fas fa-folder-open"></i> Voir le projet
     </a>
     <button class="btn btn-primary" onclick="window.print()">
       <i class="fas fa-print"></i> Imprimer
     </button>
+    <a href="{% url 'ui_achat_delete' achat.pk %}" class="btn" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);color:var(--red);">
+      <i class="fas fa-trash-alt"></i>
+    </a>
   </div>
 </div>
 
@@ -90,6 +96,39 @@
   </div>
 
 </div>
+
+<!-- Documents PDF -->
+{% if achat.fichier_facture or achat.bon_entree_pdf %}
+<div class="card animate-fade-up" style="margin-bottom:16px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-file-pdf text-gold"></i> Documents associés</div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    {% if achat.fichier_facture %}
+    <a href="{{ achat.fichier_facture.url }}" target="_blank"
+       style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.25);border-radius:10px;text-decoration:none;color:var(--red);font-weight:600;font-size:13px;transition:background 0.2s;"
+       onmouseover="this.style.background='rgba(255,71,87,0.15)'" onmouseout="this.style.background='rgba(255,71,87,0.08)'">
+      <i class="fas fa-file-invoice" style="font-size:22px;"></i>
+      <div>
+        <div>Facture fournisseur</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:400;">Ouvrir dans un nouvel onglet</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if achat.bon_entree_pdf %}
+    <a href="{{ achat.bon_entree_pdf.url }}" target="_blank"
+       style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:rgba(0,196,140,0.08);border:1px solid rgba(0,196,140,0.25);border-radius:10px;text-decoration:none;color:var(--green);font-weight:600;font-size:13px;transition:background 0.2s;"
+       onmouseover="this.style.background='rgba(0,196,140,0.15)'" onmouseout="this.style.background='rgba(0,196,140,0.08)'">
+      <i class="fas fa-clipboard-check" style="font-size:22px;"></i>
+      <div>
+        <div>Bon d'entrée PDF</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:400;">Généré automatiquement</div>
+      </div>
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 
 <!-- Lignes d'achat -->
 <div class="card animate-fade-up delay-1">

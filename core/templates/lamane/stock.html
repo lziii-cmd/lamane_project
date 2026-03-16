@@ -5,6 +5,25 @@
 
 {% block content %}
 
+<!-- Actions rapides -->
+<div class="flex items-center justify-between mb-4 animate-fade-up">
+  <div></div>
+  <div class="flex gap-2">
+    <a href="{% url 'ui_stock_detail' %}" class="btn btn-ghost" style="font-size:13px;">
+      <i class="fas fa-warehouse"></i> Stock temps réel
+    </a>
+    <a href="{% url 'ui_bons_sortie' %}" class="btn btn-ghost" style="font-size:13px;">
+      <i class="fas fa-arrow-alt-circle-up"></i> Bons de sortie
+    </a>
+    <a href="{% url 'ui_materiel_create' %}" class="btn btn-primary" style="font-size:13px;">
+      <i class="fas fa-plus"></i> Nouveau matériau
+    </a>
+    <a href="{% url 'ui_bon_sortie_create' %}" class="btn btn-primary" style="font-size:13px;background:rgba(255,121,63,0.8);border-color:var(--orange);">
+      <i class="fas fa-plus"></i> Sortie de stock
+    </a>
+  </div>
+</div>
+
 <!-- KPIs -->
 <div class="kpi-grid mb-6 animate-fade-up">
   <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">

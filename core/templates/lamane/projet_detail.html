@@ -24,7 +24,10 @@
     {% else %}
       <span class="badge badge-yellow" style="font-size:12px;padding:6px 14px;">{{ projet.statut }}</span>
     {% endif %}
-    <a href="/admin/core/projet/{{ projet.id }}/change/" target="_blank" class="btn btn-ghost text-sm"><i class="fas fa-edit"></i> Modifier</a>
+    <a href="{% url 'ui_projet_edit' projet.id %}" class="btn btn-primary" style="font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>
+    <a href="{% url 'ui_achat_create' %}?projet={{ projet.id }}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-shopping-cart"></i> Achat</a>
+    <a href="{% url 'ui_versement_create' %}?projet={{ projet.id }}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-hand-holding-usd"></i> Versement</a>
+    <a href="{% url 'ui_projet_delete' projet.id %}" class="btn" style="font-size:12px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);"><i class="fas fa-trash-alt"></i></a>
   </div>
 </div>
 

@@ -57,7 +57,12 @@
 </div>
 
 <!-- Grille employés -->
-<div class="section-title mb-4 animate-fade-up delay-2">Annuaire des employés</div>
+<div class="flex items-center justify-between mb-4 animate-fade-up delay-2">
+  <div class="section-title">Annuaire des employés</div>
+  <a href="{% url 'ui_employe_create' %}" class="btn btn-primary">
+    <i class="fas fa-user-plus"></i> Nouvel employé
+  </a>
+</div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:28px;" class="animate-fade-up delay-2">
   {% for emp in employes %}
@@ -99,6 +104,11 @@
         <i class="fas fa-calendar-plus"></i> Embauche : {{ emp.date_embauche|date:"d/m/Y" }}
       </div>
       {% endif %}
+    </div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;">
+      <a href="{% url 'ui_employe_edit' emp.pk %}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">
+        <i class="fas fa-edit"></i> Modifier
+      </a>
     </div>
   </div>
   {% empty %}

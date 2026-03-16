@@ -1,19 +1,29 @@
 """
 core/views_html.py — Vues HTML (rendu serveur) — LAMANE BTP
 """
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Sum, Count, Avg, Q, Max, Min
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.db.models import Sum, Count, Avg, Q, Max, Min, F, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from decimal import Decimal
 import json
 
 from core.models import (
-    Projet, Employe, Fournisseur, MarcheTravaux,
+    Projet, TypeProjet, Employe, Fournisseur, MarcheTravaux,
     AvancementChantier, SousTraitant, ContratSousTraitance,
     SituationMensuelle, Achat, Versement, Proprietaire,
     LigneAchat, PhaseVersement, ProjetEmploye,
-    Materiel, CategorieMateriel,
+    Materiel, CategorieMateriel, BonSortie, LigneBonSortie,
+    EtapeStandard,
+)
+from core.forms import (
+    ProjetForm, TypeProjetForm, ProprietaireForm, EmployeForm,
+    FournisseurForm, AchatForm, LigneAchatFormSet,
+    VersementForm, MaterielForm, CategorieMaterielForm,
+    MarcheTravauxForm, AvancementChantierForm,
+    SousTraitantForm, ContratSousTraitanceForm,
+    BonSortieForm, LigneBonSortieFormSet,
 )
 
 
@@ -542,3 +552,566 @@ def fournisseurs_view(request):
         "q": q, "nb_resultats": len(f_data),
     }
     return render(request, "lamane/fournisseurs.html", ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ─── VUES CRUD ─────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _success(request, msg, url):
+    messages.success(request, msg)
+    return redirect(url)
+
+
+# ─── PROJETS CRUD ────────────────────────────────────────────────────────────
+
+def projet_create_view(request):
+    form = ProjetForm(request.POST or None)
+    if form.is_valid():
+        p = form.save()
+        return _success(request, f"Projet « {p.nom} » créé avec succès.", "ui_projets_list")
+    return render(request, "lamane/forms/projet_form.html",
+                  {"form": form, "title": "Nouveau projet", "action": "Créer", "page": "projets"})
+
+
+def projet_edit_view(request, pk):
+    projet = get_object_or_404(Projet, pk=pk)
+    form = ProjetForm(request.POST or None, instance=projet)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Projet modifié.", f"/projets/{pk}/")
+    return render(request, "lamane/forms/projet_form.html",
+                  {"form": form, "title": f"Modifier — {projet.nom}",
+                   "action": "Enregistrer", "page": "projets", "obj": projet})
+
+
+def projet_delete_view(request, pk):
+    projet = get_object_or_404(Projet, pk=pk)
+    if request.method == "POST":
+        nom = projet.nom
+        projet.delete()
+        return _success(request, f"Projet « {nom} » supprimé.", "ui_projets_list")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": projet, "titre": projet.nom, "page": "projets",
+                   "back_url": f"/projets/{pk}/"})
+
+
+# ─── TYPES DE PROJETS CRUD ───────────────────────────────────────────────────
+
+def types_projets_view(request):
+    types = TypeProjet.objects.annotate(nb_projets=Count("projet")).order_by("nom")
+    return render(request, "lamane/types_projets.html",
+                  {"page": "types_projets", "types": types})
+
+
+def type_projet_create_view(request):
+    form = TypeProjetForm(request.POST or None)
+    if form.is_valid():
+        t = form.save()
+        return _success(request, f"Type « {t.nom} » créé.", "ui_types_projets")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau type de projet",
+                   "action": "Créer", "page": "types_projets",
+                   "back_url": "/types-projets/"})
+
+
+def type_projet_edit_view(request, pk):
+    t = get_object_or_404(TypeProjet, pk=pk)
+    form = TypeProjetForm(request.POST or None, instance=t)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Type modifié.", "ui_types_projets")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier — {t.nom}",
+                   "action": "Enregistrer", "page": "types_projets",
+                   "back_url": "/types-projets/", "obj": t})
+
+
+def type_projet_delete_view(request, pk):
+    t = get_object_or_404(TypeProjet, pk=pk)
+    if request.method == "POST":
+        nom = t.nom
+        t.delete()
+        return _success(request, f"Type « {nom} » supprimé.", "ui_types_projets")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": t, "titre": t.nom, "page": "types_projets",
+                   "back_url": "/types-projets/"})
+
+
+# ─── CLIENTS (PROPRIETAIRES) CRUD ────────────────────────────────────────────
+
+def client_create_view(request):
+    form = ProprietaireForm(request.POST or None)
+    if form.is_valid():
+        c = form.save()
+        return _success(request, f"Client « {c.nom_complet} » créé.", "ui_clients")
+    return render(request, "lamane/forms/client_form.html",
+                  {"form": form, "title": "Nouveau client / propriétaire",
+                   "action": "Créer", "page": "clients", "back_url": "/clients/"})
+
+
+def client_edit_view(request, pk):
+    client = get_object_or_404(Proprietaire, pk=pk)
+    form = ProprietaireForm(request.POST or None, instance=client)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Client modifié.", f"/clients/{pk}/")
+    return render(request, "lamane/forms/client_form.html",
+                  {"form": form, "title": f"Modifier — {client.nom_complet}",
+                   "action": "Enregistrer", "page": "clients",
+                   "back_url": f"/clients/{pk}/", "obj": client})
+
+
+# ─── FOURNISSEURS CRUD ───────────────────────────────────────────────────────
+
+def fournisseur_create_view(request):
+    form = FournisseurForm(request.POST or None)
+    if form.is_valid():
+        f = form.save()
+        return _success(request, f"Fournisseur « {f} » créé.", "ui_fournisseurs")
+    return render(request, "lamane/forms/fournisseur_form.html",
+                  {"form": form, "title": "Nouveau fournisseur",
+                   "action": "Créer", "page": "fournisseurs",
+                   "back_url": "/fournisseurs/"})
+
+
+def fournisseur_edit_view(request, pk):
+    f = get_object_or_404(Fournisseur, pk=pk)
+    form = FournisseurForm(request.POST or None, instance=f)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Fournisseur modifié.", "ui_fournisseurs")
+    return render(request, "lamane/forms/fournisseur_form.html",
+                  {"form": form, "title": f"Modifier — {f}",
+                   "action": "Enregistrer", "page": "fournisseurs",
+                   "back_url": "/fournisseurs/", "obj": f})
+
+
+# ─── EMPLOYES CRUD ───────────────────────────────────────────────────────────
+
+def employe_create_view(request):
+    form = EmployeForm(request.POST or None)
+    if form.is_valid():
+        e = form.save()
+        return _success(request, f"Employé « {e.nom_complet()} » créé.", "ui_rh")
+    return render(request, "lamane/forms/employe_form.html",
+                  {"form": form, "title": "Nouvel employé",
+                   "action": "Créer", "page": "rh", "back_url": "/rh/"})
+
+
+def employe_edit_view(request, pk):
+    e = get_object_or_404(Employe, pk=pk)
+    form = EmployeForm(request.POST or None, instance=e)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Employé modifié.", "ui_rh")
+    return render(request, "lamane/forms/employe_form.html",
+                  {"form": form, "title": f"Modifier — {e.nom_complet()}",
+                   "action": "Enregistrer", "page": "rh",
+                   "back_url": "/rh/", "obj": e})
+
+
+# ─── MATERIAUX CRUD ──────────────────────────────────────────────────────────
+
+def materiel_create_view(request):
+    form = MaterielForm(request.POST or None)
+    if form.is_valid():
+        m = form.save()
+        return _success(request, f"Matériau « {m.nom} » créé.", "ui_stock")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau matériau",
+                   "action": "Créer", "page": "stock", "back_url": "/stock/"})
+
+
+def materiel_edit_view(request, pk):
+    m = get_object_or_404(Materiel, pk=pk)
+    form = MaterielForm(request.POST or None, instance=m)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Matériau modifié.", "ui_stock")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier — {m.nom}",
+                   "action": "Enregistrer", "page": "stock",
+                   "back_url": "/stock/", "obj": m})
+
+
+def categorie_materiel_create_view(request):
+    form = CategorieMaterielForm(request.POST or None)
+    if form.is_valid():
+        c = form.save()
+        return _success(request, f"Catégorie « {c.nom} » créée.", "ui_stock")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouvelle catégorie de matériau",
+                   "action": "Créer", "page": "stock", "back_url": "/stock/"})
+
+
+# ─── ACHATS CRUD ─────────────────────────────────────────────────────────────
+
+def achat_create_view(request):
+    form = AchatForm(request.POST or None, request.FILES or None)
+    formset = LigneAchatFormSet(request.POST or None, prefix="lignes")
+    if request.method == "POST" and form.is_valid() and formset.is_valid():
+        achat = form.save()
+        formset.instance = achat
+        formset.save()
+        # Recalculer les totaux après sauvegarde des lignes
+        achat.calcul_totaux()
+        achat.save(update_fields=["total_ht", "total_tva", "total_ttc"])
+        # Générer le bon d'entrée PDF
+        try:
+            achat.generate_bon_entree_pdf()
+            achat.save(update_fields=["bon_entree_pdf"])
+        except Exception as e:
+            print(f"[BON ENTREE] Erreur PDF: {e}")
+        return _success(request,
+                        f"Achat enregistré — Bon d'entrée généré automatiquement.",
+                        "ui_achats")
+    return render(request, "lamane/forms/achat_form.html",
+                  {"form": form, "formset": formset,
+                   "title": "Nouvel achat de matériaux",
+                   "action": "Enregistrer", "page": "achats",
+                   "back_url": "/achats/"})
+
+
+def achat_edit_view(request, pk):
+    achat = get_object_or_404(Achat, pk=pk)
+    form = AchatForm(request.POST or None, request.FILES or None, instance=achat)
+    formset = LigneAchatFormSet(request.POST or None, instance=achat, prefix="lignes")
+    if request.method == "POST" and form.is_valid() and formset.is_valid():
+        form.save()
+        formset.save()
+        achat.calcul_totaux()
+        achat.save(update_fields=["total_ht", "total_tva", "total_ttc"])
+        return _success(request, "Achat modifié.", f"/achats/{pk}/")
+    return render(request, "lamane/forms/achat_form.html",
+                  {"form": form, "formset": formset,
+                   "title": "Modifier l'achat",
+                   "action": "Enregistrer", "page": "achats",
+                   "back_url": f"/achats/{pk}/", "obj": achat})
+
+
+def achat_delete_view(request, pk):
+    achat = get_object_or_404(Achat, pk=pk)
+    if request.method == "POST":
+        achat.delete()
+        return _success(request, "Achat supprimé.", "ui_achats")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": achat, "titre": str(achat), "page": "achats",
+                   "back_url": f"/achats/{pk}/"})
+
+
+# ─── VERSEMENTS CRUD ─────────────────────────────────────────────────────────
+
+def versement_create_view(request):
+    form = VersementForm(request.POST or None, request.FILES or None)
+    if form.is_valid():
+        v = form.save()
+        return _success(request,
+                        f"Versement enregistré — Facture PDF générée automatiquement.",
+                        "ui_versements")
+    return render(request, "lamane/forms/versement_form.html",
+                  {"form": form, "title": "Nouveau versement",
+                   "action": "Enregistrer", "page": "versements",
+                   "back_url": "/versements/"})
+
+
+def versement_delete_view(request, pk):
+    v = get_object_or_404(Versement, pk=pk)
+    if request.method == "POST":
+        v.delete()
+        return _success(request, "Versement supprimé.", "ui_versements")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": v, "titre": str(v), "page": "versements",
+                   "back_url": "/versements/"})
+
+
+# ─── MARCHÉS CRUD ────────────────────────────────────────────────────────────
+
+def marche_create_view(request):
+    form = MarcheTravauxForm(request.POST or None)
+    if form.is_valid():
+        m = form.save()
+        return _success(request, f"Marché {m.numero_marche} créé.", "ui_marches")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau marché de travaux",
+                   "action": "Créer", "page": "marches", "back_url": "/marches/"})
+
+
+def marche_edit_view(request, pk):
+    marche = get_object_or_404(MarcheTravaux, pk=pk)
+    form = MarcheTravauxForm(request.POST or None, instance=marche)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Marché modifié.", "ui_marches")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier — {marche.numero_marche}",
+                   "action": "Enregistrer", "page": "marches",
+                   "back_url": "/marches/", "obj": marche})
+
+
+# ─── AVANCEMENT CHANTIER CRUD ────────────────────────────────────────────────
+
+def avancement_create_view(request):
+    projet_id = request.GET.get("projet")
+    initial = {}
+    if projet_id:
+        try:
+            initial["projet"] = Projet.objects.get(pk=projet_id)
+        except Projet.DoesNotExist:
+            pass
+    form = AvancementChantierForm(request.POST or None, initial=initial)
+    if form.is_valid():
+        form.save()
+        proj_id = form.cleaned_data["projet"].id
+        return _success(request, "Relevé d'avancement enregistré.", f"/chantiers/{proj_id}/")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau relevé d'avancement",
+                   "action": "Enregistrer", "page": "chantiers",
+                   "back_url": "/chantiers/"})
+
+
+# ─── SOUS-TRAITANTS CRUD ─────────────────────────────────────────────────────
+
+def sous_traitant_create_view(request):
+    form = SousTraitantForm(request.POST or None)
+    if form.is_valid():
+        st = form.save()
+        return _success(request, f"Sous-traitant « {st.nom} » créé.", "ui_sous_traitants")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau sous-traitant",
+                   "action": "Créer", "page": "sous_traitants",
+                   "back_url": "/sous-traitants/"})
+
+
+def sous_traitant_edit_view(request, pk):
+    st = get_object_or_404(SousTraitant, pk=pk)
+    form = SousTraitantForm(request.POST or None, instance=st)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Sous-traitant modifié.", "ui_sous_traitants")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier — {st.nom}",
+                   "action": "Enregistrer", "page": "sous_traitants",
+                   "back_url": "/sous-traitants/", "obj": st})
+
+
+# ─── BONS DE SORTIE CRUD ─────────────────────────────────────────────────────
+
+def bons_sortie_list_view(request):
+    q = request.GET.get("q", "")
+    bons = BonSortie.objects.select_related("projet").order_by("-date_sortie")
+    if q:
+        bons = bons.filter(
+            Q(projet__nom__icontains=q) | Q(reference__icontains=q)
+            | Q(responsable__icontains=q)
+        )
+    bons = bons[:100]
+
+    agg = BonSortie.objects.count()
+    total_lignes = LigneBonSortie.objects.count()
+
+    ctx = {
+        "page": "stock", "bons": bons, "q": q,
+        "total_bons": agg, "total_lignes": total_lignes,
+    }
+    return render(request, "lamane/bons_sortie.html", ctx)
+
+
+def bon_sortie_create_view(request):
+    form = BonSortieForm(request.POST or None)
+    formset = LigneBonSortieFormSet(request.POST or None, prefix="lignes")
+    if request.method == "POST" and form.is_valid() and formset.is_valid():
+        bon = form.save()
+        formset.instance = bon
+        formset.save()
+        # Régénérer le PDF avec les lignes
+        bon.bon_pdf = None
+        try:
+            bon._generate_pdf()
+            bon.save(update_fields=["bon_pdf"])
+        except Exception as e:
+            print(f"[BON SORTIE PDF] Erreur: {e}")
+        return _success(request,
+                        f"Bon de sortie {bon.reference} créé — PDF généré.",
+                        "ui_bons_sortie")
+    return render(request, "lamane/forms/bon_sortie_form.html",
+                  {"form": form, "formset": formset,
+                   "title": "Nouveau bon de sortie matériaux",
+                   "action": "Créer", "page": "stock",
+                   "back_url": "/stock/bons-sortie/"})
+
+
+def bon_sortie_detail_view(request, pk):
+    bon = get_object_or_404(BonSortie, pk=pk)
+    lignes = bon.lignes.select_related("materiel")
+    ctx = {"page": "stock", "bon": bon, "lignes": lignes}
+    return render(request, "lamane/bon_sortie_detail.html", ctx)
+
+
+# ─── BILANS FINANCIERS ────────────────────────────────────────────────────────
+
+def bilans_view(request):
+    """Page de bilans financiers : P&L par projet, trésorerie, alertes."""
+    from calendar import monthrange
+    today = timezone.now().date()
+
+    # P&L par projet
+    projets = Projet.objects.prefetch_related("achats", "versements").all()
+    pl_data = []
+    for p in projets:
+        versements_sum = Versement.objects.filter(projet=p).aggregate(
+            s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+        achats_agg = Achat.objects.filter(projet=p).aggregate(
+            ht=Coalesce(Sum("total_ht"), Decimal("0")),
+            ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
+        )
+        marge = float(versements_sum) - float(achats_agg["ttc"])
+        budget = float(p.cout_estime_lamane or 0)
+        alerte_budget = budget > 0 and float(achats_agg["ttc"]) > budget * 0.9
+
+        # Calcul retenue de garantie depuis marché
+        retenue = Decimal("0")
+        try:
+            marche = p.marche
+            retenue = (achats_agg["ttc"] * marche.taux_retenue_garantie / 100)
+        except Exception:
+            pass
+
+        # Calcul pénalités
+        penalites = Decimal("0")
+        try:
+            marche = p.marche
+            if marche.jours_retard and marche.jours_retard > 0:
+                penalites = (marche.montant_marche
+                             * marche.penalite_journaliere_pct / 100
+                             * marche.jours_retard)
+        except Exception:
+            pass
+
+        pl_data.append({
+            "projet": p,
+            "versements": float(versements_sum),
+            "versements_fmt": _fmt(versements_sum),
+            "achats_ht": float(achats_agg["ht"]),
+            "achats_ttc": float(achats_agg["ttc"]),
+            "achats_ht_fmt": _fmt(achats_agg["ht"]),
+            "achats_ttc_fmt": _fmt(achats_agg["ttc"]),
+            "marge": marge,
+            "marge_fmt": _fmt(abs(marge)),
+            "marge_positive": marge >= 0,
+            "budget": budget,
+            "budget_fmt": _fmt(budget),
+            "alerte_budget": alerte_budget,
+            "taux_budget": round(float(achats_agg["ttc"]) / budget * 100, 1) if budget else 0,
+            "retenue": _fmt(retenue),
+            "penalites": _fmt(penalites),
+        })
+
+    # Totaux globaux
+    total_versements_g = Versement.objects.aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+    total_achats_g = Achat.objects.aggregate(
+        ht=Coalesce(Sum("total_ht"), Decimal("0")),
+        ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
+    )
+    solde_global = float(total_versements_g) - float(total_achats_g["ttc"])
+
+    # Trésorerie mensuelle sur 12 mois
+    monthly_labels, monthly_entrees, monthly_sorties, monthly_solde = [], [], [], []
+    cumul = 0.0
+    for i in range(11, -1, -1):
+        m = ((today.month - i - 1) % 12) + 1
+        y = today.year if (today.month - i) > 0 else today.year - 1
+        start = today.replace(year=y, month=m, day=1)
+        end   = today.replace(year=y, month=m, day=monthrange(y, m)[1])
+        entrees = float(Versement.objects.filter(
+            date_versement__range=[start, end]).aggregate(
+            s=Coalesce(Sum("montant"), Decimal("0")))["s"])
+        sorties = float(Achat.objects.filter(
+            date_achat__range=[start, end]).aggregate(
+            s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"])
+        cumul += entrees - sorties
+        monthly_labels.append(start.strftime("%b %Y"))
+        monthly_entrees.append(entrees)
+        monthly_sorties.append(sorties)
+        monthly_solde.append(round(cumul, 2))
+
+    # Top 5 projets par achats
+    top5 = sorted(pl_data, key=lambda x: x["achats_ttc"], reverse=True)[:5]
+    alertes = [d for d in pl_data if d["alerte_budget"]]
+
+    ctx = {
+        "page": "bilans",
+        "pl_data": pl_data,
+        "total_versements_fmt": _fmt(total_versements_g),
+        "total_achats_ht_fmt": _fmt(total_achats_g["ht"]),
+        "total_achats_ttc_fmt": _fmt(total_achats_g["ttc"]),
+        "solde_global": _fmt(abs(solde_global)),
+        "solde_positif": solde_global >= 0,
+        "nb_projets": len(pl_data),
+        "nb_alertes": len(alertes),
+        "alertes": alertes,
+        "top5": top5,
+        "monthly_labels_json": json.dumps(monthly_labels),
+        "monthly_entrees_json": json.dumps(monthly_entrees),
+        "monthly_sorties_json": json.dumps(monthly_sorties),
+        "monthly_solde_json": json.dumps(monthly_solde),
+        "top5_labels_json": json.dumps([d["projet"].nom[:20] for d in top5]),
+        "top5_values_json": json.dumps([d["achats_ttc"] for d in top5]),
+    }
+    return render(request, "lamane/bilans.html", ctx)
+
+
+# ─── STOCK TEMPS RÉEL (vue détaillée) ────────────────────────────────────────
+
+def stock_detail_view(request):
+    """Stock réel par matériau : entrées (achats) − sorties (bons de sortie)."""
+    q   = request.GET.get("q", "")
+    cat = request.GET.get("cat", "")
+    materiaux = Materiel.objects.select_related("categorie").all()
+    if q:
+        materiaux = materiaux.filter(Q(nom__icontains=q) | Q(unite__icontains=q))
+    if cat:
+        materiaux = materiaux.filter(categorie__id=cat)
+    materiaux = materiaux.order_by("categorie__nom", "nom")
+
+    categories = CategorieMateriel.objects.annotate(nb=Count("materiaux")).order_by("nom")
+
+    stock_data = []
+    for m in materiaux:
+        # Entrées = total quantité dans LigneAchat
+        entrees = LigneAchat.objects.filter(materiel=m).aggregate(
+            s=Coalesce(Sum("quantite"), Decimal("0")))["s"]
+        # Sorties = total quantité dans LigneBonSortie
+        sorties = LigneBonSortie.objects.filter(materiel=m).aggregate(
+            s=Coalesce(Sum("quantite"), Decimal("0")))["s"]
+        stock_actuel = float(entrees) - float(sorties)
+        valeur_unitaire_moy = LigneAchat.objects.filter(materiel=m).aggregate(
+            avg=Coalesce(Avg("prix_unitaire"), Decimal("0")))["avg"]
+        valeur_stock = stock_actuel * float(valeur_unitaire_moy)
+
+        stock_data.append({
+            "materiel": m,
+            "entrees": float(entrees),
+            "sorties": float(sorties),
+            "stock_actuel": round(stock_actuel, 2),
+            "stock_positif": stock_actuel >= 0,
+            "alerte_rupture": stock_actuel <= 0,
+            "valeur_stock": _fmt(valeur_stock),
+            "prix_moyen": _fmt(valeur_unitaire_moy, 0),
+        })
+
+    # KPIs globaux
+    total_entrees_valeur = sum(
+        float(LigneAchat.objects.filter(materiel=m["materiel"]).aggregate(
+            s=Coalesce(Sum(F("quantite") * F("prix_unitaire")), Decimal("0")))["s"])
+        for m in stock_data
+    )
+
+    ctx = {
+        "page": "stock", "stock_data": stock_data,
+        "categories": categories, "q": q, "cat_filter": cat,
+        "total_references": len(stock_data),
+        "nb_ruptures": sum(1 for d in stock_data if d["alerte_rupture"]),
+        "nb_alertes": sum(1 for d in stock_data if d["stock_actuel"] < 5 and not d["alerte_rupture"]),
+    }
+    return render(request, "lamane/stock_detail.html", ctx)

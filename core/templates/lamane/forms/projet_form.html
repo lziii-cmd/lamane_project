@@ -1,0 +1,190 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if obj %}Modification du projet{% else %}Nouveau projet{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-input,.form-select,.form-textarea{width:100%;background:rgba(255,255,255,0.06);border:1.5px solid var(--border-light);border-radius:10px;padding:11px 14px;color:var(--text-primary);font-size:14px;font-family:inherit;transition:border-color 0.2s,background 0.2s;outline:none;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);background:rgba(240,165,0,0.06);}
+.form-select option{background:#1a2540;color:#f0f4ff;}
+.form-checkbox{width:18px;height:18px;accent-color:var(--gold);cursor:pointer;margin-right:8px;}
+.form-group{margin-bottom:18px;}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;}
+.form-label .required{color:#ff5050;margin-left:3px;}
+.form-help{font-size:11px;color:var(--text-muted);margin-top:4px;}
+.field-error{font-size:11px;color:#ff5050;margin-top:4px;display:block;}
+.form-section{background:rgba(255,255,255,0.02);border:1px solid var(--border-light);border-radius:12px;padding:20px;margin-bottom:20px;}
+.form-section-title{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.checkbox-row{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;cursor:pointer;}
+.checkbox-row:hover{background:rgba(255,255,255,0.06);}
+.checkbox-group{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px;}
+@media(max-width:768px){.form-grid-2,.form-grid-3{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_projets_list' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux projets</a>
+  {% if obj %}
+  <a href="{% url 'ui_projet_delete' obj.pk %}" class="btn" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);color:var(--red);">
+    <i class="fas fa-trash-alt"></i> Supprimer
+  </a>
+  {% endif %}
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<form method="post" novalidate class="animate-fade-up">
+{% csrf_token %}
+
+<div class="card" style="max-width:900px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-hard-hat text-gold"></i> {{ title }}</div>
+  </div>
+
+  {% if form.non_field_errors %}
+  <div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <!-- Section : Informations principales -->
+  <div class="form-section">
+    <div class="form-section-title"><i class="fas fa-info-circle"></i> Informations principales</div>
+    <div class="form-group">
+      <label class="form-label" for="{{ form.nom.id_for_label }}">Nom du projet<span class="required">*</span></label>
+      {{ form.nom }}
+      {% for e in form.nom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.statut.id_for_label }}">Statut<span class="required">*</span></label>
+        {{ form.statut }}
+        {% for e in form.statut.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.type_projet.id_for_label }}">Type de projet</label>
+        {{ form.type_projet }}
+        {% for e in form.type_projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.proprietaire.id_for_label }}">Client / Propriétaire<span class="required">*</span></label>
+        {{ form.proprietaire }}
+        {% for e in form.proprietaire.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.localisation.id_for_label }}">Localisation<span class="required">*</span></label>
+        {{ form.localisation }}
+        {% for e in form.localisation.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.cout_estime_lamane.id_for_label }}">Budget estimé (XOF)</label>
+        {{ form.cout_estime_lamane }}
+        {% for e in form.cout_estime_lamane.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date_debut.id_for_label }}">Date de début<span class="required">*</span></label>
+        {{ form.date_debut }}
+        {% for e in form.date_debut.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date_fin.id_for_label }}">Date de fin prévue</label>
+        {{ form.date_fin }}
+        {% for e in form.date_fin.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+      {{ form.description }}
+      {% for e in form.description.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
+  </div>
+
+  <!-- Section : Caractéristiques techniques -->
+  <div class="form-section">
+    <div class="form-section-title"><i class="fas fa-ruler-combined"></i> Caractéristiques techniques</div>
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.superficie.id_for_label }}">Superficie (m²)</label>
+        {{ form.superficie }}
+        {% for e in form.superficie.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.surface_batie.id_for_label }}">Surface bâtie (m²)</label>
+        {{ form.surface_batie }}
+        {% for e in form.surface_batie.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.nombre_pieces.id_for_label }}">Nombre de pièces</label>
+        {{ form.nombre_pieces }}
+        {% for e in form.nombre_pieces.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="{{ form.nombre_etages.id_for_label }}">Nombre d'étages</label>
+      {{ form.nombre_etages }}
+      {% for e in form.nombre_etages.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
+  </div>
+
+  <!-- Section : Équipements spéciaux -->
+  <div class="form-section">
+    <div class="form-section-title"><i class="fas fa-tools"></i> Équipements spéciaux</div>
+    <div class="checkbox-group">
+      <label class="checkbox-row">
+        {{ form.a_piscine }}
+        <span>Piscine</span>
+      </label>
+      <label class="checkbox-row">
+        {{ form.a_ascenseur }}
+        <span>Ascenseur</span>
+      </label>
+      <label class="checkbox-row">
+        {{ form.a_climatisation }}
+        <span>Climatisation</span>
+      </label>
+      <label class="checkbox-row">
+        {{ form.a_panneaux_solaires }}
+        <span>Panneaux solaires</span>
+      </label>
+    </div>
+    <div class="form-grid-2" id="equipDetails">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.volume_piscine.id_for_label }}">Volume piscine (m³)</label>
+        {{ form.volume_piscine }}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.nombre_ascenseurs.id_for_label }}">Nombre d'ascenseurs</label>
+        {{ form.nombre_ascenseurs }}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.nombre_clims.id_for_label }}">Nombre de clims</label>
+        {{ form.nombre_clims }}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.puissance_panneaux.id_for_label }}">Puissance panneaux (kWc)</label>
+        {{ form.puissance_panneaux }}
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3" style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-light);">
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-save"></i> {{ action }}
+    </button>
+    <a href="{% url 'ui_projets_list' %}" class="btn btn-ghost">Annuler</a>
+  </div>
+</div>
+</form>
+{% endblock %}

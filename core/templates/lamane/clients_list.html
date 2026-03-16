@@ -5,14 +5,19 @@
 
 {% block content %}
 
-<!-- Filtres -->
-<form method="get" class="filters-bar mb-6 animate-fade-up">
-  <input type="text" name="q" id="searchInput" value="{{ q }}" placeholder="🔍 Rechercher un client…" class="filter-input" style="min-width:280px;">
-  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
-  {% if q %}
-  <a href="{% url 'ui_clients' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
-  {% endif %}
-</form>
+<!-- Filtres + Actions -->
+<div class="flex items-center justify-between mb-4 animate-fade-up">
+  <form method="get" class="filters-bar" style="margin:0;flex:1;">
+    <input type="text" name="q" id="searchInput" value="{{ q }}" placeholder="🔍 Rechercher un client…" class="filter-input" style="min-width:280px;">
+    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+    {% if q %}
+    <a href="{% url 'ui_clients' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
+    {% endif %}
+  </form>
+  <a href="{% url 'ui_client_create' %}" class="btn btn-primary" style="margin-left:12px;white-space:nowrap;">
+    <i class="fas fa-plus"></i> Nouveau client
+  </a>
+</div>
 
 <!-- Grille clients -->
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;" class="animate-fade-up delay-1" id="clientsGrid">

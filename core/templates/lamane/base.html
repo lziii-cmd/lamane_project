@@ -298,6 +298,9 @@
     <a href="{% url 'ui_finances' %}" class="nav-item {% if page == 'finances' %}active{% endif %}">
       <i class="fas fa-chart-line"></i><span>Finances</span>
     </a>
+    <a href="{% url 'ui_bilans' %}" class="nav-item {% if page == 'bilans' %}active{% endif %}">
+      <i class="fas fa-balance-scale"></i><span>Bilans P&L</span>
+    </a>
     <a href="{% url 'ui_achats' %}" class="nav-item {% if page == 'achats' %}active{% endif %}">
       <i class="fas fa-shopping-cart"></i><span>Achats & Factures</span>
     </a>
@@ -309,6 +312,12 @@
     <a href="{% url 'ui_stock' %}" class="nav-item {% if page == 'stock' %}active{% endif %}">
       <i class="fas fa-boxes"></i><span>Stock matériaux</span>
     </a>
+    <a href="{% url 'ui_stock_detail' %}" class="nav-item {% if page == 'stock_detail' %}active{% endif %}">
+      <i class="fas fa-warehouse"></i><span>Stock temps réel</span>
+    </a>
+    <a href="{% url 'ui_bons_sortie' %}" class="nav-item {% if page == 'bons_sortie' %}active{% endif %}">
+      <i class="fas fa-arrow-alt-circle-up"></i><span>Bons de sortie</span>
+    </a>
     <a href="{% url 'ui_fournisseurs' %}" class="nav-item {% if page == 'fournisseurs' %}active{% endif %}">
       <i class="fas fa-truck"></i><span>Fournisseurs</span>
     </a>
@@ -319,7 +328,10 @@
       <i class="fas fa-users"></i><span>Équipe & RH</span>
     </a>
 
-    <div class="nav-section-label">Système</div>
+    <div class="nav-section-label">Configuration</div>
+    <a href="{% url 'ui_types_projets' %}" class="nav-item {% if page == 'types_projets' %}active{% endif %}">
+      <i class="fas fa-tags"></i><span>Types de projets</span>
+    </a>
     <a href="/admin/" class="nav-item" target="_blank">
       <i class="fas fa-sliders"></i><span>Administration</span>
     </a>

@@ -1,0 +1,98 @@
+{% extends "lamane/base.html" %}
+{% block title %}Bons de sortie{% endblock %}
+{% block page_title %}Bons de sortie{% endblock %}
+{% block page_sub %}{{ total_bons }} bon{{ total_bons|pluralize }} — {{ total_lignes }} ligne{{ total_lignes|pluralize }} de matériaux{% endblock %}
+
+{% block content %}
+
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);">
+    <div class="kpi-icon"><i class="fas fa-arrow-circle-up"></i></div>
+    <div class="kpi-value">{{ total_bons }}</div>
+    <div class="kpi-label">Bons de sortie totaux</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-boxes"></i></div>
+    <div class="kpi-value">{{ total_lignes }}</div>
+    <div class="kpi-label">Lignes de matériaux</div>
+  </div>
+</div>
+
+<div class="card animate-fade-up delay-1">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-arrow-alt-circle-up text-gold"></i> Liste des bons de sortie</div>
+    <div class="flex gap-2 items-center">
+      <form method="get" class="flex gap-2 items-center">
+        <input type="text" name="q" value="{{ q }}" placeholder="🔍 Projet, référence, responsable…" class="filter-input" style="font-size:13px;">
+        <button type="submit" class="btn btn-primary" style="padding:8px 14px;font-size:13px;">Filtrer</button>
+        {% if q %}<a href="{% url 'ui_bons_sortie' %}" class="btn btn-ghost" style="padding:8px 12px;font-size:13px;"><i class="fas fa-times"></i></a>{% endif %}
+      </form>
+      <a href="{% url 'ui_bon_sortie_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nouveau bon
+      </a>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Date</th>
+          <th>Projet</th>
+          <th>Responsable</th>
+          <th>Matériaux</th>
+          <th>PDF</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bon in bons %}
+        <tr>
+          <td>
+            <a href="{% url 'ui_bon_sortie_detail' bon.pk %}" style="font-weight:700;color:var(--gold);text-decoration:none;">
+              {{ bon.reference }}
+            </a>
+          </td>
+          <td class="text-muted text-sm">{{ bon.date_sortie|date:"d/m/Y" }}</td>
+          <td>
+            <a href="{% url 'ui_projet_detail' bon.projet.id %}" style="color:var(--text-primary);text-decoration:none;font-weight:600;font-size:13px;">
+              {{ bon.projet.nom|truncatechars:25 }}
+            </a>
+          </td>
+          <td class="text-sm text-muted">{{ bon.responsable|default:"—" }}</td>
+          <td>
+            <span class="badge badge-orange">{{ bon.lignes.count }} matériau{{ bon.lignes.count|pluralize:"x" }}</span>
+          </td>
+          <td>
+            {% if bon.bon_pdf %}
+            <a href="{{ bon.bon_pdf.url }}" target="_blank" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;color:var(--red);">
+              <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            {% else %}
+            <span class="text-muted text-xs">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'ui_bon_sortie_detail' bon.pk %}" class="btn btn-ghost" style="padding:5px 12px;font-size:12px;">
+              <i class="fas fa-eye"></i> Voir
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;">📦</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px;">Aucun bon de sortie</div>
+            <div style="font-size:12px;margin-bottom:16px;">Créez un bon de sortie pour enregistrer les matériaux utilisés sur un chantier.</div>
+            <a href="{% url 'ui_bon_sortie_create' %}" class="btn btn-primary" style="font-size:13px;">
+              <i class="fas fa-plus"></i> Créer un bon de sortie
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

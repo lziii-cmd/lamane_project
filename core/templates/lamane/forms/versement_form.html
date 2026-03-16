@@ -1,0 +1,119 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Enregistrement d'un versement client{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-input,.form-select,.form-textarea{width:100%;background:rgba(255,255,255,0.06);border:1.5px solid var(--border-light);border-radius:10px;padding:11px 14px;color:var(--text-primary);font-size:14px;font-family:inherit;transition:border-color 0.2s,background 0.2s;outline:none;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);background:rgba(240,165,0,0.06);}
+.form-select option{background:#1a2540;color:#f0f4ff;}
+.form-file{width:100%;padding:6px 0;color:var(--text-muted);font-size:13px;}
+.form-group{margin-bottom:18px;}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;}
+.form-label .required{color:#ff5050;margin-left:3px;}
+.field-error{font-size:11px;color:#ff5050;margin-top:4px;display:block;}
+.form-section{background:rgba(255,255,255,0.02);border:1px solid var(--border-light);border-radius:12px;padding:20px;margin-bottom:20px;}
+.form-section-title{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:768px){.form-grid-2,.form-grid-3{grid-template-columns:1fr;}}
+.amount-input-wrap{position:relative;}
+.amount-currency{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-muted);pointer-events:none;font-weight:600;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{{ back_url }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux versements</a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate class="animate-fade-up">
+{% csrf_token %}
+
+<div class="card" style="max-width:780px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-hand-holding-usd text-gold"></i> {{ title }}</div>
+  </div>
+
+  {% if form.non_field_errors %}
+  <div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <div class="form-section">
+    <div class="form-section-title"><i class="fas fa-project-diagram"></i> Rattachement</div>
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.projet.id_for_label }}">Projet<span class="required">*</span></label>
+        {{ form.projet }}
+        {% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.phase.id_for_label }}">Phase<span class="required">*</span></label>
+        {{ form.phase }}
+        {% for e in form.phase.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.etape.id_for_label }}">Étape standard</label>
+        {{ form.etape }}
+        {% for e in form.etape.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title"><i class="fas fa-money-bill-wave"></i> Détails du versement</div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.montant.id_for_label }}">Montant (XOF)<span class="required">*</span></label>
+        <div class="amount-input-wrap">
+          {{ form.montant }}
+          <span class="amount-currency">XOF</span>
+        </div>
+        {% for e in form.montant.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date_versement.id_for_label }}">Date du versement<span class="required">*</span></label>
+        {{ form.date_versement }}
+        {% for e in form.date_versement.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.type_versement.id_for_label }}">Mode de paiement<span class="required">*</span></label>
+        {{ form.type_versement }}
+        {% for e in form.type_versement.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.reference_paiement.id_for_label }}">Référence / N° transaction</label>
+        {{ form.reference_paiement }}
+        {% for e in form.reference_paiement.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.fichier_justificatif.id_for_label }}">Justificatif (PDF/Image)</label>
+        {{ form.fichier_justificatif }}
+        {% for e in form.fichier_justificatif.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:12px 16px;background:rgba(0,196,140,0.08);border:1px solid rgba(0,196,140,0.2);border-radius:8px;margin-bottom:16px;font-size:12px;color:var(--green);">
+    <i class="fas fa-file-pdf"></i>
+    Une <strong>facture PDF de versement</strong> sera générée automatiquement après enregistrement.
+  </div>
+
+  <div class="flex gap-3" style="padding-top:16px;border-top:1px solid var(--border-light);">
+    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {{ action }}</button>
+    <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+  </div>
+</div>
+</form>
+{% endblock %}

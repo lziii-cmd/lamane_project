@@ -47,6 +47,59 @@ urlpatterns = [
     path('clients/', views_html.clients_view, name='ui_clients'),
     path('clients/<int:pk>/', views_html.client_detail_view, name='ui_client_detail'),
     path('stock/', views_html.stock_view, name='ui_stock'),
+    path('stock/detail/', views_html.stock_detail_view, name='ui_stock_detail'),
+    path('stock/bons-sortie/', views_html.bons_sortie_list_view, name='ui_bons_sortie'),
+    path('stock/bons-sortie/nouveau/', views_html.bon_sortie_create_view, name='ui_bon_sortie_create'),
+    path('stock/bons-sortie/<str:pk>/', views_html.bon_sortie_detail_view, name='ui_bon_sortie_detail'),
+    path('stock/materiaux/nouveau/', views_html.materiel_create_view, name='ui_materiel_create'),
+    path('stock/materiaux/<str:pk>/modifier/', views_html.materiel_edit_view, name='ui_materiel_edit'),
+    path('stock/categories/nouveau/', views_html.categorie_materiel_create_view, name='ui_categorie_create'),
+
+    # ── Projets CRUD ──────────────────────────────────────────────────────────
+    path('projets/nouveau/', views_html.projet_create_view, name='ui_projet_create'),
+    path('projets/<str:pk>/modifier/', views_html.projet_edit_view, name='ui_projet_edit'),
+    path('projets/<str:pk>/supprimer/', views_html.projet_delete_view, name='ui_projet_delete'),
+
+    # ── Types de projets ──────────────────────────────────────────────────────
+    path('types-projets/', views_html.types_projets_view, name='ui_types_projets'),
+    path('types-projets/nouveau/', views_html.type_projet_create_view, name='ui_type_projet_create'),
+    path('types-projets/<int:pk>/modifier/', views_html.type_projet_edit_view, name='ui_type_projet_edit'),
+    path('types-projets/<int:pk>/supprimer/', views_html.type_projet_delete_view, name='ui_type_projet_delete'),
+
+    # ── Clients CRUD ──────────────────────────────────────────────────────────
+    path('clients/nouveau/', views_html.client_create_view, name='ui_client_create'),
+    path('clients/<int:pk>/modifier/', views_html.client_edit_view, name='ui_client_edit'),
+
+    # ── Fournisseurs CRUD ─────────────────────────────────────────────────────
+    path('fournisseurs/nouveau/', views_html.fournisseur_create_view, name='ui_fournisseur_create'),
+    path('fournisseurs/<int:pk>/modifier/', views_html.fournisseur_edit_view, name='ui_fournisseur_edit'),
+
+    # ── Employés CRUD ─────────────────────────────────────────────────────────
+    path('rh/employes/nouveau/', views_html.employe_create_view, name='ui_employe_create'),
+    path('rh/employes/<int:pk>/modifier/', views_html.employe_edit_view, name='ui_employe_edit'),
+
+    # ── Achats CRUD ───────────────────────────────────────────────────────────
+    path('achats/nouveau/', views_html.achat_create_view, name='ui_achat_create'),
+    path('achats/<str:pk>/modifier/', views_html.achat_edit_view, name='ui_achat_edit'),
+    path('achats/<str:pk>/supprimer/', views_html.achat_delete_view, name='ui_achat_delete'),
+
+    # ── Versements CRUD ───────────────────────────────────────────────────────
+    path('versements/nouveau/', views_html.versement_create_view, name='ui_versement_create'),
+    path('versements/<int:pk>/supprimer/', views_html.versement_delete_view, name='ui_versement_delete'),
+
+    # ── Marchés CRUD ──────────────────────────────────────────────────────────
+    path('marches/nouveau/', views_html.marche_create_view, name='ui_marche_create'),
+    path('marches/<int:pk>/modifier/', views_html.marche_edit_view, name='ui_marche_edit'),
+
+    # ── Avancement Chantier ───────────────────────────────────────────────────
+    path('chantiers/avancement/nouveau/', views_html.avancement_create_view, name='ui_avancement_create'),
+
+    # ── Sous-traitants CRUD ───────────────────────────────────────────────────
+    path('sous-traitants/nouveau/', views_html.sous_traitant_create_view, name='ui_sous_traitant_create'),
+    path('sous-traitants/<int:pk>/modifier/', views_html.sous_traitant_edit_view, name='ui_sous_traitant_edit'),
+
+    # ── Bilans financiers ─────────────────────────────────────────────────────
+    path('bilans/', views_html.bilans_view, name='ui_bilans'),
 ]
 
 if settings.DEBUG:

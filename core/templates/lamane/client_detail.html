@@ -10,9 +10,14 @@
   <a href="{% url 'ui_clients' %}" class="btn btn-ghost">
     <i class="fas fa-arrow-left"></i> Retour aux clients
   </a>
-  <button class="btn btn-primary" onclick="window.print()">
-    <i class="fas fa-print"></i> Imprimer la fiche
-  </button>
+  <div class="flex gap-2">
+    <a href="{% url 'ui_client_edit' client.pk %}" class="btn btn-primary">
+      <i class="fas fa-edit"></i> Modifier
+    </a>
+    <button class="btn btn-ghost" onclick="window.print()">
+      <i class="fas fa-print"></i> Imprimer
+    </button>
+  </div>
 </div>
 
 <!-- KPIs -->

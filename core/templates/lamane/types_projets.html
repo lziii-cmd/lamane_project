@@ -1,0 +1,89 @@
+{% extends "lamane/base.html" %}
+{% block title %}Types de projets{% endblock %}
+{% block page_title %}Types de projets{% endblock %}
+{% block page_sub %}{{ types|length }} type{{ types|length|pluralize }} enregistré{{ types|length|pluralize }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <div></div>
+  <a href="{% url 'ui_type_projet_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouveau type
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-tags text-gold"></i> Catalogue des types de projets</div>
+    <span class="badge badge-yellow">{{ types|length }} type{{ types|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Description</th>
+          <th>Projets associés</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in types %}
+        <tr>
+          <td class="bold">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:34px;height:34px;background:rgba(240,165,0,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-tag" style="color:var(--gold);font-size:14px;"></i>
+              </div>
+              {{ t.nom }}
+            </div>
+          </td>
+          <td style="max-width:300px;">
+            <span style="font-size:13px;color:var(--text-secondary);">{{ t.description|default:"—"|truncatechars:80 }}</span>
+          </td>
+          <td>
+            <a href="{% url 'ui_projets_list' %}?type={{ t.pk }}" style="text-decoration:none;">
+              <span class="badge badge-blue">{{ t.nb_projets }} projet{{ t.nb_projets|pluralize }}</span>
+            </a>
+          </td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:6px;justify-content:flex-end;">
+              <a href="{% url 'ui_type_projet_edit' t.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+                <i class="fas fa-edit"></i> Modifier
+              </a>
+              {% if t.nb_projets == 0 %}
+              <a href="{% url 'ui_type_projet_delete' t.pk %}" class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);">
+                <i class="fas fa-trash-alt"></i>
+              </a>
+              {% else %}
+              <span class="btn btn-ghost" style="padding:6px 12px;font-size:12px;opacity:0.4;cursor:not-allowed;" title="Impossible : des projets sont rattachés">
+                <i class="fas fa-lock"></i>
+              </span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;">🏷️</div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucun type de projet</div>
+            <div style="font-size:12px;margin-bottom:18px;">Créez votre premier type pour classifier vos projets.</div>
+            <a href="{% url 'ui_type_projet_create' %}" class="btn btn-primary" style="font-size:13px;">
+              <i class="fas fa-plus"></i> Créer un type
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "lamane/base.html" %}
+{% block title %}Confirmation de suppression{% endblock %}
+{% block page_title %}Supprimer{% endblock %}
+{% block page_sub %}Confirmation requise{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{{ back_url }}" class="btn btn-ghost">
+    <i class="fas fa-arrow-left"></i> Retour
+  </a>
+</div>
+
+<div class="card animate-fade-up" style="max-width:560px;margin:0 auto;">
+  <div style="text-align:center;padding:16px 0 24px;">
+    <div style="width:72px;height:72px;background:rgba(255,71,87,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;border:2px solid rgba(255,71,87,0.3);">
+      <i class="fas fa-trash-alt" style="font-size:28px;color:var(--red);"></i>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:10px;">Confirmer la suppression</h2>
+    <p style="color:var(--text-secondary);font-size:14px;max-width:380px;margin:0 auto;">
+      Vous êtes sur le point de supprimer définitivement&nbsp;:
+    </p>
+    <div style="margin:16px auto;padding:12px 20px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);border-radius:10px;font-weight:600;font-size:15px;color:var(--red);max-width:380px;">
+      {{ titre }}
+    </div>
+    <p style="color:var(--text-muted);font-size:12px;">Cette action est irréversible.</p>
+  </div>
+
+  <div style="border-top:1px solid var(--border-light);padding-top:20px;display:flex;gap:12px;justify-content:center;">
+    <a href="{{ back_url }}" class="btn btn-ghost" style="min-width:130px;">
+      <i class="fas fa-times"></i> Annuler
+    </a>
+    <form method="post" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn" style="min-width:160px;background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.35);color:var(--red);">
+        <i class="fas fa-trash-alt"></i> Supprimer définitivement
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

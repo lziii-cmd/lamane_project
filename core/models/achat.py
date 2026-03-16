@@ -72,3 +72,98 @@ class Achat(models.Model):
         super().save(*args, **kwargs)  # save to create ID
         self.calcul_totaux()
         super().save(*args, **kwargs)
+
+    def generate_bon_entree_pdf(self):
+        """Génère le bon d'entrée matériaux (appelé après création des lignes)."""
+        try:
+            from io import BytesIO
+            from django.core.files.base import ContentFile
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib import colors
+            from reportlab.lib.units import cm
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.enums import TA_RIGHT, TA_CENTER
+        except ImportError:
+            return
+
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4,
+            leftMargin=2*cm, rightMargin=2*cm,
+            topMargin=1.5*cm, bottomMargin=2*cm)
+        S = getSampleStyleSheet()
+        P = S["BodyText"]; P.fontSize = 10
+        right = ParagraphStyle("right", parent=P, alignment=TA_RIGHT)
+        head  = ParagraphStyle("head", parent=S["Heading2"],
+                                textColor=colors.HexColor("#2f6f8f"), spaceAfter=8)
+        center = ParagraphStyle("center", parent=P, alignment=TA_CENTER)
+
+        header = Table(
+            [[Paragraph("<b><font color='white' size=14>BON D'ENTRÉE MATÉRIAUX</font></b>", right)]],
+            colWidths=[16*cm]
+        )
+        header.setStyle(TableStyle([
+            ("BACKGROUND", (0,0),(-1,-1), colors.HexColor("#1a7a4a")),
+            ("VALIGN", (0,0),(-1,-1), "MIDDLE"),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 14),
+            ("TOPPADDING",(0,0),(-1,-1), 14),
+        ]))
+
+        fournisseur_nom = "—"
+        if self.fournisseur:
+            fournisseur_nom = (self.fournisseur.entreprise
+                               if self.fournisseur.est_moral
+                               else f"{self.fournisseur.prenom} {self.fournisseur.nom}").strip()
+
+        infos = Table([
+            [Paragraph(f"<b>Référence :</b> BE-{self.date_achat.strftime('%Y%m%d')}-{str(self.id)[:6].upper()}", P),
+             Paragraph(f"<b>Date :</b> {self.date_achat.strftime('%d/%m/%Y')}", right)],
+            [Paragraph(f"<b>Projet :</b> {self.projet.nom}", P),
+             Paragraph(f"<b>Fournisseur :</b> {fournisseur_nom}", right)],
+            [Paragraph(f"<b>N° Facture :</b> {self.numero_facture or '—'}", P),
+             Paragraph(f"<b>Mode paiement :</b> {self.mode_paiement}", right)],
+        ], colWidths=[8*cm, 8*cm])
+        infos.setStyle(TableStyle([
+            ("LINEBELOW", (0,0),(-1,-1), 0.5, colors.HexColor("#e5e7eb")),
+            ("TOPPADDING", (0,0),(-1,-1), 6),
+            ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+        ]))
+
+        rows = [["Matériau", "Unité", "Qté", "P.U. HT (XOF)", "Total HT (XOF)"]]
+        for lg in self.lignes.select_related("materiel").all():
+            rows.append([
+                lg.materiel.nom,
+                lg.materiel.unite or "—",
+                str(lg.quantite),
+                f"{float(lg.prix_unitaire):,.0f}".replace(",", " "),
+                f"{float(lg.total_ligne):,.0f}".replace(",", " "),
+            ])
+        rows.append(["", "", "", "Total HT",
+                     f"{float(self.total_ht):,.0f}".replace(",", " ")])
+        if self.tva_active:
+            rows.append(["", "", "", "TVA 18%",
+                         f"{float(self.total_tva):,.0f}".replace(",", " ")])
+        rows.append(["", "", "", "TOTAL TTC",
+                     f"{float(self.total_ttc):,.0f}".replace(",", " ")])
+
+        table = Table(rows, colWidths=[5*cm, 2.5*cm, 2.5*cm, 3*cm, 3*cm])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0,0),(-1,0), colors.HexColor("#e9f2f7")),
+            ("TEXTCOLOR", (0,0),(-1,0), colors.HexColor("#1a7a4a")),
+            ("FONTNAME", (0,0),(-1,0), "Helvetica-Bold"),
+            ("GRID", (0,0),(-1,-len(rows)+len(rows)-3), 0.5, colors.HexColor("#e5e7eb")),
+            ("ROWBACKGROUNDS", (0,1),(-1,-4), [colors.whitesmoke, colors.white]),
+            ("FONTNAME", (3,-1),(-1,-1), "Helvetica-Bold"),
+            ("BACKGROUND", (3,-1),(-1,-1), colors.HexColor("#e9f7ee")),
+            ("ALIGN", (2,0),(-1,-1), "RIGHT"),
+            ("TOPPADDING", (0,0),(-1,-1), 6),
+            ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+        ]))
+
+        story = [header, Spacer(1,12), infos, Spacer(1,16),
+                 Paragraph("<b>Matériaux reçus</b>", head), table]
+        doc.build(story)
+
+        fname = f"bon_entree_{self.date_achat.strftime('%Y%m%d')}_{str(self.id)[:8]}.pdf"
+        self.bon_entree_pdf.save(fname, ContentFile(buf.getvalue()), save=False)
+        buf.close()

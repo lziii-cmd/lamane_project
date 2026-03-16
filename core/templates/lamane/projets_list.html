@@ -10,7 +10,7 @@
   <div style="font-size:13px;color:var(--text-muted);">
     <i class="fas fa-building text-gold"></i> {{ nb_resultats }} résultat{{ nb_resultats|pluralize }} affiché{{ nb_resultats|pluralize }}
   </div>
-  <a href="/admin/core/projet/add/" class="btn btn-primary">
+  <a href="{% url 'ui_projet_create' %}" class="btn btn-primary">
     <i class="fas fa-plus"></i> Nouveau projet
   </a>
 </div>

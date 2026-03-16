@@ -1,0 +1,312 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if obj %}Modification d'un achat{% else %}Nouvel achat de matériaux{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-input,.form-select,.form-textarea{width:100%;background:rgba(255,255,255,0.06);border:1.5px solid var(--border-light);border-radius:10px;padding:11px 14px;color:var(--text-primary);font-size:14px;font-family:inherit;transition:border-color 0.2s,background 0.2s;outline:none;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);background:rgba(240,165,0,0.06);}
+.form-select option{background:#1a2540;color:#f0f4ff;}
+.form-file{width:100%;padding:6px 0;color:var(--text-muted);font-size:13px;}
+.form-checkbox{width:18px;height:18px;accent-color:var(--gold);cursor:pointer;}
+.form-group{margin-bottom:18px;}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;}
+.form-label .required{color:#ff5050;margin-left:3px;}
+.form-help{font-size:11px;color:var(--text-muted);margin-top:4px;}
+.field-error{font-size:11px;color:#ff5050;margin-top:4px;display:block;}
+.form-section{background:rgba(255,255,255,0.02);border:1px solid var(--border-light);border-radius:12px;padding:20px;margin-bottom:20px;}
+.form-section-title{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:768px){.form-grid-2,.form-grid-3{grid-template-columns:1fr;}}
+
+/* Formset lignes */
+.lignes-table{width:100%;border-collapse:collapse;}
+.lignes-table th{padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);}
+.lignes-table td{padding:6px 8px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
+.lignes-table tr.hidden-row{display:none;}
+.delete-row-btn{background:rgba(255,71,87,0.1);border:none;color:var(--red);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:13px;transition:background 0.2s;}
+.delete-row-btn:hover{background:rgba(255,71,87,0.25);}
+.add-row-btn{background:rgba(0,196,140,0.1);border:1px dashed rgba(0,196,140,0.3);color:var(--green);border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;width:100%;margin-top:10px;transition:all 0.2s;}
+.add-row-btn:hover{background:rgba(0,196,140,0.18);}
+.total-live{font-size:13px;color:var(--text-secondary);}
+#totalHT,#totalTTC{font-weight:700;color:var(--gold);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{{ back_url }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour</a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate class="animate-fade-up" id="achatForm">
+{% csrf_token %}
+{{ formset.management_form }}
+
+<div class="card" style="max-width:960px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-shopping-cart text-gold"></i> {{ title }}</div>
+    <div class="total-live">
+      Total HT&nbsp;: <span id="totalHT">0</span> XOF &nbsp;|&nbsp;
+      Total TTC&nbsp;: <span id="totalTTC">0</span> XOF
+    </div>
+  </div>
+
+  {% if form.non_field_errors %}
+  <div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <!-- Section 1 : Informations générales -->
+  <div class="form-section">
+    <div class="form-section-title"><i class="fas fa-info-circle"></i> Informations générales</div>
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date_achat.id_for_label }}">
+          {{ form.date_achat.label }}<span class="required">*</span>
+        </label>
+        {{ form.date_achat }}
+        {% for e in form.date_achat.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.projet.id_for_label }}">
+          {{ form.projet.label }}<span class="required">*</span>
+        </label>
+        {{ form.projet }}
+        {% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.fournisseur.id_for_label }}">{{ form.fournisseur.label }}</label>
+        {{ form.fournisseur }}
+        {% for e in form.fournisseur.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.mode_paiement.id_for_label }}">
+          {{ form.mode_paiement.label }}<span class="required">*</span>
+        </label>
+        {{ form.mode_paiement }}
+        {% for e in form.mode_paiement.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.numero_facture.id_for_label }}">{{ form.numero_facture.label }}</label>
+        {{ form.numero_facture }}
+        {% for e in form.numero_facture.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.fichier_facture.id_for_label }}">{{ form.fichier_facture.label }}</label>
+        {{ form.fichier_facture }}
+        {% for e in form.fichier_facture.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        {% if obj.fichier_facture %}
+        <p class="form-help"><i class="fas fa-file-pdf" style="color:var(--red);"></i>
+          <a href="{{ obj.fichier_facture.url }}" target="_blank" style="color:var(--gold);">Facture actuelle</a>
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+      {{ form.tva_active }}
+      <label for="{{ form.tva_active.id_for_label }}" style="font-size:14px;cursor:pointer;">
+        Appliquer la TVA (18%)
+      </label>
+      {% for e in form.tva_active.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+    </div>
+  </div>
+
+  <!-- Section 2 : Lignes d'achat -->
+  <div class="form-section">
+    <div class="form-section-title"><i class="fas fa-list-ul"></i> Matériaux achetés</div>
+    {% if formset.non_form_errors %}
+    <div style="padding:10px;background:rgba(255,80,80,0.1);border-radius:8px;color:#ff5050;margin-bottom:12px;">{{ formset.non_form_errors }}</div>
+    {% endif %}
+
+    <div style="overflow-x:auto;">
+      <table class="lignes-table" id="lignesTable">
+        <thead>
+          <tr>
+            <th style="width:35%;">Matériau</th>
+            <th style="width:18%;">Quantité</th>
+            <th style="width:22%;">Prix unitaire (XOF)</th>
+            <th style="width:17%;">Commentaire</th>
+            <th style="width:8%;"></th>
+          </tr>
+        </thead>
+        <tbody id="lignesBody">
+          {% for ligne_form in formset %}
+          <tr class="ligne-row {% if ligne_form.instance.pk and ligne_form.DELETE.value %}hidden-row{% endif %}" data-index="{{ forloop.counter0 }}">
+            <td>
+              {{ ligne_form.materiel }}
+              {% for e in ligne_form.materiel.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+              {{ ligne_form.id }}
+            </td>
+            <td>
+              <input type="number" name="{{ ligne_form.quantite.html_name }}" value="{{ ligne_form.quantite.value|default:'' }}" class="form-input ligne-qty" min="0" step="0.001" style="text-align:right;" placeholder="0">
+              {% for e in ligne_form.quantite.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+            </td>
+            <td>
+              <input type="number" name="{{ ligne_form.prix_unitaire.html_name }}" value="{{ ligne_form.prix_unitaire.value|default:'' }}" class="form-input ligne-pu" min="0" step="1" style="text-align:right;" placeholder="0">
+              {% for e in ligne_form.prix_unitaire.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+            </td>
+            <td><input type="text" name="{{ ligne_form.commentaire.html_name }}" value="{{ ligne_form.commentaire.value|default:'' }}" class="form-input" placeholder="Optionnel"></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:6px;">
+                {% if ligne_form.DELETE %}
+                <input type="checkbox" name="{{ ligne_form.DELETE.html_name }}" id="{{ ligne_form.DELETE.id_for_label }}" style="display:none;" class="delete-checkbox">
+                {% endif %}
+                <button type="button" class="delete-row-btn" onclick="deleteRow(this)"><i class="fas fa-times"></i></button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button type="button" class="add-row-btn" id="addRowBtn" onclick="addRow()">
+      <i class="fas fa-plus-circle"></i> Ajouter une ligne de matériau
+    </button>
+
+    <!-- Totaux -->
+    <div style="margin-top:16px;padding:12px 16px;background:rgba(240,165,0,0.06);border:1px solid rgba(240,165,0,0.2);border-radius:10px;display:flex;gap:24px;flex-wrap:wrap;justify-content:flex-end;">
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Total HT</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);" id="totalHTBottom">0 XOF</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">TVA (18%)</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-secondary);" id="totalTVA">0 XOF</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Total TTC</div>
+        <div style="font-size:22px;font-weight:800;color:var(--gold);" id="totalTTCBottom">0 XOF</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3" style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-light);">
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-save"></i> {{ action }}
+    </button>
+    <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+    {% if not obj %}
+    <div style="margin-left:auto;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+      <i class="fas fa-file-pdf" style="color:var(--red);"></i>
+      Un bon d'entrée PDF sera généré automatiquement
+    </div>
+    {% endif %}
+  </div>
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TVA_RATE = 0.18;
+const TOTAL_FORMS = document.getElementById('id_lignes-TOTAL_FORMS');
+let formCount = parseInt(TOTAL_FORMS.value);
+const maxForms = parseInt(document.getElementById('id_lignes-MAX_NUM_FORMS').value) || 1000;
+
+// Template d'une ligne vide (on récupère la structure depuis la première ligne)
+function getEmptyRow(idx) {
+  return `<tr class="ligne-row" data-index="${idx}">
+    <td>
+      <select name="lignes-${idx}-materiel" id="id_lignes-${idx}-materiel" class="form-input form-select">
+        <option value="">-- Choisir un matériau --</option>
+        {% for mat in form.fields %}{% endfor %}
+      </select>
+      <input type="hidden" name="lignes-${idx}-id" id="id_lignes-${idx}-id">
+    </td>
+    <td><input type="number" name="lignes-${idx}-quantite" class="form-input ligne-qty" min="0" step="0.001" style="text-align:right;" placeholder="0"></td>
+    <td><input type="number" name="lignes-${idx}-prix_unitaire" class="form-input ligne-pu" min="0" step="1" style="text-align:right;" placeholder="0"></td>
+    <td><input type="text" name="lignes-${idx}-commentaire" class="form-input" placeholder="Optionnel"></td>
+    <td><button type="button" class="delete-row-btn" onclick="deleteRow(this)"><i class="fas fa-times"></i></button></td>
+  </tr>`;
+}
+
+// Pour la dynamique on clone la première ligne vide
+function addRow() {
+  if (formCount >= maxForms) return;
+  const body = document.getElementById('lignesBody');
+  // Clone the first row's structure
+  const firstRow = body.querySelector('.ligne-row');
+  if (!firstRow) return;
+  const newRow = firstRow.cloneNode(true);
+  newRow.dataset.index = formCount;
+  // Reset all inputs/selects
+  newRow.querySelectorAll('input[type="text"],input[type="number"]').forEach(el => {
+    const name = el.name.replace(/lignes-\d+-/, `lignes-${formCount}-`);
+    el.name = name;
+    el.id = 'id_' + name;
+    el.value = '';
+  });
+  newRow.querySelectorAll('select').forEach(el => {
+    const name = el.name.replace(/lignes-\d+-/, `lignes-${formCount}-`);
+    el.name = name;
+    el.id = 'id_' + name;
+    el.selectedIndex = 0;
+  });
+  newRow.querySelectorAll('input[type="hidden"]').forEach(el => {
+    const name = el.name.replace(/lignes-\d+-/, `lignes-${formCount}-`);
+    el.name = name;
+    el.id = 'id_' + name;
+    el.value = '';
+  });
+  newRow.querySelectorAll('.delete-checkbox').forEach(el => el.checked = false);
+  body.appendChild(newRow);
+  formCount++;
+  TOTAL_FORMS.value = formCount;
+  recalcTotals();
+}
+
+function deleteRow(btn) {
+  const row = btn.closest('tr');
+  const cb = row.querySelector('.delete-checkbox');
+  if (cb) {
+    cb.checked = true;
+    row.style.opacity = '0.35';
+    row.style.pointerEvents = 'none';
+    // Visual strike-through
+    row.querySelectorAll('input,select').forEach(el => el.disabled = true);
+  } else {
+    row.remove();
+  }
+  recalcTotals();
+}
+
+function recalcTotals() {
+  const tvaCb = document.getElementById('{{ form.tva_active.id_for_label }}');
+  const tvaActive = tvaCb ? tvaCb.checked : false;
+  let ht = 0;
+  document.querySelectorAll('#lignesBody .ligne-row').forEach(row => {
+    if (row.style.opacity === '0.35') return;
+    const qty = parseFloat(row.querySelector('.ligne-qty')?.value) || 0;
+    const pu  = parseFloat(row.querySelector('.ligne-pu')?.value) || 0;
+    ht += qty * pu;
+  });
+  const tva = tvaActive ? ht * TVA_RATE : 0;
+  const ttc = ht + tva;
+  const fmt = v => v.toLocaleString('fr-SN', {minimumFractionDigits:0, maximumFractionDigits:0});
+  document.getElementById('totalHT').textContent    = fmt(ht);
+  document.getElementById('totalTTC').textContent   = fmt(ttc);
+  document.getElementById('totalHTBottom').textContent = fmt(ht) + ' XOF';
+  document.getElementById('totalTVA').textContent   = fmt(tva) + ' XOF';
+  document.getElementById('totalTTCBottom').textContent = fmt(ttc) + ' XOF';
+}
+
+// Listeners dynamiques
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('ligne-qty') || e.target.classList.contains('ligne-pu')) recalcTotals();
+});
+const tvaCb = document.getElementById('{{ form.tva_active.id_for_label }}');
+if (tvaCb) tvaCb.addEventListener('change', recalcTotals);
+recalcTotals();
+</script>
+{% endblock %}

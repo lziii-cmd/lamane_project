@@ -14,7 +14,13 @@
     <a href="{% url 'ui_projet_detail' projet.id %}" class="btn btn-ghost">
       <i class="fas fa-folder-open"></i> Voir le projet
     </a>
-    <button class="btn btn-primary" onclick="window.print()">
+    <a href="{% url 'ui_avancement_create' %}?projet={{ projet.id }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Nouveau relevé d'avancement
+    </a>
+    <a href="{% url 'ui_projet_edit' projet.id %}" class="btn btn-ghost">
+      <i class="fas fa-edit"></i> Modifier le projet
+    </a>
+    <button class="btn btn-ghost" onclick="window.print()">
       <i class="fas fa-print"></i> Imprimer
     </button>
   </div>

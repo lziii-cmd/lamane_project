@@ -1,0 +1,226 @@
+{% extends "lamane/base.html" %}
+{% block title %}Bilans financiers{% endblock %}
+{% block page_title %}Bilans financiers{% endblock %}
+{% block page_sub %}{{ nb_projets }} projet{{ nb_projets|pluralize }} analysé{{ nb_projets|pluralize }} — {% if nb_alertes %}⚠️ {{ nb_alertes }} alerte{{ nb_alertes|pluralize }} budget{% else %}✅ Aucune alerte{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- KPIs globaux -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hand-holding-usd"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{{ total_versements_fmt }}</div>
+    <div class="kpi-label">Versements reçus (XOF)</div>
+    <div class="kpi-trend trend-up"><i class="fas fa-arrow-up"></i> Entrées clients</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--red);--icon-bg:rgba(255,71,87,0.12);">
+    <div class="kpi-icon"><i class="fas fa-shopping-cart"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{{ total_achats_ttc_fmt }}</div>
+    <div class="kpi-label">Achats TTC (XOF)</div>
+    <div class="kpi-trend trend-down"><i class="fas fa-arrow-down"></i> Sorties opérationnelles</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:{% if solde_positif %}var(--green){% else %}var(--red){% endif %};--icon-bg:{% if solde_positif %}rgba(0,196,140,0.12){% else %}rgba(255,71,87,0.12){% endif %};">
+    <div class="kpi-icon"><i class="fas fa-balance-scale"></i></div>
+    <div class="kpi-value" style="font-size:16px;color:{% if solde_positif %}var(--green){% else %}var(--red){% endif %};">
+      {% if not solde_positif %}-{% endif %}{{ solde_global }}
+    </div>
+    <div class="kpi-label">Solde net (XOF)</div>
+    <div class="kpi-trend {% if solde_positif %}trend-up{% else %}trend-down{% endif %}">
+      <i class="fas fa-{% if solde_positif %}smile{% else %}frown{% endif %}"></i>
+      {% if solde_positif %}Marge positive{% else %}Déficit{% endif %}
+    </div>
+  </div>
+  <div class="kpi-card" style="--accent-color:{% if nb_alertes %}var(--orange){% else %}var(--blue){% endif %};--icon-bg:{% if nb_alertes %}rgba(255,121,63,0.12){% else %}rgba(30,111,255,0.12){% endif %};">
+    <div class="kpi-icon"><i class="fas fa-{% if nb_alertes %}exclamation-triangle{% else %}shield-alt{% endif %}"></i></div>
+    <div class="kpi-value">{{ nb_alertes }}</div>
+    <div class="kpi-label">Alerte{{ nb_alertes|pluralize }} budget</div>
+    <div class="kpi-trend" style="color:var(--text-muted);">Projets > 90% budget</div>
+  </div>
+</div>
+
+<!-- Alertes budget -->
+{% if alertes %}
+<div class="card mb-6 animate-fade-up" style="border-color:rgba(255,121,63,0.3);background:rgba(255,121,63,0.04);">
+  <div class="card-header">
+    <div class="card-title" style="color:var(--orange);"><i class="fas fa-exclamation-triangle"></i> Alertes budget</div>
+    <span class="badge badge-orange">{{ alertes|length }} projet{{ alertes|length|pluralize }}</span>
+  </div>
+  <div style="display:grid;gap:10px;">
+    {% for d in alertes %}
+    <div style="padding:12px 16px;background:rgba(255,121,63,0.06);border:1px solid rgba(255,121,63,0.2);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <a href="{% url 'ui_projet_detail' d.projet.id %}" style="font-weight:700;font-size:14px;color:var(--text-primary);text-decoration:none;">
+          {{ d.projet.nom }}
+        </a>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+          Budget : {{ d.budget_fmt }} XOF — Achats : {{ d.achats_ttc_fmt }} XOF
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:120px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">{{ d.taux_budget }}% du budget</div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:{{ d.taux_budget }}%;background:{% if d.taux_budget > 100 %}var(--red){% else %}var(--orange){% endif %};"></div>
+          </div>
+        </div>
+        <span class="badge badge-orange">{{ d.taux_budget }}%</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Charts -->
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px;" class="animate-fade-up delay-1">
+  <!-- Trésorerie -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-chart-area text-gold"></i> Trésorerie cumulée — 12 mois</div>
+    </div>
+    <div style="position:relative;height:240px;">
+      <canvas id="chartTresorerie"></canvas>
+    </div>
+  </div>
+  <!-- Top 5 projets -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-medal text-gold"></i> Top 5 projets (achats)</div>
+    </div>
+    <div style="position:relative;height:240px;">
+      <canvas id="chartTop5"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- P&L par projet -->
+<div class="card animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-table text-gold"></i> P&L par projet</div>
+    <span class="badge badge-yellow">{{ nb_projets }} projet{{ nb_projets|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Projet</th>
+          <th>Statut</th>
+          <th style="text-align:right;">Versements (XOF)</th>
+          <th style="text-align:right;">Achats HT (XOF)</th>
+          <th style="text-align:right;">Achats TTC (XOF)</th>
+          <th style="text-align:right;">Marge brute</th>
+          <th>Budget vs Réel</th>
+          <th style="text-align:right;">Retenue gar.</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in pl_data %}
+        <tr style="{% if d.alerte_budget %}background:rgba(255,121,63,0.04);{% endif %}">
+          <td>
+            <a href="{% url 'ui_projet_detail' d.projet.id %}" style="font-weight:600;font-size:13px;color:var(--text-primary);text-decoration:none;">
+              {{ d.projet.nom|truncatechars:28 }}
+            </a>
+            {% if d.alerte_budget %}
+            <span style="font-size:10px;color:var(--orange);display:block;margin-top:2px;"><i class="fas fa-exclamation-triangle"></i> Alerte budget</span>
+            {% endif %}
+          </td>
+          <td>
+            {% with s=d.projet.statut %}
+            <span class="badge {% if s == 'En cours' %}badge-blue{% elif s == 'Terminé' %}badge-green{% elif s == 'En pause' %}badge-orange{% else %}badge-yellow{% endif %} text-xs">{{ s }}</span>
+            {% endwith %}
+          </td>
+          <td style="text-align:right;color:var(--green);font-weight:600;">{{ d.versements_fmt }}</td>
+          <td style="text-align:right;color:var(--text-secondary);">{{ d.achats_ht_fmt }}</td>
+          <td style="text-align:right;color:var(--red);font-weight:600;">{{ d.achats_ttc_fmt }}</td>
+          <td style="text-align:right;">
+            <span style="font-weight:700;color:{% if d.marge_positive %}var(--green){% else %}var(--red){% endif %};">
+              {% if not d.marge_positive %}-{% endif %}{{ d.marge_fmt }}
+            </span>
+          </td>
+          <td style="min-width:120px;">
+            {% if d.budget > 0 %}
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">{{ d.taux_budget }}% / {{ d.budget_fmt }}</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" style="width:{{ d.taux_budget|default:0 }}%;{% if d.taux_budget > 100 %}background:var(--red);{% elif d.taux_budget > 90 %}background:var(--orange);{% endif %}"></div>
+            </div>
+            {% else %}
+            <span style="font-size:12px;color:var(--text-muted);">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;font-size:12px;color:var(--text-muted);">{{ d.retenue }}</td>
+          <td>
+            <a href="{% url 'ui_projet_detail' d.projet.id %}" class="btn btn-ghost" style="padding:4px 10px;font-size:11px;">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);">Aucun projet trouvé.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const labels12  = {{ monthly_labels_json|safe }};
+const entrees12 = {{ monthly_entrees_json|safe }};
+const sorties12 = {{ monthly_sorties_json|safe }};
+const solde12   = {{ monthly_solde_json|safe }};
+const top5Labels = {{ top5_labels_json|safe }};
+const top5Values = {{ top5_values_json|safe }};
+
+// Graphique trésorerie
+new Chart(document.getElementById('chartTresorerie'), {
+  type: 'bar',
+  data: {
+    labels: labels12,
+    datasets: [
+      {label:'Versements', data: entrees12, backgroundColor:'rgba(0,196,140,0.5)', borderColor:'#00c48c', borderWidth:1.5, borderRadius:4},
+      {label:'Achats TTC', data: sorties12, backgroundColor:'rgba(255,71,87,0.5)', borderColor:'#ff4757', borderWidth:1.5, borderRadius:4},
+      {label:'Solde cumulé', data: solde12, type:'line', borderColor:'#f0a500', backgroundColor:'rgba(240,165,0,0.08)', borderWidth:2, pointRadius:3, tension:0.4, yAxisID:'y2'}
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index', intersect:false},
+    scales:{
+      x:{ticks:{color:'rgba(240,244,255,0.4)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},
+      y:{ticks:{color:'rgba(240,244,255,0.4)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},
+         title:{display:true,text:'Montant (XOF)',color:'rgba(240,244,255,0.3)',font:{size:10}}},
+      y2:{position:'right',ticks:{color:'rgba(240,165,0,0.6)',font:{size:10}},grid:{display:false}}
+    },
+    plugins:{
+      legend:{labels:{color:'rgba(240,244,255,0.6)',font:{size:11},padding:12}},
+      tooltip:{callbacks:{label:ctx => ctx.dataset.label+': '+ctx.parsed.y.toLocaleString()+' XOF'}}
+    }
+  }
+});
+
+// Top 5 projets
+if (top5Labels.length) {
+  new Chart(document.getElementById('chartTop5'), {
+    type: 'doughnut',
+    data: {
+      labels: top5Labels,
+      datasets: [{
+        data: top5Values,
+        backgroundColor:['#f0a500','#1e6fff','#00c48c','#a55eea','#ff6b6b'],
+        borderColor:'#0f1629', borderWidth:3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'55%',
+      plugins:{
+        legend:{position:'bottom', labels:{color:'rgba(240,244,255,0.6)',font:{size:10},padding:8,boxWidth:10}},
+        tooltip:{callbacks:{label:ctx => ctx.label+': '+ctx.parsed.toLocaleString()+' XOF'}}
+      }
+    }
+  });
+}
+</script>
+{% endblock %}
