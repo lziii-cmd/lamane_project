@@ -1,0 +1,23 @@
+{% extends "admin/change_list.html" %}
+
+{% block content %}
+  {{ block.super }}
+
+  {% if summary %}
+    <div class="module" style="margin-top: 20px;">
+      <h2>Récapitulatif des Achats Filtrés</h2>
+      <table>
+        <tr>
+          <th style="padding: 5px 15px;">Total HT</th>
+          <th style="padding: 5px 15px;">Total TVA</th>
+          <th style="padding: 5px 15px;">Total TTC</th>
+        </tr>
+        <tr>
+          <td style="padding: 5px 15px;">{{ summary.total_ht|floatformat:0 }} FCFA</td>
+          <td style="padding: 5px 15px;">{{ summary.total_tva|floatformat:0 }} FCFA</td>
+          <td style="padding: 5px 15px;">{{ summary.total_ttc|floatformat:0 }} FCFA</td>
+        </tr>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}

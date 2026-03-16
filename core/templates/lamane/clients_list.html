@@ -1,0 +1,139 @@
+{% extends "lamane/base.html" %}
+{% block title %}Clients{% endblock %}
+{% block page_title %}Clients / Propriétaires{% endblock %}
+{% block page_sub %}{{ nb_resultats }} client{{ nb_resultats|pluralize }} — {{ total_clients }} au total{% endblock %}
+
+{% block content %}
+
+<!-- Filtres -->
+<form method="get" class="filters-bar mb-6 animate-fade-up">
+  <input type="text" name="q" id="searchInput" value="{{ q }}" placeholder="🔍 Rechercher un client…" class="filter-input" style="min-width:280px;">
+  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+  {% if q %}
+  <a href="{% url 'ui_clients' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
+  {% endif %}
+</form>
+
+<!-- Grille clients -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;" class="animate-fade-up delay-1" id="clientsGrid">
+
+{% for d in clients_data %}
+{% with c=d.client %}
+<div class="card client-card" style="transition:transform 0.2s,border-color 0.2s;" data-search="{{ c.entreprise|lower }} {{ c.nom|lower }} {{ c.prenom|lower }} {{ c.telephone|lower }}"
+  onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(240,165,0,0.3)'"
+  onmouseout="this.style.transform='';this.style.borderColor=''">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 mb-4">
+    <div class="avatar-circle" style="width:46px;height:46px;font-size:17px;
+      background:{% if c.est_moral %}rgba(30,111,255,0.15){% else %}rgba(0,196,140,0.15){% endif %};
+      color:{% if c.est_moral %}var(--blue-light){% else %}var(--green){% endif %};">
+      {% if c.est_moral %}<i class="fas fa-building"></i>{% else %}<i class="fas fa-user"></i>{% endif %}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        {% if c.est_moral %}{{ c.entreprise|default:"—" }}
+        {% else %}{{ c.prenom }} {{ c.nom }}{% endif %}
+      </div>
+      <div class="text-xs text-muted">
+        {% if c.est_moral %}
+          <span class="badge badge-blue" style="font-size:9px;padding:2px 7px;margin-top:2px;">Entreprise</span>
+        {% else %}
+          <span class="badge badge-green" style="font-size:9px;padding:2px 7px;margin-top:2px;">Particulier</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Infos contact -->
+  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+    {% if c.telephone %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-phone text-xs text-muted"></i>
+      <span style="font-size:12px;">{{ c.telephone }}</span>
+    </div>
+    {% endif %}
+    {% if c.email %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-envelope text-xs text-muted"></i>
+      <span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c.email }}</span>
+    </div>
+    {% endif %}
+    {% if c.adresse %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-map-marker-alt text-xs text-muted"></i>
+      <span style="font-size:12px;">{{ c.adresse|truncatechars:35 }}</span>
+    </div>
+    {% endif %}
+    {% if c.ninea %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-id-card text-xs text-muted"></i>
+      <span class="text-xs text-muted">NINEA : </span>
+      <span style="font-size:12px;font-weight:600;">{{ c.ninea }}</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Stats projets -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--border-light);padding-top:12px;margin-bottom:12px;">
+    <div style="text-align:center;">
+      <div class="text-xs text-muted">Projets</div>
+      <div style="font-size:22px;font-weight:700;color:var(--blue-light);">{{ d.nb_projets }}</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="text-xs text-muted">Achats TTC</div>
+      <div style="font-size:13px;font-weight:700;color:var(--gold);">{{ d.total_achats_fmt }}</div>
+      <div class="text-xs text-muted">XOF</div>
+    </div>
+  </div>
+
+  <!-- Derniers projets -->
+  {% if d.derniers_projets %}
+  <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">
+    {% for p in d.derniers_projets %}
+    <a href="{% url 'ui_projet_detail' p.id %}" style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,0.03);border-radius:6px;text-decoration:none;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+      <i class="fas fa-hard-hat text-xs text-muted"></i>
+      <span style="font-size:12px;font-weight:500;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ p.nom|truncatechars:30 }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Action -->
+  <a href="{% url 'ui_client_detail' c.id %}" class="btn btn-primary" style="width:100%;text-align:center;">
+    <i class="fas fa-user-circle"></i> Voir le profil
+  </a>
+
+</div>
+{% endwith %}
+{% empty %}
+<div class="card" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+  <div style="font-size:48px;margin-bottom:16px;">👥</div>
+  <div>Aucun client trouvé</div>
+  {% if q %}<a href="{% url 'ui_clients' %}" class="btn btn-ghost" style="margin-top:16px;">Effacer la recherche</a>{% endif %}
+</div>
+{% endfor %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Live search
+const si = document.getElementById('searchInput');
+if (si) {
+  let t;
+  si.addEventListener('input', function() {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const q = this.value.toLowerCase().trim();
+      document.querySelectorAll('.client-card').forEach(card => {
+        const match = !q || card.dataset.search.includes(q);
+        card.style.display = match ? '' : 'none';
+      });
+    }, 180);
+  });
+}
+</script>
+{% endblock %}

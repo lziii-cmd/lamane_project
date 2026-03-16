@@ -1,0 +1,42 @@
+
+from core.models import Proprietaire
+from uuid import uuid4
+import random
+
+# 📦 Données personnes physiques - Hommes
+Proprietaire.objects.create(prenom="Mamadou", nom="Diop", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000001", email="mamadou.diop@example.com", adresse="Parcelles Assainies")
+Proprietaire.objects.create(prenom="Cheikh", nom="Ndiaye", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000002", email="cheikh.ndiaye@example.com", adresse="Guédiawaye")
+Proprietaire.objects.create(prenom="El Hadji", nom="Sow", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000003", email="elhadji.sow@example.com", adresse="Pikine")
+Proprietaire.objects.create(prenom="Ibrahima", nom="Ba", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000004", email="ibrahima.ba@example.com", adresse="Mermoz")
+Proprietaire.objects.create(prenom="Amadou", nom="Kane", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000005", email="amadou.kane@example.com", adresse="Yoff")
+Proprietaire.objects.create(prenom="Aliou", nom="Fall", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000006", email="aliou.fall@example.com", adresse="HLM Grand-Yoff")
+Proprietaire.objects.create(prenom="Boubacar", nom="Sy", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000007", email="boubacar.sy@example.com", adresse="Rufisque")
+Proprietaire.objects.create(prenom="Pape", nom="Ndoye", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000008", email="pape.ndoye@example.com", adresse="Camberène")
+Proprietaire.objects.create(prenom="Ousmane", nom="Gueye", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000009", email="ousmane.gueye@example.com", adresse="Thiaroye")
+Proprietaire.objects.create(prenom="Serigne", nom="Dia", sexe="H", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="771000010", email="serigne.dia@example.com", adresse="Dalifort")
+
+# 📦 Données personnes physiques - Femmes
+Proprietaire.objects.create(prenom="Awa", nom="Diop", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000001", email="awa.diop@example.com", adresse="Mbour")
+Proprietaire.objects.create(prenom="Fatou", nom="Sy", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000002", email="fatou.sy@example.com", adresse="Thiès")
+Proprietaire.objects.create(prenom="Khady", nom="Ba", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000003", email="khady.ba@example.com", adresse="Keur Massar")
+Proprietaire.objects.create(prenom="Astou", nom="Sarr", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000004", email="astou.sarr@example.com", adresse="Ouakam")
+Proprietaire.objects.create(prenom="Ndeye", nom="Fall", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000005", email="ndeye.fall@example.com", adresse="Almadies")
+Proprietaire.objects.create(prenom="Sokhna", nom="Ndoye", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000006", email="sokhna.ndoye@example.com", adresse="Point E")
+Proprietaire.objects.create(prenom="Mariama", nom="Kane", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000007", email="mariama.kane@example.com", adresse="Liberté 6")
+Proprietaire.objects.create(prenom="Yacine", nom="Gueye", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000008", email="yacine.gueye@example.com", adresse="Colobane")
+Proprietaire.objects.create(prenom="Bineta", nom="Dia", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000009", email="bineta.dia@example.com", adresse="Fass")
+Proprietaire.objects.create(prenom="Mame", nom="Faye", sexe="F", numero_identite=f"CNI-{uuid4().hex[:8]}", telephone="772000010", email="mame.faye@example.com", adresse="Cité Keur Gorgui")
+
+# 📦 Données entreprises
+Proprietaire.objects.create(est_moral=True, entreprise="Sénégale Matériaux S.A.", ninea="NINEA-1000001", telephone="773000001", email="contact@senegale-materiaux.sn", adresse="Zone industrielle - Dakar")
+Proprietaire.objects.create(est_moral=True, entreprise="BTP Services Sénégal", ninea="NINEA-1000002", telephone="773000002", email="info@btpservices.sn", adresse="Keur Massar")
+Proprietaire.objects.create(est_moral=True, entreprise="Groupe Bâ Construction", ninea="NINEA-1000003", telephone="773000003", email="contact@gbc.sn", adresse="Rufisque")
+Proprietaire.objects.create(est_moral=True, entreprise="Entreprise Touba Habitat", ninea="NINEA-1000004", telephone="773000004", email="contact@touba-habitat.sn", adresse="Touba")
+Proprietaire.objects.create(est_moral=True, entreprise="Société Africa Design", ninea="NINEA-1000005", telephone="773000005", email="contact@africadesign.sn", adresse="Dakar Plateau")
+Proprietaire.objects.create(est_moral=True, entreprise="SenBat Constructions", ninea="NINEA-1000006", telephone="773000006", email="info@senbat.sn", adresse="Thiès")
+Proprietaire.objects.create(est_moral=True, entreprise="Techno Habitat SARL", ninea="NINEA-1000007", telephone="773000007", email="contact@technohabitat.sn", adresse="Saint-Louis")
+Proprietaire.objects.create(est_moral=True, entreprise="ProLogis Sénégal", ninea="NINEA-1000008", telephone="773000008", email="support@prologis.sn", adresse="Diamniadio")
+Proprietaire.objects.create(est_moral=True, entreprise="Sen Innov SARL", ninea="NINEA-1000009", telephone="773000009", email="contact@seninnov.sn", adresse="Parc Hann")
+Proprietaire.objects.create(est_moral=True, entreprise="Batix Afrique", ninea="NINEA-1000010", telephone="773000010", email="contact@batix.sn", adresse="Keur Gorgui")
+
+print("✅ Proprietaire enregistrés avec succès.")

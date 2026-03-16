@@ -1,0 +1,143 @@
+{% extends "lamane/base.html" %}
+{% block title %}Achat — {{ achat.numero_facture|default:achat.id }}{% endblock %}
+{% block page_title %}Bon d'achat{% endblock %}
+{% block page_sub %}
+  {% if achat.numero_facture %}N° {{ achat.numero_facture }} · {% endif %}
+  {{ achat.date_achat|date:"d/m/Y" }}
+{% endblock %}
+
+{% block content %}
+
+<!-- Actions -->
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_achats' %}" class="btn btn-ghost">
+    <i class="fas fa-arrow-left"></i> Retour aux achats
+  </a>
+  <div class="flex gap-3">
+    <a href="{% url 'ui_projet_detail' achat.projet.id %}" class="btn btn-ghost">
+      <i class="fas fa-folder-open"></i> Voir le projet
+    </a>
+    <button class="btn btn-primary" onclick="window.print()">
+      <i class="fas fa-print"></i> Imprimer
+    </button>
+  </div>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up">
+
+  <!-- Entête bon d'achat -->
+  <div class="card" style="border-color:rgba(240,165,0,0.2);background:rgba(240,165,0,0.03);">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-file-invoice text-gold"></i> Détails bon d'achat</div>
+      {% if achat.tva_active %}
+      <span class="badge badge-blue text-xs">TVA active</span>
+      {% else %}
+      <span class="badge badge-yellow text-xs">Hors TVA</span>
+      {% endif %}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      {% if achat.numero_facture %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">N° Facture</span>
+        <span style="font-weight:700;color:var(--gold);">{{ achat.numero_facture }}</span>
+      </div>
+      {% endif %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Date d'achat</span>
+        <span style="font-weight:600;">{{ achat.date_achat|date:"d/m/Y" }}</span>
+      </div>
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Mode de paiement</span>
+        <span class="badge badge-{% if achat.mode_paiement == 'virement' %}blue{% elif achat.mode_paiement == 'espèces' %}green{% elif achat.mode_paiement == 'chèque' %}purple{% else %}yellow{% endif %}">
+          {{ achat.mode_paiement|default:"Non précisé" }}
+        </span>
+      </div>
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Projet</span>
+        <a href="{% url 'ui_projet_detail' achat.projet.id %}" style="color:var(--blue-light);font-weight:600;font-size:13px;">
+          {{ achat.projet.nom|truncatechars:28 }}
+        </a>
+      </div>
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Fournisseur</span>
+        <span style="font-weight:600;font-size:13px;">
+          {% if achat.fournisseur.entreprise %}{{ achat.fournisseur.entreprise }}
+          {% else %}{{ achat.fournisseur.prenom }} {{ achat.fournisseur.nom }}{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Résumé financier -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-calculator text-gold"></i> Résumé financier</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="padding:14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between items-center">
+        <span class="text-muted">Montant HT</span>
+        <span style="font-size:16px;font-weight:600;">{{ achat.total_ht|floatformat:0 }} <span class="text-xs text-muted">XOF</span></span>
+      </div>
+      <div style="padding:14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between items-center">
+        <span class="text-muted">TVA (18%)</span>
+        <span style="font-size:15px;font-weight:600;color:var(--purple);">{{ achat.total_tva|floatformat:0 }} <span class="text-xs text-muted">XOF</span></span>
+      </div>
+      <div style="padding:14px;background:rgba(240,165,0,0.1);border-radius:8px;border:1px solid rgba(240,165,0,0.2);" class="flex justify-between items-center">
+        <span style="font-weight:700;">Total TTC</span>
+        <span style="font-size:22px;font-weight:800;color:var(--gold);">{{ achat.total_ttc|floatformat:0 }} <span class="text-sm text-muted">XOF</span></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Lignes d'achat -->
+<div class="card animate-fade-up delay-1">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-boxes text-gold"></i> Lignes d'achat / Matériaux</div>
+    <span class="badge badge-purple">{{ lignes|length }} ligne{{ lignes|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Matériau / Article</th><th>Unité</th><th>Quantité</th>
+          <th>Prix unitaire (XOF)</th><th>Total HT (XOF)</th><th>Commentaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in lignes %}
+        <tr>
+          <td>
+            <div style="font-weight:600;font-size:13px;">{{ l.materiel.nom }}</div>
+            {% if l.materiel.categorie %}
+            <div class="text-xs text-muted">{{ l.materiel.categorie.nom }}</div>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ l.materiel.unite|default:"—" }}</td>
+          <td style="font-weight:700;color:var(--cyan);">{{ l.quantite }}</td>
+          <td class="amount text-sm">{{ l.prix_unitaire|floatformat:0 }}</td>
+          <td class="amount" style="color:var(--gold);font-weight:700;">{{ l.total_ligne|floatformat:0 }}</td>
+          <td class="text-xs text-muted">{{ l.commentaire|default:"—"|truncatechars:40 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">
+          <div style="font-size:28px;margin-bottom:10px;">📦</div>
+          Aucune ligne de détail
+        </td></tr>
+        {% endfor %}
+      </tbody>
+      {% if lignes %}
+      <tfoot>
+        <tr style="background:rgba(240,165,0,0.06);">
+          <td colspan="4" style="text-align:right;font-weight:700;padding:12px;">Total HT</td>
+          <td class="amount" style="color:var(--gold);font-weight:800;">{{ achat.total_ht|floatformat:0 }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,20 @@
+{# core/templates/admin/core/achat/change_list_results.html #}
+{% extends "admin/change_list_results.html" %}
+{% load humanize %}
+
+{% block result_list %}
+  {{ block.super }}
+  {% if totaux %}
+    <table class="adminlist">
+      <tfoot>
+        <tr style="font-weight: bold; background-color: #f0f0f0;">
+          <td colspan="4" style="text-align: right;">Totaux :</td>
+          <td style="text-align: right;">{{ totaux.total_ht|floatformat:0|intcomma }} FCFA</td>
+          <td style="text-align: right;">{{ totaux.total_tva|floatformat:0|intcomma }} FCFA</td>
+          <td style="text-align: right;">{{ totaux.total_ttc|floatformat:0|intcomma }} FCFA</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  {% endif %}
+{% endblock %}

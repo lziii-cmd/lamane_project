@@ -1,0 +1,195 @@
+{% extends "lamane/base.html" %}
+{% block title %}Chantiers{% endblock %}
+{% block page_title %}Suivi des chantiers{% endblock %}
+{% block page_sub %}{{ nb_chantiers }} chantier{{ nb_chantiers|pluralize }} actif{{ nb_chantiers|pluralize }} — Avancement en temps réel{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hard-hat"></i></div>
+    <div class="kpi-value">{{ nb_chantiers }}</div>
+    <div class="kpi-label">Chantiers en cours</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-tasks"></i></div>
+    <div class="kpi-value">{{ avg_physique }}%</div>
+    <div class="kpi-label">Avancement physique moyen</div>
+    <div class="progress-bar-wrap" style="margin-top:10px;">
+      <div class="progress-bar-fill" style="width:{{ avg_physique }}%;"></div>
+    </div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+    <div class="kpi-value">{{ avg_financier }}%</div>
+    <div class="kpi-label">Avancement financier moyen</div>
+    <div class="progress-bar-wrap" style="margin-top:10px;">
+      <div class="progress-bar-fill green" style="width:{{ avg_financier }}%;"></div>
+    </div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--cyan);--icon-bg:rgba(0,210,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-users"></i></div>
+    <div class="kpi-value">{{ total_ouvriers }}</div>
+    <div class="kpi-label">Ouvriers sur chantier</div>
+    <div class="kpi-trend text-muted"><i class="fas fa-user-tie"></i> {{ total_encadrement }} encadrants</div>
+  </div>
+</div>
+
+<!-- Chantiers cards -->
+<div class="flex items-center justify-between mb-4 animate-fade-up delay-1">
+  <div class="section-title">Chantiers actifs</div>
+  <a href="/admin/core/projet/add/" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouveau chantier
+  </a>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:18px;margin-bottom:28px;" class="animate-fade-up delay-1">
+{% for item in chantiers_data %}
+{% with p=item.projet av=item.dernier_avancement m=item.marche %}
+
+<div class="card" style="transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <a href="{% url 'ui_projet_detail' p.id %}" style="font-size:14px;font-weight:700;color:var(--text-primary);text-decoration:none;">
+        {{ p.nom|truncatechars:35 }}
+      </a>
+      <div class="text-xs text-muted mt-1"><i class="fas fa-map-marker-alt"></i> {{ p.localisation }}</div>
+    </div>
+    <span class="badge badge-blue"><span class="badge-dot" style="background:var(--blue-light)"></span>En cours</span>
+  </div>
+
+  <!-- Barres d'avancement -->
+  {% if av %}
+  <div style="margin-bottom:14px;">
+    <div class="flex justify-between text-xs mb-4" style="margin-bottom:5px;">
+      <span class="text-muted">Avancement physique</span>
+      <span class="text-gold font-bold">{{ av.taux_physique }}%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" style="width:{{ av.taux_physique }}%;"></div>
+    </div>
+
+    <div class="flex justify-between text-xs mt-2" style="margin-top:8px;margin-bottom:5px;">
+      <span class="text-muted">Avancement financier</span>
+      <span class="text-green font-bold">{{ av.taux_financier }}%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill green" style="width:{{ av.taux_financier }}%;"></div>
+    </div>
+
+    <div class="flex justify-between text-xs mt-2" style="margin-top:8px;margin-bottom:5px;">
+      <span class="text-muted">Avancement planifié</span>
+      <span class="text-muted">{{ av.taux_planifie }}%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill blue" style="width:{{ av.taux_planifie }}%;background:rgba(240,244,255,0.2);"></div>
+    </div>
+  </div>
+
+  <!-- Effectifs et période -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+    <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;text-align:center;">
+      <div class="text-xs text-muted">Ouvriers</div>
+      <div style="font-weight:700;color:var(--cyan);font-size:16px;">{{ av.effectif_ouvriers }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;text-align:center;">
+      <div class="text-xs text-muted">Encadrement</div>
+      <div style="font-weight:700;color:var(--purple);font-size:16px;">{{ av.effectif_encadrement }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;text-align:center;">
+      <div class="text-xs text-muted">Période</div>
+      <div style="font-weight:600;font-size:12px;color:var(--text-secondary);">{{ av.periode|date:"m/Y" }}</div>
+    </div>
+  </div>
+
+  {% if av.observations %}
+  <div style="padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid var(--gold);">
+    <p class="text-xs" style="color:var(--text-secondary);line-height:1.5;">{{ av.observations }}</p>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div style="padding:20px;text-align:center;color:var(--text-muted);">
+    <i class="fas fa-clock" style="font-size:24px;margin-bottom:8px;display:block;"></i>
+    Aucun relevé d'avancement
+  </div>
+  {% endif %}
+
+  <!-- Footer -->
+  <div class="flex items-center justify-between mt-3" style="border-top:1px solid var(--border-light);padding-top:10px;">
+    {% if m %}
+    <div class="text-xs text-muted">
+      <i class="fas fa-file-contract text-gold"></i>
+      {{ m.montant_marche|floatformat:0 }} XOF
+    </div>
+    {% endif %}
+    <div class="flex gap-2">
+      {% if item.nb_contrats_st > 0 %}
+      <span class="badge badge-orange text-xs">{{ item.nb_contrats_st }} SS-traitants</span>
+      {% endif %}
+      <a href="{% url 'ui_chantier_detail' p.id %}" class="btn btn-primary text-xs" style="padding:4px 10px;">
+        <i class="fas fa-hard-hat"></i> Chantier
+      </a>
+      <a href="{% url 'ui_projet_detail' p.id %}" class="btn btn-ghost text-xs" style="padding:4px 10px;">
+        <i class="fas fa-folder-open"></i> Projet
+      </a>
+    </div>
+  </div>
+</div>
+
+{% endwith %}
+{% empty %}
+<div class="card" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+  <div style="font-size:48px;margin-bottom:16px;">🏗️</div>
+  <div>Aucun chantier en cours</div>
+</div>
+{% endfor %}
+</div>
+
+<!-- Tableau des derniers avancements -->
+<div class="card animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-table text-gold"></i> Historique des avancements</div>
+    <span class="badge badge-yellow">{{ avancements_all|length }} relevés</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Période</th><th>Projet</th><th>Physique</th><th>Financier</th><th>Planifié</th>
+          <th>Ouvriers</th><th>Encadrement</th><th>Observations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for av in avancements_all %}
+        <tr>
+          <td class="text-muted text-sm">{{ av.periode|date:"m/Y" }}</td>
+          <td class="bold text-sm">{{ av.projet.nom|truncatechars:28 }}</td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="progress-bar-wrap" style="width:60px;"><div class="progress-bar-fill" style="width:{{ av.taux_physique }}%;"></div></div>
+              <span class="text-gold text-xs font-bold">{{ av.taux_physique }}%</span>
+            </div>
+          </td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="progress-bar-wrap" style="width:60px;"><div class="progress-bar-fill green" style="width:{{ av.taux_financier }}%;"></div></div>
+              <span class="text-green text-xs">{{ av.taux_financier }}%</span>
+            </div>
+          </td>
+          <td class="text-muted text-xs">{{ av.taux_planifie }}%</td>
+          <td class="text-sm text-cyan font-bold">{{ av.effectif_ouvriers }}</td>
+          <td class="text-sm text-muted">{{ av.effectif_encadrement }}</td>
+          <td class="text-xs text-muted">{{ av.observations|truncatechars:40 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">Aucun avancement enregistré</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

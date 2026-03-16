@@ -1,0 +1,197 @@
+{% extends "lamane/base.html" %}
+{% block title %}Ressources Humaines{% endblock %}
+{% block page_title %}Ressources Humaines{% endblock %}
+{% block page_sub %}Équipe LAMANE SARL — {{ total_employes }} employé{{ total_employes|pluralize }}{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-users"></i></div>
+    <div class="kpi-value">{{ total_employes }}</div>
+    <div class="kpi-label">Employés LAMANE</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue-light);--icon-bg:rgba(77,143,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-mars"></i></div>
+    <div class="kpi-value">{{ hommes }}</div>
+    <div class="kpi-label">Hommes</div>
+    <div class="progress-bar-wrap" style="margin-top:10px;">
+      <div class="progress-bar-fill blue" style="width:{% if total_employes %}{{ hommes|floatformat:0 }}0{% else %}0{% endif %}%;"></div>
+    </div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-venus"></i></div>
+    <div class="kpi-value">{{ femmes }}</div>
+    <div class="kpi-label">Femmes</div>
+    <div class="progress-bar-wrap" style="margin-top:10px;">
+      <div class="progress-bar-fill purple" style="width:{% if total_employes %}{{ femmes|floatformat:0 }}0{% else %}0{% endif %}%;"></div>
+    </div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-briefcase"></i></div>
+    <div class="kpi-value">{{ nb_affectes }}</div>
+    <div class="kpi-label">Affectés à des projets</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="grid-2 mb-6 animate-fade-up delay-1">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-venus-mars text-gold"></i> Répartition par genre</div>
+    </div>
+    <div style="position:relative;height:200px;display:flex;align-items:center;justify-content:center;">
+      <canvas id="chartGenre"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-sitemap text-gold"></i> Postes & fonctions</div>
+    </div>
+    <canvas id="chartPostes" height="200"></canvas>
+  </div>
+
+</div>
+
+<!-- Grille employés -->
+<div class="section-title mb-4 animate-fade-up delay-2">Annuaire des employés</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:28px;" class="animate-fade-up delay-2">
+  {% for emp in employes %}
+  <div class="card" style="padding:18px;transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="avatar-circle"
+        style="width:44px;height:44px;font-size:16px;
+          background:{% if emp.sexe == 'F' %}rgba(165,94,234,0.2){% else %}rgba(30,111,255,0.2){% endif %};
+          color:{% if emp.sexe == 'F' %}var(--purple){% else %}var(--blue-light){% endif %};">
+        {{ emp.prenom|first }}{{ emp.nom|first }}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:13.5px;">{{ emp.prenom }} {{ emp.nom }}</div>
+        <div style="font-size:11px;color:var(--text-muted);">
+          {% if emp.sexe == 'F' %}<i class="fas fa-venus" style="color:var(--purple);"></i>{% else %}<i class="fas fa-mars" style="color:var(--blue-light);"></i>{% endif %}
+          {{ emp.sexe|default:"" }}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      <div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:6px 10px;">
+        <span class="text-xs text-muted">Poste : </span>
+        <span style="font-size:12px;font-weight:600;color:var(--gold);">{{ emp.poste }}</span>
+      </div>
+      {% if emp.email %}
+      <div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:6px 10px;">
+        <i class="fas fa-envelope text-xs text-muted"></i>
+        <span style="font-size:11px;color:var(--text-secondary);margin-left:4px;">{{ emp.email }}</span>
+      </div>
+      {% endif %}
+      {% if emp.telephone %}
+      <div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:6px 10px;">
+        <i class="fas fa-phone text-xs text-muted"></i>
+        <span style="font-size:12px;color:var(--text-secondary);margin-left:4px;">{{ emp.telephone }}</span>
+      </div>
+      {% endif %}
+      {% if emp.date_embauche %}
+      <div style="font-size:10px;color:var(--text-muted);padding:4px 10px;">
+        <i class="fas fa-calendar-plus"></i> Embauche : {{ emp.date_embauche|date:"d/m/Y" }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="card" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+    <div style="font-size:48px;margin-bottom:16px;">👥</div>
+    Aucun employé enregistré
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Affectations -->
+<div class="card animate-fade-up delay-3">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-project-diagram text-gold"></i> Affectations aux projets</div>
+    <span class="badge badge-blue">{{ affectations|length }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Employé</th><th>Projet</th><th>Rôle</th></tr>
+      </thead>
+      <tbody>
+        {% for aff in affectations %}
+        <tr>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="avatar-circle" style="width:30px;height:30px;font-size:11px;background:rgba(30,111,255,0.15);color:var(--blue-light);">
+                {{ aff.employe.prenom|first }}{{ aff.employe.nom|first }}
+              </div>
+              <span class="bold text-sm">{{ aff.employe.prenom }} {{ aff.employe.nom }}</span>
+            </div>
+          </td>
+          <td>
+            <a href="{% url 'ui_projet_detail' aff.projet.id %}" style="color:var(--text-primary);text-decoration:none;font-size:13px;">
+              {{ aff.projet.nom|truncatechars:30 }}
+            </a>
+          </td>
+          <td><span class="badge badge-gold text-xs" style="background:rgba(240,165,0,0.12);color:var(--gold);">{{ aff.role|default:"Non précisé" }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="text-align:center;padding:30px;color:var(--text-muted);">Aucune affectation enregistrée</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const genre_data    = {{ genre_json|safe }};
+const postes_labels = {{ postes_labels_json|safe }};
+const postes_values = {{ postes_values_json|safe }};
+
+// Genre doughnut
+new Chart(document.getElementById('chartGenre'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(genre_data),
+    datasets: [{
+      data: Object.values(genre_data),
+      backgroundColor: ['#4d8fff', '#a55eea'],
+      borderColor: '#0f1629', borderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '60%',
+    plugins: { legend: { position: 'bottom', labels: { color: 'rgba(240,244,255,0.6)', padding: 14 } } }
+  }
+});
+
+// Postes bar
+new Chart(document.getElementById('chartPostes'), {
+  type: 'bar',
+  data: {
+    labels: postes_labels,
+    datasets: [{
+      label: 'Employés',
+      data: postes_values,
+      backgroundColor: postes_labels.map((_, i) => `hsla(${200 + i * 25}, 70%, 55%, 0.75)`),
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(240,244,255,0.4)', stepSize: 1 } },
+      y: { grid: { display: false }, ticks: { color: 'rgba(240,244,255,0.7)', font: { size: 10 } } }
+    }
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends "lamane/base.html" %}
+{% block title %}Client — {{ client.nom_complet }}{% endblock %}
+{% block page_title %}{{ client.nom_complet }}{% endblock %}
+{% block page_sub %}Fiche client · {% if client.est_moral %}Personne morale{% else %}Personne physique{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- Actions -->
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_clients' %}" class="btn btn-ghost">
+    <i class="fas fa-arrow-left"></i> Retour aux clients
+  </a>
+  <button class="btn btn-primary" onclick="window.print()">
+    <i class="fas fa-print"></i> Imprimer la fiche
+  </button>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hard-hat"></i></div>
+    <div class="kpi-value">{{ projets_data|length }}</div>
+    <div class="kpi-label">Projets</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-file-invoice"></i></div>
+    <div class="kpi-value" style="font-size:17px;">{{ total_achats_ttc }}</div>
+    <div class="kpi-label">Achats TTC (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hand-holding-usd"></i></div>
+    <div class="kpi-value" style="font-size:17px;">{{ total_verse }}</div>
+    <div class="kpi-label">Versements reçus (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:{% if solde_positif %}var(--green){% else %}#ff5050{% endif %};--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-balance-scale"></i></div>
+    <div class="kpi-value" style="font-size:17px;color:{% if solde_positif %}var(--green){% else %}#ff5050{% endif %};">
+      {% if not solde_positif %}-{% endif %}{{ total_achats_ttc }}
+    </div>
+    <div class="kpi-label">Solde {{ solde_positif|yesno:"positif,déficitaire" }}</div>
+  </div>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up delay-1">
+
+  <!-- Fiche identité -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-id-card text-gold"></i> Identité</div>
+      <span class="badge badge-{% if client.est_moral %}blue{% else %}green{% endif %}">
+        {% if client.est_moral %}Entreprise{% else %}Particulier{% endif %}
+      </span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+      <div class="avatar-circle" style="width:60px;height:60px;font-size:22px;
+        background:{% if client.est_moral %}rgba(30,111,255,0.15){% else %}rgba(0,196,140,0.15){% endif %};
+        color:{% if client.est_moral %}var(--blue-light){% else %}var(--green){% endif %};">
+        {% if client.est_moral %}<i class="fas fa-building"></i>{% else %}<i class="fas fa-user"></i>{% endif %}
+      </div>
+      <div>
+        <div style="font-size:18px;font-weight:700;">{{ client.nom_complet }}</div>
+        {% if client.ninea %}<div class="text-xs text-muted mt-1">NINEA : {{ client.ninea }}</div>{% endif %}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% if client.telephone %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-phone text-muted text-sm"></i>
+        <span>{{ client.telephone }}</span>
+      </div>
+      {% endif %}
+      {% if client.email %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-envelope text-muted text-sm"></i>
+        <span>{{ client.email }}</span>
+      </div>
+      {% endif %}
+      {% if client.adresse %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-map-marker-alt text-muted text-sm"></i>
+        <span>{{ client.adresse }}</span>
+      </div>
+      {% endif %}
+      {% if client.numero_identite %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-id-badge text-muted text-sm"></i>
+        <span class="text-muted text-xs">N° Identité :</span>
+        <span>{{ client.numero_identite }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Graphique versements -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-chart-bar text-gold"></i> Versements sur 6 mois</div>
+    </div>
+    <div style="position:relative;height:200px;">
+      <canvas id="chartVersements"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Projets du client -->
+<div class="card animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-hard-hat text-gold"></i> Projets</div>
+    <span class="badge badge-blue">{{ projets_data|length }}</span>
+  </div>
+
+  {% if projets_data %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">
+    {% for d in projets_data %}
+    {% with p=d.projet av=d.avancement %}
+    <a href="{% url 'ui_projet_detail' p.id %}" style="display:block;padding:14px;background:rgba(255,255,255,0.03);border-radius:10px;text-decoration:none;border:1px solid var(--border-light);transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(240,165,0,0.25)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border-light)';this.style.transform=''">
+      <div class="flex justify-between items-center mb-2">
+        <div style="font-weight:700;font-size:13px;color:var(--text-primary);">{{ p.nom|truncatechars:30 }}</div>
+        <span class="badge badge-{% if p.statut == 'En cours' %}blue{% elif p.statut == 'Terminé' %}green{% else %}yellow{% endif %} text-xs">{{ p.statut }}</span>
+      </div>
+      {% if p.localisation %}
+      <div class="text-xs text-muted mb-2"><i class="fas fa-map-marker-alt"></i> {{ p.localisation }}</div>
+      {% endif %}
+      {% if av %}
+      <div class="flex justify-between text-xs mb-1">
+        <span class="text-muted">Avancement</span>
+        <span style="color:var(--gold);font-weight:600;">{{ av.taux_physique }}%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width:{{ av.taux_physique }}%;"></div>
+      </div>
+      {% endif %}
+      <div class="flex justify-between text-xs mt-2">
+        <span class="text-muted">Achats TTC</span>
+        <span style="color:var(--gold);font-weight:600;">{{ d.total_achats }} XOF</span>
+      </div>
+    </a>
+    {% endwith %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:40px;color:var(--text-muted);">
+    <i class="fas fa-hard-hat" style="font-size:32px;margin-bottom:12px;display:block;opacity:0.3;"></i>
+    Aucun projet associé
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const mLabels = {{ monthly_labels_json|safe }};
+const mVers   = {{ monthly_vers_json|safe }};
+
+new Chart(document.getElementById('chartVersements'), {
+  type: 'bar',
+  data: {
+    labels: mLabels,
+    datasets: [{
+      label: 'Versements (XOF)',
+      data: mVers,
+      backgroundColor: 'rgba(0,196,140,0.4)',
+      borderColor: '#00c48c',
+      borderWidth: 2,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: {
+        ticks: { color: 'rgba(240,244,255,0.5)', callback: v => (v/1000000).toFixed(1) + 'M' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      x: { ticks: { color: 'rgba(240,244,255,0.5)' }, grid: { display: false } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% endblock %}

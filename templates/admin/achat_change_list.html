@@ -1,0 +1,28 @@
+{# templates/admin/achat_change_list.html #}
+{% extends "admin/change_list.html" %}
+{% load i18n admin_list %}
+
+{% block result_list %}
+  {% if action_form and actions_on_top and cl.show_admin_actions %}
+    {% admin_actions %}
+  {% endif %}
+
+  {% result_list cl %}
+
+  {% if cl.result_count %}
+    <table class="admin-summary" style="margin-top: 10px; border-top: 2px solid #ccc; width: 100%;">
+      <thead>
+        <tr>
+          <th colspan="6" style="text-align: right; padding: 10px; font-weight: bold;">TOTAL</th>
+          <th style="text-align: right; padding: 10px;">{{ summary.total_ht|floatformat:0 }} FCFA</th>
+          <th style="text-align: right; padding: 10px;">{{ summary.total_tva|floatformat:0 }} FCFA</th>
+          <th style="text-align: right; padding: 10px;">{{ summary.total_ttc|floatformat:0 }} FCFA</th>
+        </tr>
+      </thead>
+    </table>
+  {% endif %}
+
+  {% if action_form and actions_on_bottom and cl.show_admin_actions %}
+    {% admin_actions %}
+  {% endif %}
+{% endblock %}

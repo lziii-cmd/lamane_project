@@ -1,0 +1,355 @@
+{% extends "lamane/base.html" %}
+{% block title %}Chantier — {{ projet.nom }}{% endblock %}
+{% block page_title %}{{ projet.nom|truncatechars:45 }}{% endblock %}
+{% block page_sub %}Détail chantier · {{ projet.localisation }}{% endblock %}
+
+{% block content %}
+
+<!-- Barre d'actions -->
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_chantiers' %}" class="btn btn-ghost">
+    <i class="fas fa-arrow-left"></i> Retour aux chantiers
+  </a>
+  <div class="flex gap-3">
+    <a href="{% url 'ui_projet_detail' projet.id %}" class="btn btn-ghost">
+      <i class="fas fa-folder-open"></i> Voir le projet
+    </a>
+    <button class="btn btn-primary" onclick="window.print()">
+      <i class="fas fa-print"></i> Imprimer
+    </button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-tasks"></i></div>
+    <div class="kpi-value">{% if dernier_av %}{{ dernier_av.taux_physique }}%{% else %}—{% endif %}</div>
+    <div class="kpi-label">Avancement physique</div>
+    {% if dernier_av %}
+    <div class="progress-bar-wrap" style="margin-top:10px;">
+      <div class="progress-bar-fill" style="width:{{ dernier_av.taux_physique }}%;"></div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+    <div class="kpi-value">{% if dernier_av %}{{ dernier_av.taux_financier }}%{% else %}—{% endif %}</div>
+    <div class="kpi-label">Avancement financier</div>
+    {% if dernier_av %}
+    <div class="progress-bar-wrap" style="margin-top:10px;">
+      <div class="progress-bar-fill green" style="width:{{ dernier_av.taux_financier }}%;"></div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--cyan);--icon-bg:rgba(0,210,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-users"></i></div>
+    <div class="kpi-value">{% if dernier_av %}{{ dernier_av.effectif_ouvriers }}{% else %}0{% endif %}</div>
+    <div class="kpi-label">Ouvriers actuels</div>
+    <div class="kpi-trend text-muted">Moy. {{ avg_ouvriers|floatformat:0 }} sur la durée</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div>
+    <div class="kpi-value">{{ nb_releves }}</div>
+    <div class="kpi-label">Relevés d'avancement</div>
+    <div class="kpi-trend text-muted">{{ contrats_st|length }} sous-traitant{{ contrats_st|length|pluralize }}</div>
+  </div>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up delay-1">
+
+  <!-- Infos projet -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-info-circle text-gold"></i> Informations du chantier</div>
+      <span class="badge badge-{% if projet.statut == 'En cours' %}blue{% elif projet.statut == 'Terminé' %}green{% else %}yellow{% endif %}">
+        <span class="badge-dot" style="background:{% if projet.statut == 'En cours' %}var(--blue-light){% elif projet.statut == 'Terminé' %}var(--green){% else %}var(--gold){% endif %};"></span>
+        {{ projet.statut }}
+      </span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      {% if projet.proprietaire %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-user text-muted text-sm"></i>
+        <div>
+          <div class="text-xs text-muted">Client / Maître d'ouvrage</div>
+          <div style="font-weight:600;">{{ projet.proprietaire.nom_complet }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if projet.localisation %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-map-marker-alt text-muted text-sm"></i>
+        <div>
+          <div class="text-xs text-muted">Localisation</div>
+          <div style="font-weight:600;">{{ projet.localisation }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if projet.date_debut %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-calendar text-muted text-sm"></i>
+        <div>
+          <div class="text-xs text-muted">Début des travaux</div>
+          <div style="font-weight:600;">{{ projet.date_debut|date:"d/m/Y" }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if projet.date_fin_prevue %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-flag-checkered text-muted text-sm"></i>
+        <div>
+          <div class="text-xs text-muted">Fin prévue</div>
+          <div style="font-weight:600;color:var(--gold);">{{ projet.date_fin_prevue|date:"d/m/Y" }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if projet.budget %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex items-center gap-3">
+        <i class="fas fa-wallet text-muted text-sm"></i>
+        <div>
+          <div class="text-xs text-muted">Budget projet</div>
+          <div style="font-weight:700;color:var(--gold);">{{ projet.budget|floatformat:0 }} XOF</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Marché de travaux -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-file-contract text-gold"></i> Marché de travaux</div>
+    </div>
+    {% if marche %}
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="padding:12px;background:rgba(240,165,0,0.08);border-radius:8px;text-align:center;border:1px solid rgba(240,165,0,0.15);">
+          <div class="text-xs text-muted">N° Marché</div>
+          <div style="font-weight:700;color:var(--gold);font-size:15px;">{{ marche.numero_marche }}</div>
+        </div>
+        <div style="padding:12px;background:rgba(30,111,255,0.08);border-radius:8px;text-align:center;border:1px solid rgba(30,111,255,0.15);">
+          <div class="text-xs text-muted">Statut</div>
+          <div style="font-weight:700;color:var(--blue-light);font-size:13px;">{{ marche.statut|capfirst }}</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex justify-between items-center">
+        <span class="text-muted text-sm">Montant marché</span>
+        <span style="font-weight:700;font-size:15px;color:var(--gold);">{{ marche.montant_marche|floatformat:0 }} <span class="text-xs text-muted">XOF</span></span>
+      </div>
+      <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex justify-between items-center">
+        <span class="text-muted text-sm">Avance de démarrage</span>
+        <span style="font-weight:600;font-size:14px;color:var(--green);">{{ marche.montant_avance_demarrage|floatformat:0 }} XOF</span>
+      </div>
+      <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex justify-between items-center">
+        <span class="text-muted text-sm">Date signature</span>
+        <span style="font-weight:600;">{{ marche.date_signature|date:"d/m/Y" }}</span>
+      </div>
+      <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex justify-between items-center">
+        <span class="text-muted text-sm">Délai d'exécution</span>
+        <span style="font-weight:600;">{{ marche.delai_execution_jours }} jours</span>
+      </div>
+      {% if marche.jours_retard %}
+      <div style="padding:10px 14px;background:rgba(255,80,80,0.08);border-radius:8px;border:1px solid rgba(255,80,80,0.2);" class="flex items-center gap-2">
+        <i class="fas fa-exclamation-triangle" style="color:#ff5050;"></i>
+        <span style="font-size:13px;color:#ff5050;font-weight:600;">{{ marche.jours_retard }} jours de retard</span>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:40px;color:var(--text-muted);">
+      <i class="fas fa-file-contract" style="font-size:32px;margin-bottom:12px;display:block;opacity:0.3;"></i>
+      Aucun marché associé
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Graphique avancement -->
+{% if avancements %}
+<div class="card mb-6 animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-chart-line text-gold"></i> Courbe d'avancement</div>
+    <span class="badge badge-yellow">{{ nb_releves }} relevé{{ nb_releves|pluralize }}</span>
+  </div>
+  <div style="position:relative;height:280px;padding:10px 0;">
+    <canvas id="chartAvancement"></canvas>
+  </div>
+</div>
+{% endif %}
+
+<!-- Historique avancements -->
+<div class="card mb-6 animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-history text-gold"></i> Historique des relevés</div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Période</th><th>Physique</th><th>Financier</th><th>Planifié</th>
+          <th>Ouvriers</th><th>Encadrement</th><th>Observations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for av in avancements %}
+        <tr>
+          <td class="text-muted text-sm">{{ av.periode|date:"m/Y" }}</td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="progress-bar-wrap" style="width:70px;"><div class="progress-bar-fill" style="width:{{ av.taux_physique }}%;"></div></div>
+              <span class="text-gold text-xs font-bold">{{ av.taux_physique }}%</span>
+            </div>
+          </td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="progress-bar-wrap" style="width:70px;"><div class="progress-bar-fill green" style="width:{{ av.taux_financier }}%;"></div></div>
+              <span class="text-green text-xs">{{ av.taux_financier }}%</span>
+            </div>
+          </td>
+          <td class="text-muted text-xs">{{ av.taux_planifie }}%</td>
+          <td class="text-cyan font-bold text-sm">{{ av.effectif_ouvriers }}</td>
+          <td class="text-muted text-sm">{{ av.effectif_encadrement }}</td>
+          <td class="text-xs text-muted">{{ av.observations|truncatechars:45 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">Aucun relevé enregistré</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Sous-traitants + Situations -->
+<div class="grid-2 animate-fade-up delay-3">
+
+  <!-- Contrats SS-traitance -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-handshake text-gold"></i> Sous-traitants</div>
+      <span class="badge badge-orange">{{ contrats_st|length }}</span>
+    </div>
+    {% for c in contrats_st %}
+    <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:8px;">
+      <div class="flex justify-between items-center mb-2">
+        <div style="font-weight:600;font-size:13px;">{{ c.sous_traitant.nom }}</div>
+        <span class="badge badge-{% if c.statut == 'en_cours' %}blue{% elif c.statut == 'termine' %}green{% else %}yellow{% endif %} text-xs">{{ c.statut }}</span>
+      </div>
+      <div class="flex justify-between text-xs text-muted">
+        <span>{{ c.specialite|default:"—" }}</span>
+        <span style="color:var(--gold);font-weight:600;">{{ c.montant|floatformat:0 }} XOF</span>
+      </div>
+      <div class="progress-bar-wrap" style="margin-top:8px;">
+        <div class="progress-bar-fill green" style="width:{% if c.montant %}{% widthratio c.montant_paye c.montant 100 %}{% else %}0{% endif %}%;"></div>
+      </div>
+      <div class="flex justify-between text-xs mt-1">
+        <span class="text-muted">Payé</span>
+        <span class="text-green">{{ c.montant_paye|floatformat:0 }} XOF</span>
+      </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center;padding:30px;color:var(--text-muted);">
+      <i class="fas fa-handshake" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.3;"></i>
+      Aucun sous-traitant
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Situations mensuelles -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-receipt text-gold"></i> Situations mensuelles</div>
+      <span class="badge badge-purple">{{ situations|length }}</span>
+    </div>
+    {% for s in situations %}
+    <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:8px;">
+      <div class="flex justify-between items-center">
+        <div style="font-weight:600;font-size:13px;">Situation n°{{ s.numero_situation }}</div>
+        <span class="text-xs text-muted">{{ s.date_situation|date:"d/m/Y" }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+        <div style="text-align:center;">
+          <div class="text-xs text-muted">Brut cumulé</div>
+          <div style="font-size:12px;font-weight:600;">{{ s.montant_brut_cumule|floatformat:0 }}</div>
+        </div>
+        <div style="text-align:center;">
+          <div class="text-xs text-muted">Retenue 5%</div>
+          <div style="font-size:12px;font-weight:600;color:var(--gold);">{{ s.retenue_garantie|floatformat:0 }}</div>
+        </div>
+        <div style="text-align:center;">
+          <div class="text-xs text-muted">À payer</div>
+          <div style="font-size:12px;font-weight:700;color:var(--green);">{{ s.montant_a_payer|floatformat:0 }}</div>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center;padding:30px;color:var(--text-muted);">
+      <i class="fas fa-receipt" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.3;"></i>
+      Aucune situation mensuelle
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{% if avancements %}
+<script>
+const avLabels    = {{ av_labels_json|safe }};
+const avPhysique  = {{ av_physique_json|safe }};
+const avFinancier = {{ av_financier_json|safe }};
+const avPlanifie  = {{ av_planifie_json|safe }};
+const avOuvriers  = {{ av_ouvriers_json|safe }};
+
+new Chart(document.getElementById('chartAvancement'), {
+  type: 'line',
+  data: {
+    labels: avLabels,
+    datasets: [
+      {
+        label: 'Avancement physique',
+        data: avPhysique,
+        borderColor: '#f0a500', backgroundColor: 'rgba(240,165,0,0.08)',
+        tension: 0.4, fill: true, pointRadius: 5, pointHoverRadius: 8,
+      },
+      {
+        label: 'Avancement financier',
+        data: avFinancier,
+        borderColor: '#00c48c', backgroundColor: 'rgba(0,196,140,0.05)',
+        tension: 0.4, fill: false, pointRadius: 5,
+      },
+      {
+        label: 'Planifié',
+        data: avPlanifie,
+        borderColor: 'rgba(240,244,255,0.25)', backgroundColor: 'transparent',
+        tension: 0.4, fill: false, pointRadius: 3, borderDash: [6,3],
+      },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: {
+        min: 0, max: 100,
+        ticks: { color: 'rgba(240,244,255,0.5)', callback: v => v + '%' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      x: {
+        ticks: { color: 'rgba(240,244,255,0.5)' },
+        grid: { color: 'rgba(255,255,255,0.04)' }
+      }
+    },
+    plugins: {
+      legend: { labels: { color: 'rgba(240,244,255,0.7)', padding: 16 } },
+      tooltip: {
+        callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' }
+      }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends "lamane/base.html" %}
+{% block title %}Marchés de travaux{% endblock %}
+{% block page_title %}Marchés de travaux{% endblock %}
+{% block page_sub %}Conformes CCAG Sénégal — Retenue de garantie 5% — Pénalités 0,05%/jour{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-file-contract"></i></div>
+    <div class="kpi-value">{{ total_marches }}</div>
+    <div class="kpi-label">Marchés totaux</div>
+    <div class="kpi-trend text-muted">{{ en_cours_m }} en cours · {{ termines_m }} réceptionnés</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="kpi-value">{{ montant_total }}</div>
+    <div class="kpi-label">Montant total (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-rocket"></i></div>
+    <div class="kpi-value">{{ avance_totale }}</div>
+    <div class="kpi-label">Avances de démarrage (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-shield-alt"></i></div>
+    <div class="kpi-value">5%</div>
+    <div class="kpi-label">Retenue de garantie CCAG</div>
+    <div class="kpi-trend text-muted">Pénalités retard : 0,05%/jour (plafond 10%)</div>
+  </div>
+</div>
+
+<!-- Filtre statut + répartition -->
+<div class="grid-2 mb-6 animate-fade-up delay-1">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-chart-pie text-gold"></i> Répartition par statut</div>
+    </div>
+    <div style="position:relative;height:200px;display:flex;align-items:center;justify-content:center;">
+      <canvas id="chartStatutsMarche"></canvas>
+    </div>
+  </div>
+
+  <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+    <div class="card-title"><i class="fas fa-filter text-gold"></i> Filtrer les marchés</div>
+    <form method="get" class="flex gap-3 items-center flex-wrap">
+      <select name="statut" class="filter-select" style="flex:1;">
+        <option value="">Tous les statuts</option>
+        {% for key, label in statuts_labels.items %}
+        <option value="{{ key }}" {% if statut_filter == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrer</button>
+      {% if statut_filter %}
+      <a href="{% url 'ui_marches' %}" class="btn btn-ghost"><i class="fas fa-times"></i></a>
+      {% endif %}
+    </form>
+
+    <!-- Légende statuts -->
+    {% for s in statuts_marche %}
+    <div class="flex items-center justify-between" style="padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;">
+      <div class="flex items-center gap-2">
+        <div style="width:10px;height:10px;border-radius:50%;background:{% if s.statut == 'en_cours' %}var(--blue-light){% elif s.statut == 'reception_definitive' %}var(--green){% elif s.statut == 'reception_provisoire' %}var(--cyan){% else %}var(--gold){% endif %};"></div>
+        <span class="text-sm">{{ statuts_labels|default_if_none:s.statut }}</span>
+        <span class="text-xs text-muted">({{ s.count }})</span>
+      </div>
+      <span class="text-sm text-gold font-bold">{{ s.total|floatformat:0 }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- Tableau marchés -->
+<div class="card animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list text-gold"></i> Liste des marchés</div>
+    <span class="badge badge-purple">{{ marches|length }} marchés</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>N° Marché</th><th>Projet</th><th>Montant (XOF)</th>
+          <th>Avance démarrage</th><th>Date signature</th>
+          <th>Délai (j)</th><th>Statut</th><th>Pénalités</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in marches %}
+        <tr>
+          <td class="bold text-gold text-sm">{{ m.numero_marche }}</td>
+          <td>
+            <a href="{% url 'ui_projet_detail' m.projet.id %}" style="color:var(--text-primary);text-decoration:none;font-weight:600;font-size:13px;">
+              {{ m.projet.nom|truncatechars:28 }}
+            </a>
+          </td>
+          <td class="amount">{{ m.montant_marche|floatformat:0 }}</td>
+          <td class="amount text-green text-sm">{{ m.montant_avance_demarrage|floatformat:0 }}</td>
+          <td class="text-muted text-sm">{{ m.date_signature|date:"d/m/Y" }}</td>
+          <td class="text-sm">{{ m.delai_execution_jours }}</td>
+          <td>
+            {% if m.statut == "en_cours" %}
+              <span class="badge badge-blue text-xs"><span class="badge-dot" style="background:var(--blue-light)"></span>En cours</span>
+            {% elif m.statut == "reception_definitive" %}
+              <span class="badge badge-green text-xs">Récept. définitive</span>
+            {% elif m.statut == "reception_provisoire" %}
+              <span class="badge badge-cyan text-xs">Récept. provisoire</span>
+            {% else %}
+              <span class="badge badge-yellow text-xs">{{ m.statut }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if m.jours_retard %}
+              <span class="badge badge-red text-xs"><i class="fas fa-exclamation-triangle"></i> {{ m.jours_retard }}j</span>
+            {% else %}
+              <span class="text-muted text-xs">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
+          <div style="font-size:32px;margin-bottom:12px;">📋</div>
+          Aucun marché trouvé
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Info CCAG -->
+<div class="card mt-4 animate-fade-up delay-3" style="border-color:rgba(240,165,0,0.2);background:rgba(240,165,0,0.04);">
+  <div class="flex items-center gap-3">
+    <div style="font-size:28px;">⚖️</div>
+    <div>
+      <div style="font-weight:700;color:var(--gold);margin-bottom:4px;">Réglementation CCAG Sénégal</div>
+      <div class="text-sm text-muted">
+        Retenue de garantie : <strong class="text-gold">5%</strong> du montant brut cumulé ·
+        Pénalités de retard : <strong class="text-gold">0,05% par jour</strong> de retard ·
+        Plafond des pénalités : <strong class="text-gold">10%</strong> du montant du marché ·
+        Avance de démarrage : <strong class="text-gold">25%</strong> du marché
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const statuts_data = {{ statuts_marche_json|safe }};
+const COLORS = {'en_attente':'#f0a500','en_cours':'#1e6fff','reception_provisoire':'#00d2ff','reception_definitive':'#00c48c'};
+
+new Chart(document.getElementById('chartStatutsMarche'), {
+  type: 'doughnut',
+  data: {
+    labels: statuts_data.map(s => ({'en_attente':'En attente','en_cours':'En cours','reception_provisoire':'Récept. provisoire','reception_definitive':'Récept. définitive'}[s.statut] || s.statut)),
+    datasets: [{
+      data: statuts_data.map(s => s.count),
+      backgroundColor: statuts_data.map(s => COLORS[s.statut] || '#666'),
+      borderColor: '#0f1629', borderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '62%',
+    plugins: { legend: { position: 'right', labels: { color: 'rgba(240,244,255,0.6)', padding: 10 } } }
+  }
+});
+</script>
+{% endblock %}

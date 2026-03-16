@@ -1,0 +1,201 @@
+{% extends "lamane/base.html" %}
+{% block title %}Sous-traitants{% endblock %}
+{% block page_title %}Sous-traitants{% endblock %}
+{% block page_sub %}Gestion de la sous-traitance — {{ total_contrats }} contrats actifs{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);">
+    <div class="kpi-icon"><i class="fas fa-people-group"></i></div>
+    <div class="kpi-value">{{ total_st }}</div>
+    <div class="kpi-label">Sous-traitants référencés</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-handshake"></i></div>
+    <div class="kpi-value">{{ total_contrats }}</div>
+    <div class="kpi-label">Contrats de sous-traitance</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+    <div class="kpi-value">{{ total_montant_st }}</div>
+    <div class="kpi-label">Volume total (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="kpi-value">{{ total_paye_st }}</div>
+    <div class="kpi-label">Montant payé (XOF)</div>
+  </div>
+</div>
+
+<!-- Chart + Spécialités -->
+<div class="grid-2 mb-6 animate-fade-up delay-1">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-chart-bar text-gold"></i> Volume par sous-traitant</div>
+    </div>
+    <canvas id="chartST" height="220"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-tools text-gold"></i> Spécialités</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      {% for spec in specialites %}
+      {% with labels='electricite_cfa,plomberie_sanitaire,menuiserie_bois,climatisation,carrelage_faience,panneaux_solaires,piscine,ascenseur,menuiserie_alu,vrd' %}
+      <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-bold">
+            {% if spec.specialite == "electricite_cfa" %}⚡ Électricité CFA
+            {% elif spec.specialite == "plomberie_sanitaire" %}🔧 Plomberie Sanitaire
+            {% elif spec.specialite == "menuiserie_bois" %}🪵 Menuiserie Bois
+            {% elif spec.specialite == "climatisation" %}❄️ Climatisation
+            {% elif spec.specialite == "carrelage_faience" %}🪴 Carrelage / Faïence
+            {% elif spec.specialite == "panneaux_solaires" %}☀️ Panneaux Solaires
+            {% elif spec.specialite == "piscine" %}🏊 Piscine
+            {% elif spec.specialite == "ascenseur" %}🛗 Ascenseur
+            {% elif spec.specialite == "menuiserie_alu" %}🔩 Menuiserie Aluminium
+            {% elif spec.specialite == "vrd" %}🛣️ VRD
+            {% else %}{{ spec.specialite }}{% endif %}
+          </div>
+          <span class="badge badge-purple text-xs">{{ spec.count }}</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill purple" style="width:{{ spec.count|floatformat:0 }}0%;"></div>
+        </div>
+      </div>
+      {% endwith %}
+      {% empty %}
+      <div class="text-muted text-sm" style="text-align:center;padding:20px;">Aucune spécialité enregistrée</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Sous-traitants table -->
+<div class="card mb-6 animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list text-gold"></i> Fiche sous-traitants</div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Société</th><th>Spécialité</th><th>NINEA</th><th>Tél.</th>
+          <th>Contrats</th><th>Volume total</th><th>Payé</th><th>Reste</th><th>Taux</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in st_data %}
+        <tr>
+          <td class="bold">{{ d.st.nom }}</td>
+          <td>
+            <span class="badge badge-orange text-xs">
+              {% if d.st.specialite == "electricite_cfa" %}⚡ Élec. CFA
+              {% elif d.st.specialite == "plomberie_sanitaire" %}🔧 Plomberie
+              {% elif d.st.specialite == "menuiserie_bois" %}🪵 Men. Bois
+              {% elif d.st.specialite == "climatisation" %}❄️ Clim
+              {% elif d.st.specialite == "carrelage_faience" %}🪴 Carrelage
+              {% elif d.st.specialite == "panneaux_solaires" %}☀️ Solaire
+              {% elif d.st.specialite == "piscine" %}🏊 Piscine
+              {% elif d.st.specialite == "ascenseur" %}🛗 Ascenseur
+              {% elif d.st.specialite == "menuiserie_alu" %}🔩 Men. Alu
+              {% elif d.st.specialite == "vrd" %}🛣️ VRD
+              {% else %}{{ d.st.specialite }}{% endif %}
+            </span>
+          </td>
+          <td class="text-muted text-xs">{{ d.st.ninea|default:"—" }}</td>
+          <td class="text-xs">{{ d.st.telephone|default:"—" }}</td>
+          <td class="text-sm text-muted">{{ d.nb_contrats }}</td>
+          <td class="amount text-gold text-sm">{{ d.total_montant_fmt }}</td>
+          <td class="amount text-green text-sm">{{ d.total_paye_fmt }}</td>
+          <td class="amount text-red text-sm">{{ d.reste }}</td>
+          <td>
+            <div class="flex items-center gap-2">
+              <div class="progress-bar-wrap" style="width:50px;">
+                <div class="progress-bar-fill {% if d.taux_paiement >= 80 %}green{% elif d.taux_paiement >= 50 %}{% else %}red{% endif %}" style="width:{{ d.taux_paiement }}%;"></div>
+              </div>
+              <span class="text-xs {% if d.taux_paiement >= 80 %}text-green{% elif d.taux_paiement >= 50 %}text-gold{% else %}text-red{% endif %}">{{ d.taux_paiement }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">Aucun sous-traitant enregistré</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Contrats récents -->
+<div class="card animate-fade-up delay-3">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-handshake text-gold"></i> Derniers contrats de sous-traitance</div>
+    <span class="badge badge-purple">{{ contrats_recents|length }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Projet</th><th>Sous-traitant</th><th>Lot</th><th>Montant</th><th>Payé</th><th>Début</th><th>Fin prévue</th><th>Statut</th></tr>
+      </thead>
+      <tbody>
+        {% for c in contrats_recents %}
+        <tr>
+          <td class="bold text-sm">{{ c.projet.nom|truncatechars:22 }}</td>
+          <td class="text-sm">{{ c.sous_traitant.nom|truncatechars:22 }}</td>
+          <td class="text-xs text-muted">{{ c.lot|truncatechars:20 }}</td>
+          <td class="amount text-gold text-sm">{{ c.montant|floatformat:0 }}</td>
+          <td class="amount text-green text-sm">{{ c.montant_paye|floatformat:0 }}</td>
+          <td class="text-muted text-xs">{{ c.date_debut|date:"d/m/Y" }}</td>
+          <td class="text-muted text-xs">{{ c.date_fin_prevue|date:"d/m/Y"|default:"—" }}</td>
+          <td>
+            {% if c.statut == "termine" %}<span class="badge badge-green text-xs">Terminé</span>
+            {% elif c.statut == "en_cours" %}<span class="badge badge-blue text-xs">En cours</span>
+            {% else %}<span class="badge badge-yellow text-xs">{{ c.statut }}</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">Aucun contrat enregistré</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const st_labels   = {{ st_labels_json|safe }};
+const st_montants = {{ st_montants_json|safe }};
+
+new Chart(document.getElementById('chartST'), {
+  type: 'bar',
+  data: {
+    labels: st_labels,
+    datasets: [{
+      label: 'Volume (XOF)',
+      data: st_montants,
+      backgroundColor: st_labels.map((_, i) => `hsla(${270 + i*18}, 70%, 60%, 0.75)`),
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: {
+        color: 'rgba(240,244,255,0.4)',
+        callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v
+      }},
+      y: { grid: { display: false }, ticks: { color: 'rgba(240,244,255,0.7)', font: { size: 10 } } }
+    }
+  }
+});
+</script>
+{% endblock %}

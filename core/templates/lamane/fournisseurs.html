@@ -1,0 +1,100 @@
+{% extends "lamane/base.html" %}
+{% block title %}Fournisseurs{% endblock %}
+{% block page_title %}Fournisseurs{% endblock %}
+{% block page_sub %}{{ nb_resultats }} fournisseur{{ nb_resultats|pluralize }} — {{ total_fournisseurs }} au total{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<form method="get" class="filters-bar mb-6 animate-fade-up">
+  <input type="text" name="q" value="{{ q }}" placeholder="🔍 Rechercher un fournisseur…" class="filter-input" style="min-width:280px;">
+  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+  {% if q %}
+  <a href="{% url 'ui_fournisseurs' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
+  {% endif %}
+</form>
+
+<!-- Grille fournisseurs -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;" class="animate-fade-up delay-1">
+
+{% for d in f_data %}
+{% with f=d.fournisseur %}
+<div class="card" style="transition:transform 0.2s,border-color 0.2s;" onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(240,165,0,0.3)'" onmouseout="this.style.transform='';this.style.borderColor=''">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 mb-4">
+    <div class="avatar-circle" style="width:44px;height:44px;font-size:16px;
+      background:{% if f.est_moral %}rgba(30,111,255,0.15){% else %}rgba(165,94,234,0.15){% endif %};
+      color:{% if f.est_moral %}var(--blue-light){% else %}var(--purple){% endif %};">
+      {% if f.est_moral %}<i class="fas fa-building"></i>{% else %}<i class="fas fa-user"></i>{% endif %}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:700;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        {% if f.est_moral %}{{ f.entreprise|default:"—" }}
+        {% else %}{{ f.prenom }} {{ f.nom }}{% endif %}
+      </div>
+      <div class="text-xs text-muted">
+        {% if f.est_moral %}
+          <span class="badge badge-blue" style="font-size:9px;padding:2px 7px;margin-top:2px;">Entreprise</span>
+        {% else %}
+          <span class="badge badge-purple" style="font-size:9px;padding:2px 7px;margin-top:2px;">Personne physique</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Infos -->
+  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+    {% if f.ninea %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-id-card text-xs text-muted"></i>
+      <span class="text-xs text-muted">NINEA : </span>
+      <span style="font-size:12px;font-weight:600;">{{ f.ninea }}</span>
+    </div>
+    {% endif %}
+    {% if f.telephone %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-phone text-xs text-muted"></i>
+      <span style="font-size:12px;">{{ f.telephone }}</span>
+    </div>
+    {% endif %}
+    {% if f.email %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-envelope text-xs text-muted"></i>
+      <span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ f.email }}</span>
+    </div>
+    {% endif %}
+    {% if f.adresse %}
+    <div style="background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 10px;" class="flex items-center gap-2">
+      <i class="fas fa-map-marker-alt text-xs text-muted"></i>
+      <span style="font-size:12px;">{{ f.adresse }}</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Stats achats -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--border-light);padding-top:12px;">
+    <div style="text-align:center;">
+      <div class="text-xs text-muted">Bons d'achat</div>
+      <div style="font-size:20px;font-weight:700;color:var(--blue-light);">{{ d.nb_achats }}</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="text-xs text-muted">Volume TTC</div>
+      <div style="font-size:14px;font-weight:700;color:var(--gold);">{{ d.total_ttc_fmt }}</div>
+      <div class="text-xs text-muted">XOF</div>
+    </div>
+  </div>
+
+</div>
+{% endwith %}
+{% empty %}
+<div class="card" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+  <div style="font-size:48px;margin-bottom:16px;">🚚</div>
+  <div>Aucun fournisseur trouvé</div>
+  {% if q %}<a href="{% url 'ui_fournisseurs' %}" class="btn btn-ghost" style="margin-top:16px;">Effacer la recherche</a>{% endif %}
+</div>
+{% endfor %}
+
+</div>
+
+{% endblock %}

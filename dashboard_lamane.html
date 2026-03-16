@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAMANE SARL — Tableau de Bord BTP</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #1a6eb5;
+    --primary-light: #2e87d4;
+    --primary-dark: #0d4a80;
+    --accent: #f59e0b;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --accent-purple: #8b5cf6;
+    --accent-teal: #06b6d4;
+    --bg-dark: #0a0e1a;
+    --bg-card: #111827;
+    --bg-card2: #1a2235;
+    --border: rgba(255,255,255,0.08);
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    --radius: 16px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --gradient-primary: linear-gradient(135deg, #1a6eb5, #2e87d4);
+    --gradient-gold: linear-gradient(135deg, #f59e0b, #fcd34d);
+    --gradient-green: linear-gradient(135deg, #10b981, #34d399);
+    --gradient-red: linear-gradient(135deg, #ef4444, #f87171);
+    --gradient-purple: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 20% 20%, rgba(26,110,181,0.07) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(245,158,11,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────────────────── */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 260px;
+    background: linear-gradient(180deg, #0d1526 0%, #0a0e1a 100%);
+    border-right: 1px solid var(--border);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+  }
+  .logo-area {
+    padding: 28px 24px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-text {
+    font-size: 26px;
+    font-weight: 800;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+  .nav-section {
+    padding: 20px 12px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .nav-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    padding: 0 12px;
+    margin: 16px 0 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-light);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .nav-item.active {
+    background: linear-gradient(135deg, rgba(26,110,181,0.25), rgba(46,135,212,0.15));
+    color: #60b4ff;
+    border-color: rgba(26,110,181,0.3);
+  }
+  .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .badge-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--accent-green);
+  }
+  .dot-live {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+  /* ── MAIN CONTENT ─────────────────────────────────────────────── */
+  .main { margin-left: 260px; min-height: 100vh; position: relative; z-index: 1; }
+
+  /* ── TOPBAR ───────────────────────────────────────────────────── */
+  .topbar {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,14,26,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .topbar-left p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .btn-primary {
+    padding: 9px 18px;
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 15px rgba(26,110,181,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,110,181,0.4); }
+  .date-badge {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    color: var(--text-light);
+  }
+
+  /* ── CONTENT AREA ─────────────────────────────────────────────── */
+  .content { padding: 28px 32px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── KPI GRID ─────────────────────────────────────────────────── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .kpi-card.blue::before { background: var(--gradient-primary); }
+  .kpi-card.gold::before { background: var(--gradient-gold); }
+  .kpi-card.green::before { background: var(--gradient-green); }
+  .kpi-card.red::before { background: var(--gradient-red); }
+  .kpi-card.purple::before { background: var(--gradient-purple); }
+  .kpi-card.teal::before { background: linear-gradient(135deg, #06b6d4, #67e8f9); }
+  .kpi-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+  .kpi-card.blue .kpi-icon { background: rgba(26,110,181,0.2); }
+  .kpi-card.gold .kpi-icon { background: rgba(245,158,11,0.2); }
+  .kpi-card.green .kpi-icon { background: rgba(16,185,129,0.2); }
+  .kpi-card.red .kpi-icon { background: rgba(239,68,68,0.2); }
+  .kpi-card.purple .kpi-icon { background: rgba(139,92,246,0.2); }
+  .kpi-card.teal .kpi-icon { background: rgba(6,182,212,0.2); }
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 4px;
+    letter-spacing: -1px;
+  }
+  .kpi-card.blue .kpi-value { color: #60b4ff; }
+  .kpi-card.gold .kpi-value { color: #fcd34d; }
+  .kpi-card.green .kpi-value { color: #34d399; }
+  .kpi-card.red .kpi-value { color: #f87171; }
+  .kpi-card.purple .kpi-value { color: #c4b5fd; }
+  .kpi-card.teal .kpi-value { color: #67e8f9; }
+  .kpi-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+  .kpi-glow {
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    opacity: 0.08;
+  }
+  .kpi-card.blue .kpi-glow { background: #2e87d4; }
+  .kpi-card.gold .kpi-glow { background: #f59e0b; }
+  .kpi-card.green .kpi-glow { background: #10b981; }
+  .kpi-card.red .kpi-glow { background: #ef4444; }
+
+  /* ── CHARTS GRID ──────────────────────────────────────────────── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .card-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* ── DATA GRID ────────────────────────────────────────────────── */
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .full-width { grid-column: 1 / -1; }
+
+  /* ── TABLE ────────────────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 11px 14px; color: var(--text-light); }
+  .td-bold { font-weight: 600; color: var(--text) !important; }
+  .td-mono { font-family: 'Courier New', monospace; }
+
+  /* ── BADGES ───────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-green { background: rgba(16,185,129,0.15); color: #34d399; }
+  .badge-blue { background: rgba(26,110,181,0.15); color: #60b4ff; }
+  .badge-gold { background: rgba(245,158,11,0.15); color: #fcd34d; }
+  .badge-red { background: rgba(239,68,68,0.15); color: #f87171; }
+  .badge-gray { background: rgba(100,116,139,0.15); color: #94a3b8; }
+  .badge-purple { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+  .badge-teal { background: rgba(6,182,212,0.15); color: #67e8f9; }
+
+  /* ── PROGRESS BAR ─────────────────────────────────────────────── */
+  .progress-container { margin-bottom: 14px; }
+  .progress-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+  .progress-nom { color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+  .progress-pct { color: var(--accent-green); font-weight: 700; }
+  .progress-track {
+    height: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+    position: relative;
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: 0;
+    width: 4px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 2px;
+  }
+  .progress-planifie {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: rgba(245,158,11,0.6);
+  }
+  .progress-meta { display: flex; gap: 10px; margin-top: 5px; font-size: 11px; color: var(--text-muted); }
+
+  /* ── SITUATION CARD ───────────────────────────────────────────── */
+  .situation-item {
+    display: flex;
+    align-items: center;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    gap: 14px;
+    transition: background 0.15s;
+  }
+  .situation-item:hover { background: rgba(255,255,255,0.04); }
+  .sit-num {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .sit-info { flex: 1; min-width: 0; }
+  .sit-nom { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sit-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .sit-montant { text-align: right; }
+  .sit-amount { font-size: 14px; font-weight: 700; color: var(--accent-green); white-space: nowrap; }
+  .sit-taux { font-size: 11px; color: var(--text-muted); }
+
+  /* ── EMPLOYEE CARD ────────────────────────────────────────────── */
+  .emp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .emp-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: background 0.15s;
+  }
+  .emp-card:hover { background: rgba(255,255,255,0.04); }
+  .emp-avatar {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .emp-name { font-size: 13px; font-weight: 600; }
+  .emp-poste { font-size: 11px; color: var(--text-muted); }
+
+  /* ── ST CARD ──────────────────────────────────────────────────── */
+  .st-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .st-item:last-child { border-bottom: none; }
+  .st-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .st-nom { font-size: 13px; font-weight: 600; }
+  .st-spec { font-size: 11px; color: var(--text-muted); }
+  .st-amounts { text-align: right; }
+  .st-total { font-size: 13px; font-weight: 700; color: var(--text); }
+  .st-paye-pct { font-size: 11px; color: var(--accent-green); }
+  .st-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .st-bar-fill {
+    height: 100%;
+    background: var(--gradient-green);
+    border-radius: 2px;
+  }
+
+  /* ── FINANCIAL SUMMARY ────────────────────────────────────────── */
+  .fin-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .fin-row:last-child { border-bottom: none; }
+  .fin-label { font-size: 13px; color: var(--text-light); }
+  .fin-value { font-size: 15px; font-weight: 700; }
+
+  /* ── SEARCH BAR ───────────────────────────────────────────────── */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: rgba(26,110,181,0.5); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  /* ── SUMMARY BANNER ───────────────────────────────────────────── */
+  .summary-banner {
+    background: linear-gradient(135deg, rgba(26,110,181,0.15) 0%, rgba(6,182,212,0.08) 100%);
+    border: 1px solid rgba(26,110,181,0.25);
+    border-radius: var(--radius);
+    padding: 20px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .banner-stat { text-align: center; }
+  .banner-value { font-size: 24px; font-weight: 800; color: #60b4ff; }
+  .banner-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .banner-divider { width: 1px; height: 50px; background: var(--border); }
+
+  /* ── TABS INSIDE PAGE ─────────────────────────────────────────── */
+  .inner-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+  .inner-tab {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+  .inner-tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .inner-tab.active {
+    background: rgba(26,110,181,0.2);
+    color: #60b4ff;
+    border-color: rgba(26,110,181,0.3);
+  }
+
+  /* ── RESPONSIVE ───────────────────────────────────────────────── */
+  @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 900px) { .charts-grid, .data-grid { grid-template-columns: 1fr; } .sidebar { width: 200px; } .main { margin-left: 200px; } }
+
+  /* ── SCROLLBAR ────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+  /* ── ANIMATIONS ───────────────────────────────────────────────── */
+  @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  .tab-content.active { animation: fadeIn 0.3s ease; }
+  .counter { display: inline-block; }
+
+  /* ── PROJET DETAIL CARD ───────────────────────────────────────── */
+  .projet-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .projet-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(26,110,181,0.3); }
+  .projet-rank {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(26,110,181,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #60b4ff;
+    flex-shrink: 0;
+  }
+  .projet-info { flex: 1; min-width: 0; }
+  .projet-nom { font-weight: 600; font-size: 13px; }
+  .projet-loc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .projet-montant { text-align: right; font-size: 14px; font-weight: 700; white-space: nowrap; }
+  .projet-taux { font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ──────────────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="logo-area">
+    <div class="logo-text">LAMANE</div>
+    <div class="logo-sub">BTP Management System</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Navigation</div>
+    <div class="nav-item active" onclick="showTab('dashboard', this)">
+      <span class="nav-icon">📊</span> Tableau de bord
+    </div>
+    <div class="nav-item" onclick="showTab('projets', this)">
+      <span class="nav-icon">🏗️</span> Projets
+    </div>
+    <div class="nav-item" onclick="showTab('finance', this)">
+      <span class="nav-icon">💰</span> Finances
+    </div>
+    <div class="nav-item" onclick="showTab('chantier', this)">
+      <span class="nav-icon">📐</span> Chantiers
+    </div>
+    <div class="nav-item" onclick="showTab('marches', this)">
+      <span class="nav-icon">📋</span> Marchés
+    </div>
+    <div class="nav-item" onclick="showTab('soustraitants', this)">
+      <span class="nav-icon">🤝</span> Sous-traitants
+    </div>
+    <div class="nav-item" onclick="showTab('rh', this)">
+      <span class="nav-icon">👷</span> Ressources Humaines
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="badge-live">
+      <div class="dot-live"></div>
+      Données temps réel — 2026
+    </div>
+  </div>
+</nav>
+
+<!-- ── MAIN ──────────────────────────────────────────────────────────── -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1 id="page-title">Tableau de Bord</h1>
+      <p id="page-sub">Vue d'ensemble — LAMANE SARL</p>
+    </div>
+    <div class="topbar-right">
+      <div class="date-badge">📅 16 Mars 2026</div>
+      <button class="btn-primary">⬇ Exporter PDF</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: DASHBOARD
+    ══════════════════════════════════════════════════════════ -->
+    <div id="tab-dashboard" class="tab-content active">
+
+      <!-- KPI Row 1 -->
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <div class="kpi-glow"></div>
+          <div class="kpi-icon">🏗️</div>
+          <div class="kpi-value counter" data-target="112">112</div>
+          <div class="kpi-label">Projets totaux</div>
+          <div class="kpi-sub">48 en cours · 39 terminés</div>
+        </div>
+        <div class="kpi-card gold">
+          <div class="kpi-glow"></div>
+          <div class="kpi-icon">📋</div>
+          <div class="kpi-value">10,47 Md</div>
+          <div class="kpi-label">Marchés de travaux</div>
+          <div class="kpi-sub">FCFA — 30 marchés actifs</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-glow"></div>
+          <div class="kpi-icon">💸</div>
+          <div class="kpi-value">1,08 Md</div>
+          <div class="kpi-label">Versements reçus</div>
+          <div class="kpi-sub">FCFA — Encaissements clients</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-glow"></div>
+          <div class="kpi-icon">🛒</div>
+          <div class="kpi-value">82,6 M</div>
+          <div class="kpi-label">Achats matériaux</div>
+          <div class="kpi-sub">FCFA TTC — 83 factures</div>
+        </div>
+      </div>
+
+      <!-- KPI Row 2 -->
+      <div class="kpi-grid">
+        <div class="kpi-card purple">
+          <div class="kpi-icon">🤝</div>
+          <div class="kpi-value counter" data-target="496710000">497 M</div>
+          <div class="kpi-label">Sous-traitance</div>
+          <div class="kpi-sub">FCFA — 10 sous-traitants</div>
+        </div>
+        <div class="kpi-card teal">
+          <div class="kpi-icon">🔒</div>
+          <div class="kpi-value">209 M</div>
+          <div class="kpi-label">Retenues de garantie</div>
+          <div class="kpi-sub">FCFA — Garanties décennales</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-icon">👷</div>
+          <div class="kpi-value counter" data-target="10">10</div>
+          <div class="kpi-label">Équipe LAMANE</div>
+          <div class="kpi-sub">Employés actifs</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-icon">🏪</div>
+          <div class="kpi-value counter" data-target="8">8</div>
+          <div class="kpi-label">Fournisseurs</div>
+          <div class="kpi-sub">Partenaires actifs</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📈 Achats & Versements mensuels</div>
+              <div class="card-sub">7 derniers mois — en FCFA</div>
+            </div>
+            <div style="display:flex;gap:12px;font-size:11px;">
+              <span style="display:flex;align-items:center;gap:5px;color:#60b4ff">■ Versements</span>
+              <span style="display:flex;align-items:center;gap:5px;color:#f87171">■ Achats TTC</span>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartActivite"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🍩 Statuts des projets</div>
+              <div class="card-sub">Répartition — 112 projets</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartStatuts"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Data Row -->
+      <div class="data-grid">
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🏗️ Top Projets — Valeur marchés</div>
+              <div class="card-sub">Classement par montant du marché</div>
+            </div>
+          </div>
+          <div id="top-projets-list"></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">💰 Modes de paiement</div>
+              <div class="card-sub">Répartition des achats</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartModes"></canvas></div>
+        </div>
+      </div>
+
+    </div><!-- /tab-dashboard -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: PROJETS
+    ══════════════════════════════════════════════════════════ -->
+    <div id="tab-projets" class="tab-content">
+      <div class="summary-banner">
+        <div class="banner-stat"><div class="banner-value">112</div><div class="banner-label">Total</div></div>
+        <div class="banner-divider"></div>
+        <div class="banner-stat"><div class="banner-value" style="color:#34d399">48</div><div class="banner-label">En cours</div></div>
+        <div class="banner-divider"></div>
+        <div class="banner-stat"><div class="banner-value" style="color:#60b4ff">39</div><div class="banner-label">Terminés</div></div>
+        <div class="banner-divider"></div>
+        <div class="banner-stat"><div class="banner-value" style="color:#fcd34d">24</div><div class="banner-label">En pause</div></div>
+        <div class="banner-divider"></div>
+        <div class="banner-stat"><div class="banner-value" style="color:#94a3b8">1</div><div class="banner-label">En attente</div></div>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" class="search-input" placeholder="🔍 Rechercher un projet..." id="search-projets" oninput="filterProjets(this.value)">
+      </div>
+
+      <div class="chart-card">
+        <div class="card-header">
+          <div class="card-title">📋 Portefeuille Projets — Top 10 marchés</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Projet</th><th>Localisation</th><th>Statut</th>
+                <th>Montant Marché</th><th>Achats TTC</th><th>Versements</th>
+                <th>Marge Brute</th><th>Consommation</th>
+              </tr>
+            </thead>
+            <tbody id="projets-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: FINANCES
+    ══════════════════════════════════════════════════════════ -->
+    <div id="tab-finance" class="tab-content">
+      <div class="summary-banner">
+        <div class="banner-stat"><div class="banner-value">10,47 Md</div><div class="banner-label">Marchés totaux (FCFA)</div></div>
+        <div class="banner-divider"></div>
+        <div class="banner-stat"><div class="banner-value" style="color:#34d399">1,08 Md</div><div class="banner-label">Encaissements (FCFA)</div></div>
+        <div class="banner-divider"></div>
+        <div class="banner-stat"><div class="banner-value" style="color:#f87171">82,6 M</div><div class="banner-label">Achats Matériaux (FCFA)</div></div>
+        <div class="banner-divider"></div>
+        <div class="banner-stat"><div class="banner-value" style="color:#c4b5fd">209 M</div><div class="banner-label">Retenues Garantie (FCFA)</div></div>
+      </div>
+
+      <div class="data-grid">
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">📊 Achats HT / TVA / TTC par mois</div>
+          </div>
+          <div style="height:260px"><canvas id="chartAchatsMensuel"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">💳 Synthèse financière</div>
+          </div>
+          <div id="synthese-fin"></div>
+        </div>
+      </div>
+
+      <div class="data-grid">
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">🏪 Top Fournisseurs par achats</div>
+          </div>
+          <div id="top-fournisseurs-list"></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">📑 Situations mensuelles récentes</div>
+            <div class="card-sub">Dernière situation par projet</div>
+          </div>
+          <div id="situations-list"></div>
+        </div>
+      </div>
+
+      <div class="chart-card full-width">
+        <div class="card-header">
+          <div class="card-title">📈 Versements clients par mois</div>
+          <div class="card-sub">Encaissements en FCFA</div>
+        </div>
+        <div style="height:240px"><canvas id="chartVersementsMensuel"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: CHANTIER
+    ══════════════════════════════════════════════════════════ -->
+    <div id="tab-chantier" class="tab-content">
+      <div class="data-grid">
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📐 Avancement chantiers en cours</div>
+              <div class="card-sub">Physique vs Planifié (dernière période)</div>
+            </div>
+          </div>
+          <div id="avancements-list"></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">📊 Radar avancement — Top chantiers</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartRadar"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-card full-width" style="margin-top:20px">
+        <div class="card-header">
+          <div class="card-title">📊 Avancement Physique vs Financier vs Planifié</div>
+          <div class="card-sub">Comparaison sur les chantiers actifs</div>
+        </div>
+        <div style="height:280px"><canvas id="chartAvancementBar"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: MARCHÉS
+    ══════════════════════════════════════════════════════════ -->
+    <div id="tab-marches" class="tab-content">
+      <div class="chart-card">
+        <div class="card-header">
+          <div class="card-title">📋 Marchés de travaux — Vue détaillée</div>
+          <div class="card-sub">Conforme CCAG Sénégal — Retenue de garantie 5%</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Projet</th><th>Montant Marché</th><th>Retenue Garantie (5%)</th>
+                <th>Délai (j)</th><th>Statut</th><th>Date Signature</th><th>Avance Démarrage</th>
+              </tr>
+            </thead>
+            <tbody id="marches-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: SOUS-TRAITANTS
+    ══════════════════════════════════════════════════════════ -->
+    <div id="tab-soustraitants" class="tab-content">
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi-card blue">
+          <div class="kpi-icon">🤝</div>
+          <div class="kpi-value">10</div>
+          <div class="kpi-label">Sous-traitants</div>
+          <div class="kpi-sub">Partenaires spécialisés</div>
+        </div>
+        <div class="kpi-card gold">
+          <div class="kpi-icon">📄</div>
+          <div class="kpi-value">25</div>
+          <div class="kpi-label">Contrats actifs</div>
+          <div class="kpi-sub">En cours d'exécution</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-value">497 M</div>
+          <div class="kpi-label">Valeur contrats</div>
+          <div class="kpi-sub">FCFA total engagé</div>
+        </div>
+      </div>
+      <div class="data-grid">
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">🏆 Sous-traitants — Synthèse</div>
+          </div>
+          <div id="st-list"></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">📊 Répartition par spécialité</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartST"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: RH
+    ══════════════════════════════════════════════════════════ -->
+    <div id="tab-rh" class="tab-content">
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi-card green">
+          <div class="kpi-icon">👷</div>
+          <div class="kpi-value">10</div>
+          <div class="kpi-label">Employés actifs</div>
+          <div class="kpi-sub">Personnel permanent LAMANE</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-icon">🏗️</div>
+          <div class="kpi-value">4</div>
+          <div class="kpi-label">Chefs de chantier</div>
+          <div class="kpi-sub">Conducteurs de travaux</div>
+        </div>
+        <div class="kpi-card gold">
+          <div class="kpi-icon">🎓</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-label">Ingénieurs</div>
+          <div class="kpi-sub">Structure & Génie Civil</div>
+        </div>
+      </div>
+      <div class="data-grid">
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">👥 Équipe LAMANE SARL</div>
+          </div>
+          <div class="emp-grid" id="employes-grid"></div>
+        </div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div class="card-title">📊 Répartition par poste</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartRH"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const DATA = {
+  "kpis":{"total_projets":112,"en_cours":48,"termines":39,"en_attente":1,"nb_employes":10,"nb_fournisseurs":8,"nb_achats":83,"total_achats_ttc":82594852.0,"total_versements":1080000000.0,"total_marches":10473000000.0,"nb_soustraitants":10,"total_st":496710000.0,"total_retenue":209337730},
+  "statuts_data":[{"label":"En attente","value":1},{"label":"En cours","value":48},{"label":"En pause","value":24},{"label":"Terminé","value":39}],
+  "achats_mensuel":[{"mois":"2025-08","total":247500,"ht":247500,"tva":0},{"mois":"2025-09","total":141612,"ht":120010,"tva":21602},{"mois":"2025-10","total":7080,"ht":6000,"tva":1080},{"mois":"2025-11","total":3970700,"ht":3833000,"tva":137700},{"mois":"2025-12","total":1327000,"ht":1327000,"tva":0},{"mois":"2026-01","total":1707460,"ht":1447000,"tva":260460},{"mois":"2026-03","total":2106020,"ht":1982000,"tva":124020}],
+  "versements_mensuel":[{"mois":"2025-08","total":24000000},{"mois":"2025-09","total":12000000},{"mois":"2025-10","total":15000000},{"mois":"2025-11","total":70000000},{"mois":"2025-12","total":139000000},{"mois":"2026-01","total":70000000},{"mois":"2026-02","total":72000000},{"mois":"2026-03","total":40000000}],
+  "top_projets":[{"nom":"Projet SICAP Amitié","statut":"Terminé","montant_marche":570000000,"statut_marche":"reception_definitive","total_achats":0,"total_versements":0,"localisation":"Dakar — SICAP","date_signature":"2024-11-18","delai":270,"marge_brute":570000000,"taux_conso":0.0},{"nom":"Projet Patte d'Oie","statut":"En cours","montant_marche":569000000,"statut_marche":"en_cours","total_achats":0,"total_versements":0,"localisation":"Dakar — Patte d'Oie","date_signature":"2022-01-20","delai":365,"marge_brute":569000000,"taux_conso":0.0},{"nom":"Projet Golf Sud","statut":"En cours","montant_marche":559000000,"statut_marche":"en_cours","total_achats":0,"total_versements":0,"localisation":"Dakar — Golf Sud","date_signature":"2024-10-18","delai":450,"marge_brute":559000000,"taux_conso":0.0},{"nom":"Résidence Keur Gorgui","statut":"En cours","montant_marche":541000000,"statut_marche":"en_cours","total_achats":1323960,"total_versements":0,"localisation":"Dakar — Keur Gorgui","date_signature":"2024-05-24","delai":540,"marge_brute":539676040,"taux_conso":0.2},{"nom":"Projet Kolda","statut":"En pause","montant_marche":527000000,"statut_marche":"en_attente","total_achats":0,"total_versements":0,"localisation":"Kolda","date_signature":"2022-11-10","delai":180,"marge_brute":527000000,"taux_conso":0.0},{"nom":"Résidence Diourbel","statut":"En cours","montant_marche":512000000,"statut_marche":"en_cours","total_achats":0,"total_versements":0,"localisation":"Diourbel","date_signature":"2025-02-02","delai":450,"marge_brute":512000000,"taux_conso":0.0},{"nom":"Résidence Yeumbeul","statut":"En cours","montant_marche":511000000,"statut_marche":"en_cours","total_achats":0,"total_versements":0,"localisation":"Dakar — Yeumbeul","date_signature":"2022-04-15","delai":270,"marge_brute":511000000,"taux_conso":0.0},{"nom":"Résidence Cité Avion","statut":"En pause","montant_marche":475000000,"statut_marche":"en_attente","total_achats":0,"total_versements":0,"localisation":"Dakar","date_signature":"2025-04-11","delai":450,"marge_brute":475000000,"taux_conso":0.0},{"nom":"Projet Ngor Extension","statut":"En cours","montant_marche":445000000,"statut_marche":"en_cours","total_achats":0,"total_versements":0,"localisation":"Dakar — Ngor","date_signature":"2025-02-08","delai":180,"marge_brute":445000000,"taux_conso":0.0},{"nom":"Projet Niayes","statut":"En cours","montant_marche":439000000,"statut_marche":"en_cours","total_achats":0,"total_versements":0,"localisation":"Dakar — Niayes","date_signature":"2023-04-06","delai":270,"marge_brute":439000000,"taux_conso":0.0}],
+  "avancements":[{"nom":"Projet Grand Médine","periode":"2026-02-01","physique":88.7,"financier":82.5,"planifie":88.1,"ouvriers":23,"encadrement":3},{"nom":"Projet Zone B","periode":"2026-02-01","physique":87.6,"financier":82.1,"planifie":85.4,"ouvriers":22,"encadrement":5},{"nom":"Projet Liberté 2","periode":"2026-02-01","physique":85.8,"financier":78.8,"planifie":84.5,"ouvriers":11,"encadrement":5},{"nom":"Résidence Diourbel","periode":"2026-02-01","physique":81.0,"financier":68.7,"planifie":78.9,"ouvriers":9,"encadrement":3},{"nom":"Projet Rufisque Est","periode":"2026-02-01","physique":80.7,"financier":74.9,"planifie":78.4,"ouvriers":10,"encadrement":4},{"nom":"Projet Ouakam Extension","periode":"2026-02-01","physique":75.6,"financier":64.2,"planifie":72.9,"ouvriers":11,"encadrement":4},{"nom":"Immeuble Mermoz","periode":"2026-02-01","physique":74.4,"financier":61.1,"planifie":75.6,"ouvriers":9,"encadrement":3},{"nom":"Projet Patte d'Oie","periode":"2026-02-01","physique":70.8,"financier":63.8,"planifie":71.0,"ouvriers":20,"encadrement":5}],
+  "situations":[{"nom":"Immeuble Mermoz","num":7,"taux":91.38,"montant_cumule":387464644,"a_payer":47369532,"statut":"soumise","periode":"2024-07-01"},{"nom":"Résidence Cité Avion","num":5,"taux":66.81,"montant_cumule":317358283,"a_payer":73913155,"statut":"validee","periode":"2024-05-01"},{"nom":"Résidence Diourbel","num":5,"taux":61.45,"montant_cumule":314604457,"a_payer":66656100,"statut":"validee","periode":"2024-05-01"},{"nom":"Résidence Keur Gorgui","num":5,"taux":57.11,"montant_cumule":308969893,"a_payer":74776627,"statut":"validee","periode":"2024-05-01"},{"nom":"Résidence Yeumbeul","num":5,"taux":56.24,"montant_cumule":287404474,"a_payer":48899435,"statut":"validee","periode":"2024-05-01"},{"nom":"Projet Bargny","num":6,"taux":68.95,"montant_cumule":262000909,"a_payer":32710287,"statut":"soumise","periode":"2024-06-01"},{"nom":"Projet SICAP Amitié","num":3,"taux":42.21,"montant_cumule":240597197,"a_payer":107271228,"statut":"payee","periode":"2024-03-01"},{"nom":"Projet Djily Mbaye","num":7,"taux":100.0,"montant_cumule":214000000,"a_payer":32759338,"statut":"soumise","periode":"2024-07-01"}],
+  "top_fournisseurs":[{"nom":"SEDIMA MATERIAUX","nb":20,"total":21000000},{"nom":"CIMENTS DU SAHEL","nb":18,"total":19000000},{"nom":"AFRIBAT SARL","nb":15,"total":16000000},{"nom":"BTP DISTRIBUTION SENEGAL","nb":12,"total":12000000},{"nom":"QUINCAILLERIE DU BAOBAB","nb":10,"total":9000000},{"nom":"TQG","nb":8,"total":5594852}],
+  "sous_traitants":[{"nom":"CLIMATIC SOLUTIONS","spec":"climatisation","nb":6,"total":153020000,"paye":78707000},{"nom":"ELECTRO SERVICES SARL","spec":"electricite_cfa","nb":6,"total":139740000,"paye":74327000},{"nom":"ESPACE BOIS SENEGAL","spec":"menuiserie_bois","nb":6,"total":88800000,"paye":56740000},{"nom":"PLOMB'OK DAKAR","spec":"plomberie_sanitaire","nb":4,"total":74900000,"paye":57234000},{"nom":"CARRELAGE & DESIGN SN","spec":"carrelage_faience","nb":3,"total":40250000,"paye":25591000},{"nom":"ALUM'ART SENEGAL","spec":"menuiserie_alu","nb":0,"total":0,"paye":0},{"nom":"TERR'AMENAGE SARL","spec":"vrd","nb":0,"total":0,"paye":0},{"nom":"SOLAIRE WEST AFRICA","spec":"panneaux_solaires","nb":0,"total":0,"paye":0}],
+  "modes_paiement":[{"mode":"autre","count":23,"total":26698100},{"mode":"chèque","count":20,"total":16891900},{"mode":"espèces","count":16,"total":13599772},{"mode":"virement","count":24,"total":25405080}],
+  "employes":[{"prenom":"Mariama","nom":"Sow","poste":"Architecte","actif":true},{"prenom":"Rokhaya","nom":"Gueye","poste":"Assistante Technique","actif":true},{"prenom":"Fatou","nom":"Ndiaye","poste":"Chef de Chantier","actif":true},{"prenom":"Cheikh","nom":"Fall","poste":"Chef de Chantier","actif":true},{"prenom":"Aissatou","nom":"Mbaye","poste":"Comptable de Chantier","actif":true},{"prenom":"Moussa","nom":"Ba","poste":"Conducteur de Travaux","actif":true},{"prenom":"Ibrahima","nom":"Niang","poste":"Conducteur de Travaux","actif":true},{"prenom":"Sokhna","nom":"Diagne","poste":"Ingénieur Génie Civil","actif":true},{"prenom":"Abdoulaye","nom":"Diallo","poste":"Ingénieur Structure","actif":true},{"prenom":"Ousmane","nom":"Diop","poste":"Métreur BTP","actif":true}]
+};
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(2) + ' Md';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + ' M';
+  if (n >= 1e3) return (n/1e3).toFixed(0) + ' K';
+  return n.toFixed(0);
+}
+function fmtFull(n) {
+  return new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
+}
+function fmtMois(m) {
+  const [y, mo] = m.split('-');
+  const mois = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  return mois[parseInt(mo)-1] + ' ' + y.slice(2);
+}
+function statutBadge(s) {
+  const map = {
+    'En cours': '<span class="badge badge-green">● En cours</span>',
+    'Terminé': '<span class="badge badge-blue">✓ Terminé</span>',
+    'En pause': '<span class="badge badge-gold">⏸ En pause</span>',
+    'En attente': '<span class="badge badge-gray">○ En attente</span>',
+    'en_cours': '<span class="badge badge-green">● Exécution</span>',
+    'reception_definitive': '<span class="badge badge-blue">✓ Réceptionné</span>',
+    'en_attente': '<span class="badge badge-gray">○ Attente</span>',
+    'payee': '<span class="badge badge-green">✓ Payée</span>',
+    'validee': '<span class="badge badge-blue">✓ Validée</span>',
+    'soumise': '<span class="badge badge-gold">⏳ Soumise</span>',
+    'brouillon': '<span class="badge badge-gray">◌ Brouillon</span>',
+  };
+  return map[s] || `<span class="badge badge-gray">${s}</span>`;
+}
+function empColors(poste) {
+  const map = {
+    'Architecte': '#8b5cf6', 'Assistante Technique': '#06b6d4',
+    'Chef de Chantier': '#10b981', 'Comptable de Chantier': '#f59e0b',
+    'Conducteur de Travaux': '#3b82f6', 'Ingénieur Génie Civil': '#ef4444',
+    'Ingénieur Structure': '#ec4899', 'Métreur BTP': '#f97316',
+  };
+  return map[poste] || '#64748b';
+}
+function specLabel(spec) {
+  const m = {'climatisation':'🌀 Climatisation','electricite_cfa':'⚡ Électricité','menuiserie_bois':'🪵 Menuiserie Bois',
+    'plomberie_sanitaire':'🔧 Plomberie','carrelage_faience':'🏠 Carrelage','menuiserie_alu':'🔩 Menuiserie Alu',
+    'vrd':'🚧 VRD','panneaux_solaires':'☀️ Solaire','piscine':'🏊 Piscine','ascenseur':'🛗 Ascenseur'};
+  return m[spec] || spec;
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+const GRAD = (ctx, c1, c2) => {
+  const g = ctx.createLinearGradient(0, 0, 0, 300);
+  g.addColorStop(0, c1); g.addColorStop(1, c2); return g;
+};
+
+function initCharts() {
+  // Chart Activité (line)
+  const ctxA = document.getElementById('chartActivite').getContext('2d');
+  const labelsAll = [...new Set([...DATA.achats_mensuel.map(d=>d.mois), ...DATA.versements_mensuel.map(d=>d.mois)])].sort();
+  const versMap = Object.fromEntries(DATA.versements_mensuel.map(d=>[d.mois, d.total]));
+  const achatMap = Object.fromEntries(DATA.achats_mensuel.map(d=>[d.mois, d.total]));
+  new Chart(ctxA, {
+    type: 'line',
+    data: {
+      labels: labelsAll.map(fmtMois),
+      datasets: [
+        { label: 'Versements', data: labelsAll.map(m=>versMap[m]||0), borderColor:'#60b4ff', backgroundColor:'rgba(96,180,255,0.08)', tension:0.4, fill:true, pointBackgroundColor:'#60b4ff', pointRadius:4 },
+        { label: 'Achats TTC', data: labelsAll.map(m=>achatMap[m]||0), borderColor:'#f87171', backgroundColor:'rgba(248,113,113,0.08)', tension:0.4, fill:true, pointBackgroundColor:'#f87171', pointRadius:4 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{grid:{color:'rgba(255,255,255,0.04)'}}, y:{grid:{color:'rgba(255,255,255,0.04)'}, ticks:{callback:v=>fmt(v)}} } }
+  });
+
+  // Chart Statuts (doughnut)
+  const ctxS = document.getElementById('chartStatuts').getContext('2d');
+  new Chart(ctxS, {
+    type: 'doughnut',
+    data: {
+      labels: DATA.statuts_data.map(d=>d.label),
+      datasets: [{ data: DATA.statuts_data.map(d=>d.value), backgroundColor:['#94a3b8','#34d399','#fcd34d','#60b4ff'], borderColor:'#111827', borderWidth:3, hoverOffset:8 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{ legend:{ position:'bottom', labels:{ padding:16, font:{size:12} } } } }
+  });
+
+  // Chart Modes paiement (polar)
+  const ctxM = document.getElementById('chartModes').getContext('2d');
+  new Chart(ctxM, {
+    type: 'polarArea',
+    data: {
+      labels: DATA.modes_paiement.map(d => d.mode.charAt(0).toUpperCase()+d.mode.slice(1)),
+      datasets: [{ data: DATA.modes_paiement.map(d=>d.total), backgroundColor:['rgba(96,180,255,0.7)','rgba(252,211,77,0.7)','rgba(52,211,153,0.7)','rgba(248,113,113,0.7)'], borderColor:'#111827', borderWidth:2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ padding:12, font:{size:11} } } } }
+  });
+
+  // Chart Achats mensuel HT/TVA (bar stacked)
+  const ctxAM = document.getElementById('chartAchatsMensuel').getContext('2d');
+  new Chart(ctxAM, {
+    type: 'bar',
+    data: {
+      labels: DATA.achats_mensuel.map(d=>fmtMois(d.mois)),
+      datasets: [
+        { label: 'HT', data: DATA.achats_mensuel.map(d=>d.ht), backgroundColor:'rgba(96,180,255,0.7)', borderRadius:4 },
+        { label: 'TVA 18%', data: DATA.achats_mensuel.map(d=>d.tva), backgroundColor:'rgba(252,211,77,0.6)', borderRadius:4 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ font:{size:11} } } }, scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, ticks:{callback:v=>fmt(v)}} } }
+  });
+
+  // Chart Versements mensuel (area)
+  const ctxVM = document.getElementById('chartVersementsMensuel').getContext('2d');
+  const gradV = GRAD(ctxVM, 'rgba(52,211,153,0.3)', 'rgba(52,211,153,0.0)');
+  new Chart(ctxVM, {
+    type: 'line',
+    data: {
+      labels: DATA.versements_mensuel.map(d=>fmtMois(d.mois)),
+      datasets: [{ label: 'Versements FCFA', data: DATA.versements_mensuel.map(d=>d.total), borderColor:'#34d399', backgroundColor:gradV, tension:0.4, fill:true, pointBackgroundColor:'#34d399', pointRadius:5, pointHoverRadius:7 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{grid:{color:'rgba(255,255,255,0.04)'}}, y:{grid:{color:'rgba(255,255,255,0.04)'}, ticks:{callback:v=>fmt(v)}} } }
+  });
+
+  // Chart Avancement (grouped bar)
+  const ctxAB = document.getElementById('chartAvancementBar').getContext('2d');
+  const avNoms = DATA.avancements.map(d => d.nom.length > 14 ? d.nom.slice(0,14)+'…' : d.nom);
+  new Chart(ctxAB, {
+    type: 'bar',
+    data: {
+      labels: avNoms,
+      datasets: [
+        { label: 'Physique %', data: DATA.avancements.map(d=>d.physique), backgroundColor:'rgba(96,180,255,0.8)', borderRadius:4 },
+        { label: 'Financier %', data: DATA.avancements.map(d=>d.financier), backgroundColor:'rgba(52,211,153,0.7)', borderRadius:4 },
+        { label: 'Planifié %', data: DATA.avancements.map(d=>d.planifie), backgroundColor:'rgba(252,211,77,0.5)', borderRadius:4 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ font:{size:11} } } }, scales:{ x:{grid:{display:false}}, y:{max:100, ticks:{callback:v=>v+'%'}} } }
+  });
+
+  // Chart Radar
+  const ctxR = document.getElementById('chartRadar').getContext('2d');
+  const topAv = DATA.avancements.slice(0, 5);
+  new Chart(ctxR, {
+    type: 'radar',
+    data: {
+      labels: topAv.map(d => d.nom.length>12 ? d.nom.slice(0,12)+'…' : d.nom),
+      datasets: [
+        { label: 'Physique', data: topAv.map(d=>d.physique), borderColor:'#60b4ff', backgroundColor:'rgba(96,180,255,0.15)', pointBackgroundColor:'#60b4ff' },
+        { label: 'Planifié', data: topAv.map(d=>d.planifie), borderColor:'#fcd34d', backgroundColor:'rgba(252,211,77,0.1)', pointBackgroundColor:'#fcd34d', borderDash:[4,2] }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, scales:{ r:{ min:0, max:100, ticks:{ font:{size:9}, stepSize:25, callback:v=>v+'%' }, grid:{ color:'rgba(255,255,255,0.06)' }, pointLabels:{ font:{size:10}, color:'#94a3b8' } } }, plugins:{ legend:{ labels:{ font:{size:11} } } } }
+  });
+
+  // Chart ST (horizontal bar)
+  const ctxST = document.getElementById('chartST').getContext('2d');
+  const stData = DATA.sous_traitants.filter(d=>d.total>0);
+  new Chart(ctxST, {
+    type: 'bar',
+    data: {
+      labels: stData.map(d => d.nom.length>18 ? d.nom.slice(0,18)+'…' : d.nom),
+      datasets: [
+        { label: 'Montant contrat', data: stData.map(d=>d.total), backgroundColor:'rgba(96,180,255,0.7)', borderRadius:4 },
+        { label: 'Payé', data: stData.map(d=>d.paye), backgroundColor:'rgba(52,211,153,0.7)', borderRadius:4 }
+      ]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{font:{size:11}} } }, scales:{ x:{ ticks:{callback:v=>fmt(v)}, grid:{color:'rgba(255,255,255,0.04)'} }, y:{grid:{display:false}} } }
+  });
+
+  // Chart RH (doughnut)
+  const ctxRH = document.getElementById('chartRH').getContext('2d');
+  const posteCount = {};
+  DATA.employes.forEach(e => posteCount[e.poste] = (posteCount[e.poste]||0) + 1);
+  new Chart(ctxRH, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(posteCount),
+      datasets: [{ data: Object.values(posteCount), backgroundColor:['#8b5cf6','#06b6d4','#10b981','#f59e0b','#3b82f6','#ef4444','#ec4899','#f97316'], borderColor:'#111827', borderWidth:3, hoverOffset:6 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{ position:'bottom', labels:{ padding:10, font:{size:10} } } } }
+  });
+}
+
+// ── RENDER FUNCTIONS ──────────────────────────────────────────────────────
+function renderTopProjets() {
+  const el = document.getElementById('top-projets-list');
+  el.innerHTML = DATA.top_projets.slice(0,5).map((p,i) => `
+    <div class="projet-row">
+      <div class="projet-rank">${i+1}</div>
+      <div class="projet-info">
+        <div class="projet-nom">${p.nom}</div>
+        <div class="projet-loc">📍 ${p.localisation}</div>
+      </div>
+      ${statutBadge(p.statut)}
+      <div class="projet-montant">
+        <div>${fmt(p.montant_marche)} FCFA</div>
+        <div class="projet-taux">Délai: ${p.delai}j</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderProjetsTbody(filter='') {
+  const tbody = document.getElementById('projets-tbody');
+  if (!tbody) return;
+  const rows = DATA.top_projets.filter(p => !filter || p.nom.toLowerCase().includes(filter.toLowerCase()));
+  tbody.innerHTML = rows.map((p,i) => `
+    <tr>
+      <td><span class="badge badge-gray">${i+1}</span></td>
+      <td class="td-bold">${p.nom}</td>
+      <td>📍 ${p.localisation}</td>
+      <td>${statutBadge(p.statut)}</td>
+      <td class="td-bold" style="color:#fcd34d">${fmtFull(p.montant_marche)}</td>
+      <td style="color:#f87171">${fmtFull(p.total_achats)}</td>
+      <td style="color:#34d399">${fmtFull(p.total_versements)}</td>
+      <td style="color:${p.marge_brute>0?'#34d399':'#f87171'}">${fmtFull(p.marge_brute)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="progress-track" style="flex:1;height:6px">
+            <div class="progress-fill" style="width:${Math.min(p.taux_conso,100)}%;background:${p.taux_conso>80?'#ef4444':p.taux_conso>50?'#f59e0b':'#10b981'}"></div>
+          </div>
+          <span style="font-size:11px;color:var(--text-muted);white-space:nowrap">${p.taux_conso}%</span>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterProjets(v) { renderProjetsTbody(v); }
+
+function renderAvancements() {
+  const el = document.getElementById('avancements-list');
+  if (!el) return;
+  el.innerHTML = DATA.avancements.map(a => {
+    const ecart = (a.physique - a.planifie).toFixed(1);
+    const ecartColor = ecart >= 0 ? '#34d399' : '#f87171';
+    const ecartLabel = ecart >= 0 ? `+${ecart}% avance` : `${ecart}% retard`;
+    return `
+      <div class="progress-container">
+        <div class="progress-header">
+          <span class="progress-nom">${a.nom}</span>
+          <span class="progress-pct">${a.physique}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${a.physique}%;background:linear-gradient(90deg,#1a6eb5,#2e87d4)"></div>
+          <div class="progress-planifie" style="left:${a.planifie}%"></div>
+        </div>
+        <div class="progress-meta">
+          <span>💰 Financier: ${a.financier}%</span>
+          <span>📅 Planifié: ${a.planifie}%</span>
+          <span style="color:${ecartColor}">${ecartLabel}</span>
+          <span>👷 ${a.ouvriers} ouvriers</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSituations() {
+  const el = document.getElementById('situations-list');
+  if (!el) return;
+  el.innerHTML = DATA.situations.map(s => `
+    <div class="situation-item">
+      <div class="sit-num">N°${s.num}</div>
+      <div class="sit-info">
+        <div class="sit-nom">${s.nom}</div>
+        <div class="sit-meta">${statutBadge(s.statut)} &nbsp; Avancement: ${s.taux.toFixed(1)}%</div>
+      </div>
+      <div class="sit-montant">
+        <div class="sit-amount">${fmt(s.a_payer)} FCFA</div>
+        <div class="sit-taux">à encaisser</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderFournisseurs() {
+  const el = document.getElementById('top-fournisseurs-list');
+  if (!el) return;
+  const maxVal = Math.max(...DATA.top_fournisseurs.map(f=>f.total));
+  el.innerHTML = DATA.top_fournisseurs.map((f,i) => `
+    <div class="st-item">
+      <div class="st-header">
+        <div>
+          <div class="st-nom">${f.nom}</div>
+          <div class="st-spec">${f.nb} achats</div>
+        </div>
+        <div class="st-amounts">
+          <div class="st-total">${fmt(f.total)} FCFA</div>
+        </div>
+      </div>
+      <div class="st-bar">
+        <div class="st-bar-fill" style="width:${(f.total/maxVal*100).toFixed(0)}%;background:${['#60b4ff','#34d399','#fcd34d','#c4b5fd','#f87171','#67e8f9'][i%6]}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderSyntheseFin() {
+  const el = document.getElementById('synthese-fin');
+  if (!el) return;
+  const k = DATA.kpis;
+  const taux_encaissement = (k.total_versements / k.total_marches * 100).toFixed(1);
+  const taux_consommation = (k.total_achats_ttc / k.total_marches * 100).toFixed(2);
+  el.innerHTML = `
+    <div class="fin-row"><div class="fin-label">📋 Marchés de travaux</div><div class="fin-value" style="color:#fcd34d">${fmtFull(k.total_marches)}</div></div>
+    <div class="fin-row"><div class="fin-label">💸 Versements clients</div><div class="fin-value" style="color:#34d399">${fmtFull(k.total_versements)}</div></div>
+    <div class="fin-row"><div class="fin-label">🛒 Achats matériaux TTC</div><div class="fin-value" style="color:#f87171">${fmtFull(k.total_achats_ttc)}</div></div>
+    <div class="fin-row"><div class="fin-label">🤝 Sous-traitance</div><div class="fin-value" style="color:#c4b5fd">${fmtFull(k.total_st)}</div></div>
+    <div class="fin-row"><div class="fin-label">🔒 Retenues de garantie</div><div class="fin-value" style="color:#67e8f9">${fmtFull(k.total_retenue)}</div></div>
+    <div class="fin-row" style="border-top:2px solid rgba(26,110,181,0.3);margin-top:8px;padding-top:14px">
+      <div class="fin-label">📊 Taux d'encaissement</div>
+      <div class="fin-value" style="color:#34d399">${taux_encaissement}%</div>
+    </div>
+    <div class="fin-row">
+      <div class="fin-label">📊 Consommation matériaux</div>
+      <div class="fin-value" style="color:#60b4ff">${taux_consommation}%</div>
+    </div>
+  `;
+}
+
+function renderST() {
+  const el = document.getElementById('st-list');
+  if (!el) return;
+  el.innerHTML = DATA.sous_traitants.map(s => {
+    const tauxPay = s.total > 0 ? (s.paye/s.total*100).toFixed(0) : 0;
+    return `
+      <div class="st-item">
+        <div class="st-header">
+          <div><div class="st-nom">${s.nom}</div><div class="st-spec">${specLabel(s.spec)}</div></div>
+          <div class="st-amounts">
+            <div class="st-total">${s.total>0 ? fmt(s.total)+' FCFA' : '—'}</div>
+            ${s.total>0 ? `<div class="st-paye-pct">Payé: ${tauxPay}%</div>` : ''}
+          </div>
+        </div>
+        ${s.total>0 ? `<div class="st-bar"><div class="st-bar-fill" style="width:${tauxPay}%"></div></div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderEmployes() {
+  const el = document.getElementById('employes-grid');
+  if (!el) return;
+  el.innerHTML = DATA.employes.map(e => `
+    <div class="emp-card">
+      <div class="emp-avatar" style="background:${empColors(e.poste)}">${e.prenom[0]}${e.nom[0]}</div>
+      <div>
+        <div class="emp-name">${e.prenom} ${e.nom}</div>
+        <div class="emp-poste">${e.poste}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderMarches() {
+  const tbody = document.getElementById('marches-tbody');
+  if (!tbody) return;
+  DATA.top_projets.forEach(p => {
+    const retenue = (p.montant_marche * 0.05).toFixed(0);
+    const avance = (p.montant_marche * 0.25).toFixed(0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-bold">${p.nom}</td>
+      <td style="color:#fcd34d">${fmtFull(p.montant_marche)}</td>
+      <td style="color:#67e8f9">${fmtFull(Number(retenue))}</td>
+      <td>${p.delai} jours</td>
+      <td>${statutBadge(p.statut_marche)}</td>
+      <td>${p.date_signature}</td>
+      <td style="color:#c4b5fd">${fmtFull(Number(avance))}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── TAB NAVIGATION ─────────────────────────────────────────────────────────
+const PAGE_TITLES = {
+  dashboard: ['Tableau de Bord', 'Vue d\'ensemble — LAMANE SARL'],
+  projets: ['Portefeuille Projets', '112 projets — BTP Sénégal'],
+  finance: ['Tableau Financier', 'Analyses comptables & financières'],
+  chantier: ['Suivi Chantiers', 'Avancement physique & financier'],
+  marches: ['Marchés de Travaux', 'CCAG Sénégal — Retenues de garantie'],
+  soustraitants: ['Sous-traitants', '10 partenaires spécialisés'],
+  rh: ['Ressources Humaines', 'Équipe LAMANE SARL'],
+};
+function showTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+  const [title, sub] = PAGE_TITLES[id];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+  renderTopProjets();
+  renderProjetsTbody();
+  renderAvancements();
+  renderSituations();
+  renderFournisseurs();
+  renderSyntheseFin();
+  renderST();
+  renderEmployes();
+  renderMarches();
+});
+</script>
+</body>
+</html>

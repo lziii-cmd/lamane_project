@@ -1,0 +1,11 @@
+.champ-grise {
+  background-color: #f2f2f2 !important;
+  color: #999 !important;
+  cursor: not-allowed !important;
+  border-color: #ddd !important;
+}
+
+.champ-grise-active {
+  background-color: white !important;
+  color: black !important;
+}
