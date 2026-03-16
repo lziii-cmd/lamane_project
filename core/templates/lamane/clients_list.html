@@ -7,13 +7,15 @@
 
 <!-- Filtres + Actions -->
 <div class="flex items-center justify-between mb-4 animate-fade-up">
-  <form method="get" class="filters-bar" style="margin:0;flex:1;">
-    <input type="text" name="q" id="searchInput" value="{{ q }}" placeholder="🔍 Rechercher un client…" class="filter-input" style="min-width:280px;">
-    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+  <div class="filters-bar" style="margin:0;flex:1;">
+    <div style="position:relative;flex:1;">
+      <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+      <input type="text" name="q" id="dynSearch" value="{{ q }}" placeholder="Rechercher un client…" class="filter-input" style="min-width:240px;padding-left:34px;" autocomplete="off">
+    </div>
     {% if q %}
     <a href="{% url 'ui_clients' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
     {% endif %}
-  </form>
+  </div>
   <a href="{% url 'ui_client_create' %}" class="btn btn-primary" style="margin-left:12px;white-space:nowrap;">
     <i class="fas fa-plus"></i> Nouveau client
   </a>
@@ -24,9 +26,11 @@
 
 {% for d in clients_data %}
 {% with c=d.client %}
-<div class="card client-card" style="transition:transform 0.2s,border-color 0.2s;" data-search="{{ c.entreprise|lower }} {{ c.nom|lower }} {{ c.prenom|lower }} {{ c.telephone|lower }}"
-  onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(240,165,0,0.3)'"
-  onmouseout="this.style.transform='';this.style.borderColor=''">
+<div class="card client-card" style="transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s;cursor:pointer;border:1px solid var(--border);"
+  onclick="window.location='{% url 'ui_client_detail' c.id %}'"
+  data-search="{{ c.entreprise|lower }} {{ c.nom|lower }} {{ c.prenom|lower }} {{ c.telephone|lower }}"
+  onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(240,165,0,0.3)';this.style.boxShadow='0 12px 40px rgba(240,165,0,0.12)'"
+  onmouseout="this.style.transform='';this.style.borderColor='var(--border)';this.style.boxShadow=''">
 
   <!-- Header -->
   <div class="flex items-center gap-3 mb-4">
@@ -125,20 +129,8 @@
 
 {% block extra_js %}
 <script>
-// Live search
-const si = document.getElementById('searchInput');
-if (si) {
-  let t;
-  si.addEventListener('input', function() {
-    clearTimeout(t);
-    t = setTimeout(() => {
-      const q = this.value.toLowerCase().trim();
-      document.querySelectorAll('.client-card').forEach(card => {
-        const match = !q || card.dataset.search.includes(q);
-        card.style.display = match ? '' : 'none';
-      });
-    }, 180);
-  });
-}
+document.addEventListener('DOMContentLoaded', function() {
+  initDynamicFilter('dynSearch', 'q', 400);
+});
 </script>
 {% endblock %}

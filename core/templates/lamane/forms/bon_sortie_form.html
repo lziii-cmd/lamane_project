@@ -1,179 +1,80 @@
 {% extends "lamane/base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_sub %}Sortie de matériaux du stock{% endblock %}
-
-{% block extra_css %}
+{% block page_sub %}Créer un bon de sortie{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}
 <style>
-.form-input,.form-select,.form-textarea{width:100%;background:rgba(255,255,255,0.06);border:1.5px solid var(--border-light);border-radius:10px;padding:11px 14px;color:var(--text-primary);font-size:14px;font-family:inherit;transition:border-color 0.2s,background 0.2s;outline:none;}
-.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);background:rgba(240,165,0,0.06);}
-.form-select option{background:#1a2540;color:#f0f4ff;}
-.form-group{margin-bottom:18px;}
-.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;}
-.form-label .required{color:#ff5050;margin-left:3px;}
-.field-error{font-size:11px;color:#ff5050;margin-top:4px;display:block;}
-.form-section{background:rgba(255,255,255,0.02);border:1px solid var(--border-light);border-radius:12px;padding:20px;margin-bottom:20px;}
-.form-section-title{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-@media(max-width:768px){.form-grid-2,.form-grid-3{grid-template-columns:1fr;}}
-.lignes-table{width:100%;border-collapse:collapse;}
-.lignes-table th{padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);}
-.lignes-table td{padding:6px 8px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
-.delete-row-btn{background:rgba(255,71,87,0.1);border:none;color:var(--red);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:13px;transition:background 0.2s;}
-.delete-row-btn:hover{background:rgba(255,71,87,0.25);}
-.add-row-btn{background:rgba(0,196,140,0.1);border:1px dashed rgba(0,196,140,0.3);color:var(--green);border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;width:100%;margin-top:10px;transition:all 0.2s;}
-.add-row-btn:hover{background:rgba(0,196,140,0.18);}
+.ligne-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;padding:14px;background:var(--bg-card2);border-radius:10px;border:1px solid var(--border);margin-bottom:10px;}
+body.light-mode .ligne-row{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.08);}
+.ligne-row .form-group{margin-bottom:0;}
+.btn-del-ligne{padding:9px 13px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:#ff4757;border-radius:9px;cursor:pointer;font-size:12px;transition:all 0.2s;}
+.btn-del-ligne:hover{background:rgba(255,71,87,0.2);}
 </style>
 {% endblock %}
-
 {% block content %}
-<div class="flex items-center justify-between mb-6 animate-fade-up">
-  <a href="{{ back_url }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour</a>
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_bons_sortie_list' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux bons</a>
+  {% if obj %}<a href="{% url 'ui_bon_sortie_delete' obj.pk %}" class="wz-btn wz-btn-danger"><i class="fas fa-trash-alt"></i> Supprimer</a>{% endif %}
 </div>
-
-{% if messages %}
-{% for msg in messages %}
-<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
-  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}{{ formset.management_form }}
+<div class="wz-stepbar">
+  <div class="wz-step" data-step="1" onclick="wzGoTo(1)"><div class="wz-step-circle">1</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Bon de sortie</span></div></div>
+  <div class="wz-step" data-step="2" onclick="wzGoTo(2)"><div class="wz-step-circle">2</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 2</span><span class="wz-step-label">Matériaux</span></div></div>
 </div>
-{% endfor %}
-{% endif %}
-
-<form method="post" novalidate class="animate-fade-up" id="bonSortieForm">
-{% csrf_token %}
-{{ formset.management_form }}
-
-<div class="card" style="max-width:900px;">
-  <div class="card-header">
-    <div class="card-title"><i class="fas fa-arrow-alt-circle-up text-gold"></i> {{ title }}</div>
-    <span class="badge badge-orange">Sortie de stock</span>
-  </div>
-
-  {% if form.non_field_errors %}
-  <div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;">{{ form.non_field_errors }}</div>
-  {% endif %}
-
-  <!-- Informations du bon -->
-  <div class="form-section">
-    <div class="form-section-title"><i class="fas fa-clipboard-list"></i> Informations du bon de sortie</div>
-    <div class="form-grid-3">
-      <div class="form-group">
-        <label class="form-label" for="{{ form.projet.id_for_label }}">Projet<span class="required">*</span></label>
-        {{ form.projet }}
-        {% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill"></div></div>
+{% if form.non_field_errors %}<div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;"><i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}</div>{% endif %}
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-file-export"></i></div><div><div class="wz-section-title">Informations du bon</div><div class="wz-section-sub">Projet destinataire et date de sortie</div></div></div>
+    <div class="wz-section-body">
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Projet / Chantier <span class="req"></span></label><div class="input-icon-wrap"><i class="fas fa-hard-hat input-icon"></i>{{ form.projet }}</div>{% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+        <div class="form-group"><label class="form-label">Date de sortie <span class="req"></span></label><div class="input-icon-wrap"><i class="fas fa-calendar input-icon"></i>{{ form.date_sortie }}</div>{% for e in form.date_sortie.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ form.date_sortie.id_for_label }}">Date de sortie<span class="required">*</span></label>
-        {{ form.date_sortie }}
-        {% for e in form.date_sortie.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ form.responsable.id_for_label }}">Responsable</label>
-        {{ form.responsable }}
-        {% for e in form.responsable.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="{{ form.observations.id_for_label }}">Observations</label>
-      {{ form.observations }}
-      {% for e in form.observations.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      <div class="form-group"><label class="form-label">Responsable</label><div class="input-icon-wrap"><i class="fas fa-user-tie input-icon"></i>{{ form.responsable }}</div></div>
+      <div class="form-group"><label class="form-label">Observations</label>{{ form.observations }}</div>
     </div>
   </div>
-
-  <!-- Lignes de matériaux -->
-  <div class="form-section">
-    <div class="form-section-title"><i class="fas fa-boxes"></i> Matériaux à sortir du stock</div>
-    {% if formset.non_form_errors %}
-    <div style="padding:10px;background:rgba(255,80,80,0.1);border-radius:8px;color:#ff5050;margin-bottom:12px;">{{ formset.non_form_errors }}</div>
-    {% endif %}
-
-    <div style="overflow-x:auto;">
-      <table class="lignes-table" id="lignesTable">
-        <thead>
-          <tr>
-            <th style="width:50%;">Matériau</th>
-            <th style="width:22%;">Quantité</th>
-            <th style="width:22%;">Commentaire</th>
-            <th style="width:6%;"></th>
-          </tr>
-        </thead>
-        <tbody id="lignesBody">
-          {% for ligne_form in formset %}
-          <tr class="ligne-row" data-index="{{ forloop.counter0 }}">
-            <td>
-              {{ ligne_form.materiel }}
-              {% for e in ligne_form.materiel.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-              {{ ligne_form.id }}
-            </td>
-            <td>
-              <input type="number" name="{{ ligne_form.quantite.html_name }}" value="{{ ligne_form.quantite.value|default:'' }}" class="form-input" min="0" step="0.001" style="text-align:right;" placeholder="0">
-              {% for e in ligne_form.quantite.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-            </td>
-            <td><input type="text" name="{{ ligne_form.commentaire.html_name }}" value="{{ ligne_form.commentaire.value|default:'' }}" class="form-input" placeholder="Optionnel"></td>
-            <td>
-              <div style="display:flex;align-items:center;gap:6px;">
-                {% if ligne_form.DELETE %}<input type="checkbox" name="{{ ligne_form.DELETE.html_name }}" class="delete-checkbox" style="display:none;">{% endif %}
-                <button type="button" class="delete-row-btn" onclick="deleteRow(this)"><i class="fas fa-times"></i></button>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <button type="button" class="add-row-btn" onclick="addRow()">
-      <i class="fas fa-plus-circle"></i> Ajouter un matériau
-    </button>
-
-    <div style="margin-top:12px;padding:10px 14px;background:rgba(255,121,63,0.08);border:1px solid rgba(255,121,63,0.2);border-radius:8px;font-size:12px;color:var(--orange);">
-      <i class="fas fa-exclamation-circle"></i>
-      Les quantités sorties seront déduites du stock en temps réel.
-      Un bon de sortie PDF sera généré automatiquement.
+</div>
+<div class="wz-panel" data-step="2">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-boxes"></i></div><div><div class="wz-section-title">Matériaux sortants</div><div class="wz-section-sub">Indiquez les matières et quantités à sortir du stock</div></div></div>
+    <div class="wz-section-body">
+      <div id="lignes-container">{% for lf in formset %}
+        <div class="ligne-row" id="ligne-{{ forloop.counter0 }}">
+          {{ lf.id }}{{ lf.DELETE }}
+          <div class="form-group"><label class="form-label">Matériel</label>{{ lf.materiel }}{% for e in lf.materiel.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+          <div class="form-group"><label class="form-label">Quantité</label>{{ lf.quantite }}{% for e in lf.quantite.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+          <div class="form-group"><label class="form-label">Commentaire</label>{{ lf.commentaire }}</div>
+          <button type="button" class="btn-del-ligne" onclick="removeLigne(this, {{ forloop.counter0 }})"><i class="fas fa-trash"></i></button>
+        </div>{% endfor %}
+      </div>
+      <button type="button" onclick="addLigne()" class="wz-btn wz-btn-ghost" style="margin-top:10px;"><i class="fas fa-plus"></i> Ajouter une ligne</button>
     </div>
   </div>
-
-  <div class="flex gap-3" style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-light);">
-    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {{ action }}</button>
-    <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+</div>
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_bons_sortie_list' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+    <button type="button" id="wzPrev" style="display:none;" class="wz-btn wz-btn-ghost" onclick="wzPrev()"><i class="fas fa-arrow-left"></i> Précédent</button>
+  </div>
+  <div class="wz-nav-right">
+    <span class="wz-nav-counter" id="wzBadge"></span>
+    <button type="button" id="wzNext" class="wz-btn wz-btn-primary" onclick="wzNext()">Suivant <i class="fas fa-arrow-right"></i></button>
+    <button type="submit" id="wzSave" style="display:none;" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> {{ action }}</button>
   </div>
 </div>
 </form>
+</div>
 {% endblock %}
-
-{% block extra_js %}
+{% block extra_js %}{% include "lamane/includes/wizard_js.html" %}
 <script>
-const TOTAL_FORMS = document.getElementById('id_lignes-TOTAL_FORMS');
-let formCount = parseInt(TOTAL_FORMS.value);
-
-function addRow() {
-  const body = document.getElementById('lignesBody');
-  const firstRow = body.querySelector('.ligne-row');
-  if (!firstRow) return;
-  const newRow = firstRow.cloneNode(true);
-  newRow.dataset.index = formCount;
-  newRow.querySelectorAll('input[type="text"],input[type="number"]').forEach(el => {
-    const name = el.name.replace(/lignes-\d+-/, `lignes-${formCount}-`);
-    el.name = name; el.id = 'id_' + name; el.value = '';
-  });
-  newRow.querySelectorAll('select').forEach(el => {
-    const name = el.name.replace(/lignes-\d+-/, `lignes-${formCount}-`);
-    el.name = name; el.id = 'id_' + name; el.selectedIndex = 0;
-  });
-  newRow.querySelectorAll('input[type="hidden"]').forEach(el => {
-    const name = el.name.replace(/lignes-\d+-/, `lignes-${formCount}-`);
-    el.name = name; el.id = 'id_' + name; el.value = '';
-  });
-  body.appendChild(newRow);
-  formCount++;
-  TOTAL_FORMS.value = formCount;
-}
-
-function deleteRow(btn) {
-  const row = btn.closest('tr');
-  const cb = row.querySelector('.delete-checkbox');
-  if (cb) { cb.checked = true; row.style.opacity = '0.35'; row.style.pointerEvents = 'none'; }
-  else row.remove();
-}
+var TOTAL_FORMS_ID = '{{ formset.management_form.prefix }}-TOTAL_FORMS';
+var ligneCount = {{ formset.total_form_count }};
+var prefix = '{{ formset.management_form.prefix }}';
+function addLigne(){var c=document.getElementById('lignes-container');var idx=ligneCount;var fs=document.querySelector('[name="'+prefix+'-0-materiel"]');var d=document.createElement('div');d.className='ligne-row';d.id='ligne-'+idx;d.innerHTML='<input type="hidden" name="'+prefix+'-'+idx+'-id" value=""><input type="hidden" name="'+prefix+'-'+idx+'-DELETE" value=""><div class="form-group"><label class="form-label">Matériel</label><select name="'+prefix+'-'+idx+'-materiel" class="form-select">'+( fs?fs.innerHTML:'')+ '</select></div><div class="form-group"><label class="form-label">Quantité</label><input type="number" name="'+prefix+'-'+idx+'-quantite" class="form-input" step="0.001" min="0" value="0"></div><div class="form-group"><label class="form-label">Commentaire</label><input type="text" name="'+prefix+'-'+idx+'-commentaire" class="form-input"></div><button type="button" class="btn-del-ligne" onclick="removeLigne(this,'+idx+')"><i class="fas fa-trash"></i></button>';c.appendChild(d);document.getElementById(TOTAL_FORMS_ID).value=++ligneCount;}
+function removeLigne(btn,idx){var row=document.getElementById('ligne-'+idx);var del=row.querySelector('[name$="-DELETE"]')||null;if(del){del.value='on';row.style.display='none';}else row.remove();}
 </script>
 {% endblock %}

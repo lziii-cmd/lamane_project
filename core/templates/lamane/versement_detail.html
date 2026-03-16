@@ -1,0 +1,109 @@
+{% extends "lamane/base.html" %}
+{% block title %}Versement — {{ versement.libelle }}{% endblock %}
+{% block page_title %}Détail versement{% endblock %}
+{% block page_sub %}{{ versement.date_versement|date:"d/m/Y" }} · {{ versement.projet.nom }}{% endblock %}
+
+{% block content %}
+
+<!-- Actions -->
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_versements' %}" class="btn btn-ghost">
+    <i class="fas fa-arrow-left"></i> Retour aux versements
+  </a>
+  <div class="flex gap-3">
+    <a href="{% url 'ui_projet_detail' versement.projet.id %}" class="btn btn-ghost">
+      <i class="fas fa-folder-open"></i> Voir le projet
+    </a>
+    <a href="{% url 'ui_versement_delete' versement.pk %}" class="btn" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);color:var(--red);">
+      <i class="fas fa-trash-alt"></i>
+    </a>
+  </div>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up">
+
+  <!-- Informations versement -->
+  <div class="card" style="border-color:rgba(0,196,140,0.2);background:rgba(0,196,140,0.02);">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-hand-holding-usd text-green"></i> Détails du versement</div>
+      <span class="badge badge-{% if versement.type_versement == 'virement bancaire' %}blue{% elif versement.type_versement == 'espèces' %}green{% elif versement.type_versement == 'wave' %}purple{% elif versement.type_versement == 'virement om' %}yellow{% else %}yellow{% endif %}">
+        {{ versement.type_versement|capfirst }}
+      </span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Libellé</span>
+        <span style="font-weight:600;">{{ versement.libelle|default:"—" }}</span>
+      </div>
+      <div style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Date</span>
+        <span style="font-weight:600;">{{ versement.date_versement|date:"d/m/Y" }}</span>
+      </div>
+      <div style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Projet</span>
+        <a href="{% url 'ui_projet_detail' versement.projet.id %}" style="color:var(--blue-light);font-weight:600;font-size:13px;">
+          {{ versement.projet.nom|truncatechars:28 }}
+        </a>
+      </div>
+      {% if versement.reference_paiement %}
+      <div style="padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Référence</span>
+        <span class="badge badge-yellow">{{ versement.reference_paiement }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Montant -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-coins text-gold"></i> Montant</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="padding:24px;background:rgba(0,196,140,0.1);border-radius:12px;border:1px solid rgba(0,196,140,0.2);text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">MONTANT VERSÉ</div>
+        <div style="font-size:36px;font-weight:800;color:var(--green);">{{ versement.montant|floatformat:0 }}</div>
+        <div style="font-size:14px;color:var(--text-muted);margin-top:4px;">XOF</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Documents PDF -->
+<div class="card animate-fade-up" style="margin-bottom:16px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-file-pdf text-gold"></i> Documents associés</div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    {% if versement.facture_pdf %}
+    <a href="{{ versement.facture_pdf.url }}" target="_blank"
+       style="display:flex;align-items:center;gap:10px;padding:14px 20px;background:rgba(0,196,140,0.08);border:1px solid rgba(0,196,140,0.25);border-radius:10px;text-decoration:none;color:var(--green);font-weight:600;font-size:13px;transition:background 0.2s;"
+       onmouseover="this.style.background='rgba(0,196,140,0.15)'" onmouseout="this.style.background='rgba(0,196,140,0.08)'">
+      <i class="fas fa-file-invoice" style="font-size:24px;"></i>
+      <div>
+        <div>Facture de versement</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:400;">Générée automatiquement</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if versement.fichier_justificatif %}
+    <a href="{{ versement.fichier_justificatif.url }}" target="_blank"
+       style="display:flex;align-items:center;gap:10px;padding:14px 20px;background:rgba(30,111,255,0.08);border:1px solid rgba(30,111,255,0.25);border-radius:10px;text-decoration:none;color:var(--blue-light);font-weight:600;font-size:13px;transition:background 0.2s;"
+       onmouseover="this.style.background='rgba(30,111,255,0.15)'" onmouseout="this.style.background='rgba(30,111,255,0.08)'">
+      <i class="fas fa-paperclip" style="font-size:24px;"></i>
+      <div>
+        <div>Justificatif</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:400;">Document joint</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if not versement.facture_pdf and not versement.fichier_justificatif %}
+    <div style="color:var(--text-muted);font-size:13px;padding:20px;">
+      <i class="fas fa-info-circle"></i> Aucun document associé à ce versement.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

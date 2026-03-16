@@ -1,119 +1,80 @@
 {% extends "lamane/base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_sub %}Gestion des employés{% endblock %}
-
-{% block extra_css %}
-<style>
-.form-input,.form-select,.form-textarea{width:100%;background:rgba(255,255,255,0.06);border:1.5px solid var(--border-light);border-radius:10px;padding:11px 14px;color:var(--text-primary);font-size:14px;font-family:inherit;transition:border-color 0.2s,background 0.2s;outline:none;}
-.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);background:rgba(240,165,0,0.06);}
-.form-select option{background:#1a2540;color:#f0f4ff;}
-.form-checkbox{width:18px;height:18px;accent-color:var(--gold);cursor:pointer;}
-.form-group{margin-bottom:18px;}
-.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;}
-.form-label .required{color:#ff5050;margin-left:3px;}
-.field-error{font-size:11px;color:#ff5050;margin-top:4px;display:block;}
-.form-section{background:rgba(255,255,255,0.02);border:1px solid var(--border-light);border-radius:12px;padding:20px;margin-bottom:20px;}
-.form-section-title{font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-@media(max-width:768px){.form-grid-2,.form-grid-3{grid-template-columns:1fr;}}
-</style>
-{% endblock %}
-
+{% block page_sub %}{% if obj %}Modifier l'employé{% else %}Nouvel employé{% endif %}{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}{% endblock %}
 {% block content %}
-<div class="flex items-center justify-between mb-6 animate-fade-up">
-  <a href="{{ back_url }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour à l'équipe</a>
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_employes_list' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour à l'équipe</a>
+  {% if obj %}<a href="{% url 'ui_employe_delete' obj.pk %}" class="wz-btn wz-btn-danger"><i class="fas fa-trash-alt"></i> Supprimer</a>{% endif %}
+</div>
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if "success" in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if "success" in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if "success" in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if "success" in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" enctype="multipart/form-data" novalidate class="animate-fade-up">{% csrf_token %}
+<div class="wz-stepbar">
+  <div class="wz-step" data-step="1" onclick="wzGoTo(1)"><div class="wz-step-circle">1</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Identité</span></div></div>
+  <div class="wz-step" data-step="2" onclick="wzGoTo(2)"><div class="wz-step-circle">2</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 2</span><span class="wz-step-label">Poste</span></div></div>
+  <div class="wz-step" data-step="3" onclick="wzGoTo(3)"><div class="wz-step-circle">3</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 3</span><span class="wz-step-label">Coordonnées</span></div></div>
+</div>
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill"></div></div>
+{% if form.non_field_errors %}<div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;"><i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}</div>{% endif %}
+
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-id-card"></i></div><div><div class="wz-section-title">Identité personnelle</div><div class="wz-section-sub">Nom, prénom et informations personnelles</div></div></div>
+    <div class="wz-section-body">
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">Prénom <span class="req"></span></label><div class="input-icon-wrap"><i class="fas fa-user input-icon"></i>{{ form.prenom }}</div>{% for e in form.prenom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+      <div class="form-group"><label class="form-label">Nom <span class="req"></span></label><div class="input-icon-wrap"><i class="fas fa-user input-icon"></i>{{ form.nom }}</div>{% for e in form.nom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">Date de naissance</label>{{ form.date_naissance }}</div>
+      <div class="form-group"><label class="form-label">Lieu de naissance</label>{{ form.lieu_naissance }}</div>
+    </div>
+    <div class="form-group"><label class="form-label">Numéro CNI / Passeport</label><div class="input-icon-wrap"><i class="fas fa-id-card input-icon"></i>{{ form.numero_cni }}</div></div>
+    </div>
+  </div>
 </div>
 
-{% if messages %}
-{% for msg in messages %}
-<div class="mb-4" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
-  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+<div class="wz-panel" data-step="2">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-briefcase"></i></div><div><div class="wz-section-title">Poste et rémunération</div><div class="wz-section-sub">Fonction, contrat et salaire</div></div></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">Poste<span class="req">*</span></label>{{ form.poste }}{% for e in form.poste.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+      <div class="form-group"><label class="form-label">Type de contrat</label>{{ form.type_contrat }}</div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">Date d'embauche</label>{{ form.date_embauche }}</div>
+      <div class="form-group"><label class="form-label">Salaire de base</label><div class="input-with-suffix">{{ form.salaire_base }}<span class="input-suffix">XOF</span></div></div>
+    </div>
+    <div class="form-group"><label class="form-label">Chantier affecté</label>{{ form.chantier }}</div>
+  </div>
 </div>
-{% endfor %}
-{% endif %}
 
-<form method="post" novalidate class="animate-fade-up">
-{% csrf_token %}
-
-<div class="card" style="max-width:780px;">
-  <div class="card-header">
-    <div class="card-title"><i class="fas fa-user-hard-hat text-gold"></i> {{ title }}</div>
-  </div>
-
-  {% if form.non_field_errors %}
-  <div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;">{{ form.non_field_errors }}</div>
-  {% endif %}
-
-  <div class="form-section">
-    <div class="form-section-title"><i class="fas fa-user"></i> Identité</div>
-    <div class="form-grid-3">
-      <div class="form-group">
-        <label class="form-label" for="{{ form.prenom.id_for_label }}">Prénom<span class="required">*</span></label>
-        {{ form.prenom }}
-        {% for e in form.prenom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ form.nom.id_for_label }}">Nom<span class="required">*</span></label>
-        {{ form.nom }}
-        {% for e in form.nom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ form.sexe.id_for_label }}">Sexe</label>
-        {{ form.sexe }}
-        {% for e in form.sexe.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <div class="form-section-title"><i class="fas fa-briefcase"></i> Poste & Emploi</div>
+<div class="wz-panel" data-step="3">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-phone-alt"></i></div><div><div class="wz-section-title">Coordonnées</div><div class="wz-section-sub">Contact et adresse de l'employé</div></div></div>
     <div class="form-grid-2">
-      <div class="form-group">
-        <label class="form-label" for="{{ form.poste.id_for_label }}">Poste / Fonction<span class="required">*</span></label>
-        {{ form.poste }}
-        {% for e in form.poste.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ form.date_embauche.id_for_label }}">Date d'embauche</label>
-        {{ form.date_embauche }}
-        {% for e in form.date_embauche.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
+      <div class="form-group"><label class="form-label">Téléphone</label>{{ form.telephone }}</div>
+      <div class="form-group"><label class="form-label">Email</label>{{ form.email }}</div>
     </div>
-    <div class="form-group" style="display:flex;align-items:center;gap:10px;">
-      {{ form.actif }}
-      <label for="{{ form.actif.id_for_label }}" style="font-size:14px;cursor:pointer;">
-        Employé actif (en service)
-      </label>
-    </div>
+    <div class="form-group"><label class="form-label">Adresse</label>{{ form.adresse }}</div>
+    <div class="form-group"><label class="form-label">Photo</label><div class="file-input-wrap"><i class="fas fa-image" style="color:var(--gold);font-size:18px;"></i><span class="file-input-label">Choisir une photo <span>parcourir</span></span>{{ form.photo }}</div></div>
   </div>
+</div>
 
-  <div class="form-section">
-    <div class="form-section-title"><i class="fas fa-phone-alt"></i> Coordonnées</div>
-    <div class="form-grid-2">
-      <div class="form-group">
-        <label class="form-label" for="{{ form.telephone.id_for_label }}">Téléphone</label>
-        {{ form.telephone }}
-        {% for e in form.telephone.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
-        {{ form.email }}
-        {% for e in form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="{{ form.adresse.id_for_label }}">Adresse</label>
-      {{ form.adresse }}
-      {% for e in form.adresse.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-    </div>
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_employes_list' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+    <button type="button" id="wzPrev" style="display:none;" class="wz-btn wz-btn-ghost" onclick="wzPrev()"><i class="fas fa-arrow-left"></i> Précédent</button>
   </div>
-
-  <div class="flex gap-3" style="padding-top:16px;border-top:1px solid var(--border-light);">
-    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {{ action }}</button>
-    <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+  <div class="wz-nav-right">
+    <span class="wz-nav-counter" id="wzBadge"></span>
+    <button type="button" id="wzNext" class="wz-btn wz-btn-primary" onclick="wzNext()">Suivant <i class="fas fa-arrow-right"></i></button>
+    <button type="submit" id="wzSave" style="display:none;" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> {{ action }}</button>
   </div>
 </div>
 </form>
+</div>
 {% endblock %}
+{% block extra_js %}{% include "lamane/includes/wizard_js.html" %}{% endblock %}

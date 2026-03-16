@@ -3,7 +3,7 @@ core/views_html.py — Vues HTML (rendu serveur) — LAMANE BTP
 """
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.db.models import Sum, Count, Avg, Q, Max, Min, F, Value
+from django.db.models import Sum, Count, Avg, Q, Max, Min, F, Value, DecimalField as DjDecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from decimal import Decimal
@@ -1080,10 +1080,10 @@ def stock_detail_view(request):
     for m in materiaux:
         # Entrées = total quantité dans LigneAchat
         entrees = LigneAchat.objects.filter(materiel=m).aggregate(
-            s=Coalesce(Sum("quantite"), Decimal("0")))["s"]
+            s=Coalesce(Sum("quantite", output_field=DjDecimalField()), Decimal("0")))["s"]
         # Sorties = total quantité dans LigneBonSortie
         sorties = LigneBonSortie.objects.filter(materiel=m).aggregate(
-            s=Coalesce(Sum("quantite"), Decimal("0")))["s"]
+            s=Coalesce(Sum("quantite", output_field=DjDecimalField()), Decimal("0")))["s"]
         stock_actuel = float(entrees) - float(sorties)
         valeur_unitaire_moy = LigneAchat.objects.filter(materiel=m).aggregate(
             avg=Coalesce(Avg("prix_unitaire"), Decimal("0")))["avg"]
@@ -1115,3 +1115,203 @@ def stock_detail_view(request):
         "nb_alertes": sum(1 for d in stock_data if d["stock_actuel"] < 5 and not d["alerte_rupture"]),
     }
     return render(request, "lamane/stock_detail.html", ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ─── NOUVELLES VUES — DETAILS + SUPPRESSION + PROFIL ───────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── VERSEMENT DETAIL ────────────────────────────────────────────────────────
+
+def versement_detail_view(request, pk):
+    versement = get_object_or_404(Versement, pk=pk)
+    ctx = {
+        "page": "versements",
+        "versement": versement,
+    }
+    return render(request, "lamane/versement_detail.html", ctx)
+
+
+# ─── EMPLOYE DETAIL + SUPPRESSION ────────────────────────────────────────────
+
+def employe_detail_view(request, pk):
+    employe = get_object_or_404(Employe, pk=pk)
+    affectations = ProjetEmploye.objects.filter(employe=employe).select_related("projet").order_by("-projet__date_debut")
+    ctx = {
+        "page": "rh",
+        "employe": employe,
+        "affectations": affectations,
+        "nb_projets": affectations.count(),
+    }
+    return render(request, "lamane/employe_detail.html", ctx)
+
+
+def employe_delete_view(request, pk):
+    employe = get_object_or_404(Employe, pk=pk)
+    if request.method == "POST":
+        employe.delete()
+        return _success(request, f"Employé {employe} supprimé.", "ui_rh")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": employe, "titre": str(employe), "page": "rh",
+                   "back_url": "/rh/"})
+
+
+# ─── SOUS-TRAITANT DETAIL + SUPPRESSION + CONTRAT ────────────────────────────
+
+def sous_traitant_detail_view(request, pk):
+    st = get_object_or_404(SousTraitant, pk=pk)
+    contrats = ContratSousTraitance.objects.filter(sous_traitant=st).select_related("projet").order_by("-date_debut")
+    total_montant = contrats.aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+    total_paye    = contrats.aggregate(s=Coalesce(Sum("montant_paye"), Decimal("0")))["s"]
+    ctx = {
+        "page": "sous_traitants",
+        "st": st, "contrats": contrats,
+        "total_montant": _fmt(total_montant),
+        "total_paye": _fmt(total_paye),
+        "reste": _fmt(float(total_montant) - float(total_paye)),
+        "taux_paiement": round(float(total_paye) / float(total_montant) * 100 if total_montant > 0 else 0, 1),
+    }
+    return render(request, "lamane/sous_traitant_detail.html", ctx)
+
+
+def sous_traitant_delete_view(request, pk):
+    st = get_object_or_404(SousTraitant, pk=pk)
+    if request.method == "POST":
+        st.delete()
+        return _success(request, f"Sous-traitant « {st.nom} » supprimé.", "ui_sous_traitants")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": st, "titre": st.nom, "page": "sous_traitants",
+                   "back_url": "/sous-traitants/"})
+
+
+def contrat_st_create_view(request):
+    form = ContratSousTraitanceForm(request.POST or None)
+    if form.is_valid():
+        c = form.save(commit=False)
+        c.save()
+        try:
+            c.generate_contrat_pdf()
+            c.save(update_fields=["contrat_pdf"])
+        except Exception:
+            pass  # PDF generation optional
+        return _success(request, "Contrat créé — PDF généré.", "ui_sous_traitants")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau contrat de sous-traitance",
+                   "action": "Créer", "page": "sous_traitants",
+                   "back_url": "/sous-traitants/"})
+
+
+# ─── FOURNISSEUR DETAIL + SUPPRESSION ────────────────────────────────────────
+
+def fournisseur_detail_view(request, pk):
+    four = get_object_or_404(Fournisseur, pk=pk)
+    achats = Achat.objects.filter(fournisseur=four).select_related("projet").order_by("-date_achat")[:20]
+    total_achats = Achat.objects.filter(fournisseur=four).aggregate(
+        ht=Coalesce(Sum("total_ht"), Decimal("0")),
+        ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
+    )
+    ctx = {
+        "page": "fournisseurs",
+        "four": four, "achats": achats,
+        "total_ht": _fmt(total_achats["ht"]),
+        "total_ttc": _fmt(total_achats["ttc"]),
+        "nb_achats": Achat.objects.filter(fournisseur=four).count(),
+    }
+    return render(request, "lamane/fournisseur_detail.html", ctx)
+
+
+def fournisseur_delete_view(request, pk):
+    four = get_object_or_404(Fournisseur, pk=pk)
+    if request.method == "POST":
+        four.delete()
+        return _success(request, "Fournisseur supprimé.", "ui_fournisseurs")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": four, "titre": str(four), "page": "fournisseurs",
+                   "back_url": "/fournisseurs/"})
+
+
+# ─── CLIENT SUPPRESSION ───────────────────────────────────────────────────────
+
+def client_delete_view(request, pk):
+    client = get_object_or_404(Proprietaire, pk=pk)
+    if request.method == "POST":
+        client.delete()
+        return _success(request, "Client supprimé.", "ui_clients")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": client, "titre": str(client), "page": "clients",
+                   "back_url": "/clients/"})
+
+
+# ─── MATERIAUX LIST + DETAIL ──────────────────────────────────────────────────
+
+def materiaux_list_view(request):
+    q = request.GET.get("q", "")
+    cat = request.GET.get("cat", "")
+    materiaux = Materiel.objects.select_related("categorie").all()
+    if q:
+        materiaux = materiaux.filter(Q(nom__icontains=q) | Q(unite__icontains=q))
+    if cat:
+        materiaux = materiaux.filter(categorie__id=cat)
+    materiaux = materiaux.order_by("categorie__nom", "nom")
+    categories = CategorieMateriel.objects.all().order_by("nom")
+
+    stock_data = []
+    for m in materiaux:
+        entrees = LigneAchat.objects.filter(materiel=m).aggregate(
+            s=Coalesce(Sum("quantite", output_field=DjDecimalField()), Decimal("0")))["s"]
+        sorties = LigneBonSortie.objects.filter(materiel=m).aggregate(
+            s=Coalesce(Sum("quantite", output_field=DjDecimalField()), Decimal("0")))["s"]
+        stock_actuel = float(entrees) - float(sorties)
+        stock_data.append({
+            "materiel": m,
+            "stock_actuel": round(stock_actuel, 2),
+            "alerte_rupture": stock_actuel <= 0,
+        })
+
+    ctx = {
+        "page": "stock",
+        "stock_data": stock_data,
+        "categories": categories,
+        "q": q, "cat_filter": cat,
+        "total": len(stock_data),
+    }
+    return render(request, "lamane/materiaux_list.html", ctx)
+
+
+def materiel_detail_view(request, pk):
+    materiel = get_object_or_404(Materiel, pk=pk)
+    lignes_achat = LigneAchat.objects.filter(materiel=materiel).select_related("achat__projet").order_by("-achat__date_achat")[:20]
+    lignes_sortie = LigneBonSortie.objects.filter(materiel=materiel).select_related("bon__projet").order_by("-bon__date_sortie")[:20]
+    entrees = LigneAchat.objects.filter(materiel=materiel).aggregate(
+        s=Coalesce(Sum("quantite", output_field=DjDecimalField()), Decimal("0")))["s"]
+    sorties = LigneBonSortie.objects.filter(materiel=materiel).aggregate(
+        s=Coalesce(Sum("quantite", output_field=DjDecimalField()), Decimal("0")))["s"]
+    stock_actuel = float(entrees) - float(sorties)
+    prix_moy = LigneAchat.objects.filter(materiel=materiel).aggregate(
+        avg=Coalesce(Avg("prix_unitaire"), Decimal("0")))["avg"]
+    ctx = {
+        "page": "stock",
+        "materiel": materiel,
+        "lignes_achat": lignes_achat,
+        "lignes_sortie": lignes_sortie,
+        "entrees": float(entrees),
+        "sorties": float(sorties),
+        "stock_actuel": round(stock_actuel, 2),
+        "stock_positif": stock_actuel >= 0,
+        "alerte_rupture": stock_actuel <= 0,
+        "prix_moyen": _fmt(prix_moy, 0),
+        "valeur_stock": _fmt(stock_actuel * float(prix_moy), 0),
+    }
+    return render(request, "lamane/materiel_detail.html", ctx)
+
+
+# ─── PROFIL UTILISATEUR ───────────────────────────────────────────────────────
+
+def profil_view(request):
+    user = request.user
+    ctx = {
+        "page": "profil",
+        "user": user,
+    }
+    return render(request, "lamane/profil.html", ctx)
+

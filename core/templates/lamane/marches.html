@@ -45,25 +45,24 @@
 
   <div class="card" style="display:flex;flex-direction:column;gap:14px;">
     <div class="card-title"><i class="fas fa-filter text-gold"></i> Filtrer les marchés</div>
-    <form method="get" class="flex gap-3 items-center flex-wrap">
-      <select name="statut" class="filter-select" style="flex:1;">
+    <div class="flex gap-3 items-center flex-wrap">
+      <select id="dynStatut" class="filter-select" style="flex:1;">
         <option value="">Tous les statuts</option>
         {% for key, label in statuts_labels.items %}
         <option value="{{ key }}" {% if statut_filter == key %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
-      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrer</button>
       {% if statut_filter %}
       <a href="{% url 'ui_marches' %}" class="btn btn-ghost"><i class="fas fa-times"></i></a>
       {% endif %}
-    </form>
+    </div>
 
     <!-- Légende statuts -->
     {% for s in statuts_marche %}
     <div class="flex items-center justify-between" style="padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;">
       <div class="flex items-center gap-2">
         <div style="width:10px;height:10px;border-radius:50%;background:{% if s.statut == 'en_cours' %}var(--blue-light){% elif s.statut == 'reception_definitive' %}var(--green){% elif s.statut == 'reception_provisoire' %}var(--cyan){% else %}var(--gold){% endif %};"></div>
-        <span class="text-sm">{{ statuts_labels|default_if_none:s.statut }}</span>
+        <span class="text-sm">{% if s.statut == 'en_attente' %}En attente{% elif s.statut == 'en_cours' %}En cours{% elif s.statut == 'reception_provisoire' %}Récept. provisoire{% elif s.statut == 'reception_definitive' %}Récept. définitive{% else %}{{ s.statut }}{% endif %}</span>
         <span class="text-xs text-muted">({{ s.count }})</span>
       </div>
       <span class="text-sm text-gold font-bold">{{ s.total|floatformat:0 }}</span>
@@ -168,6 +167,11 @@ new Chart(document.getElementById('chartStatutsMarche'), {
     responsive: true, maintainAspectRatio: false, cutout: '62%',
     plugins: { legend: { position: 'right', labels: { color: 'rgba(240,244,255,0.6)', padding: 10 } } }
   }
+});
+
+// Dynamic filter
+document.addEventListener('DOMContentLoaded', function() {
+  initSelectFilter('dynStatut', 'statut');
 });
 </script>
 {% endblock %}

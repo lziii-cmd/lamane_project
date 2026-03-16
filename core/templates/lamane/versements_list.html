@@ -5,17 +5,19 @@
 
 {% block content %}
 
-<!-- KPIs par type -->
+<!-- KPIs -->
 <div class="kpi-grid mb-6 animate-fade-up">
   <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
     <div class="kpi-icon"><i class="fas fa-hand-holding-usd"></i></div>
     <div class="kpi-value">{{ total_versements }}</div>
     <div class="kpi-label">Versements totaux</div>
+    <div class="kpi-trend trend-up"><i class="fas fa-arrow-up"></i> Entrées clients</div>
   </div>
   <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
     <div class="kpi-icon"><i class="fas fa-money-bill-wave"></i></div>
     <div class="kpi-value" style="font-size:17px;">{{ montant_total }}</div>
     <div class="kpi-label">Montant total (XOF)</div>
+    <div class="kpi-trend trend-up"><i class="fas fa-coins"></i> Cumul général</div>
   </div>
   {% for t in types_stats|slice:":2" %}
   <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
@@ -27,162 +29,91 @@
   {% endfor %}
 </div>
 
-<div class="grid-2 mb-6 animate-fade-up delay-1">
-
-  <!-- Graphique répartition -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><i class="fas fa-chart-pie text-gold"></i> Répartition par mode</div>
+<!-- Barre d'outils dynamique -->
+<div class="card mb-4 animate-fade-up" style="padding:16px 20px;">
+  <div class="flex items-center gap-3" style="flex-wrap:wrap;">
+    <div style="flex:1;min-width:220px;position:relative;">
+      <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+      <input type="text" id="dynSearch" value="{{ q }}" placeholder="Projet, libellé, référence…"
+             class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
     </div>
-    <div style="position:relative;height:200px;display:flex;align-items:center;justify-content:center;">
-      <canvas id="chartTypes"></canvas>
-    </div>
-  </div>
-
-  <!-- Filtres -->
-  <div class="card">
-    <div class="card-title mb-4"><i class="fas fa-filter text-gold"></i> Filtrer les versements</div>
-    <form method="get" class="flex flex-direction-column gap-3" style="flex-direction:column;">
-      <input type="text" name="q" id="searchInput" value="{{ q }}" placeholder="🔍 Projet, libellé, référence…" class="filter-input">
-      <select name="type" class="filter-select">
+    <div style="min-width:180px;">
+      <select id="dynType" class="filter-select" style="width:100%;">
         <option value="">Tous les types</option>
         {% for t in types_choices %}
         <option value="{{ t }}" {% if type_filter == t %}selected{% endif %}>{{ t|capfirst }}</option>
         {% endfor %}
       </select>
-      <div class="flex gap-2">
-        <button type="submit" class="btn btn-primary" style="flex:1;"><i class="fas fa-search"></i> Filtrer</button>
-        {% if q or type_filter %}
-        <a href="{% url 'ui_versements' %}" class="btn btn-ghost"><i class="fas fa-times"></i></a>
-        {% endif %}
-      </div>
-    </form>
-
-    <!-- Stats types -->
-    <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px;">
-      {% for t in types_stats %}
-      <div style="padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;" class="flex justify-between items-center">
-        <span class="text-sm">{{ t.type_versement|default:"—"|capfirst }}</span>
-        <div class="flex items-center gap-2">
-          <span class="badge badge-yellow text-xs">{{ t.count }}</span>
-          <span style="font-size:12px;font-weight:600;color:var(--green);">{{ t.total|floatformat:0 }}</span>
-        </div>
-      </div>
-      {% endfor %}
     </div>
+    {% if q or type_filter %}
+    <a href="{% url 'ui_versements' %}" class="btn btn-ghost" style="white-space:nowrap;"><i class="fas fa-times"></i> Effacer</a>
+    {% endif %}
+    <a href="{% url 'ui_versement_create' %}" class="btn btn-primary" style="white-space:nowrap;margin-left:auto;">
+      <i class="fas fa-plus"></i> Nouveau versement
+    </a>
   </div>
-
 </div>
 
-<!-- Tableau versements -->
-<div class="card animate-fade-up delay-2">
+<!-- Tableau versements (lignes cliquables) -->
+<div class="card animate-fade-up delay-1">
   <div class="card-header">
     <div class="card-title"><i class="fas fa-list text-gold"></i> Liste des versements</div>
-    <div class="flex items-center gap-2">
-      <span class="badge badge-green">{{ versements|length }} résultats</span>
-      <a href="{% url 'ui_versement_create' %}" class="btn btn-primary" style="font-size:12px;padding:6px 12px;">
-        <i class="fas fa-plus"></i> Nouveau versement
-      </a>
-    </div>
+    <span class="badge badge-green">{{ versements|length }} résultat{{ versements|length|pluralize }}</span>
   </div>
   <div class="table-wrapper">
     <table>
       <thead>
         <tr>
-          <th>Date</th><th>Référence</th><th>Projet</th><th>Phase</th>
-          <th>Type</th><th>Libellé</th><th>Montant (XOF)</th><th>Document</th>
+          <th>Date</th><th>Référence</th><th>Projet</th><th>Type</th>
+          <th>Libellé</th><th style="text-align:right;">Montant (XOF)</th><th>Doc</th>
         </tr>
       </thead>
-      <tbody id="versementsBody">
+      <tbody>
         {% for v in versements %}
-        <tr class="versement-row" data-search="{{ v.projet.nom|lower }} {{ v.libelle|lower }} {{ v.reference_paiement|lower }}">
+        <tr onclick="window.location='{% url 'ui_versement_detail' v.pk %}'"
+            style="cursor:pointer;transition:background 0.15s;"
+            onmouseover="this.style.background='rgba(240,165,0,0.05)'"
+            onmouseout="this.style.background=''">
           <td class="text-muted text-sm">{{ v.date_versement|date:"d/m/Y" }}</td>
           <td>
-            {% if v.numero_facture %}
-            <span class="badge badge-yellow text-xs">{{ v.numero_facture }}</span>
-            {% elif v.reference_paiement %}
-            <span class="text-xs text-muted">{{ v.reference_paiement|truncatechars:16 }}</span>
-            {% else %}
-            <span class="text-muted text-xs">—</span>
-            {% endif %}
+            {% if v.reference_paiement %}
+            <span class="badge badge-yellow text-xs">{{ v.reference_paiement|truncatechars:16 }}</span>
+            {% else %}<span class="text-muted text-xs">—</span>{% endif %}
           </td>
-          <td>
-            <a href="{% url 'ui_projet_detail' v.projet.id %}" style="font-weight:600;font-size:13px;color:var(--text-primary);text-decoration:none;">
-              {{ v.projet.nom|truncatechars:22 }}
-            </a>
-          </td>
-          <td class="text-xs text-muted">{% if v.phase_id %}Phase {{ v.phase_id }}{% else %}—{% endif %}</td>
+          <td><span style="font-weight:600;font-size:13px;">{{ v.projet.nom|truncatechars:22 }}</span></td>
           <td>
             <span class="badge badge-{% if v.type_versement == 'virement bancaire' %}blue{% elif v.type_versement == 'espèces' %}green{% elif v.type_versement == 'wave' %}purple{% elif v.type_versement == 'virement om' %}yellow{% else %}yellow{% endif %} text-xs">
               {{ v.type_versement|default:"—" }}
             </span>
           </td>
-          <td class="text-sm">{{ v.libelle|default:"—"|truncatechars:28 }}</td>
-          <td class="amount" style="color:var(--green);font-weight:700;">{{ v.montant|floatformat:0 }}</td>
-          <td>
-            {% if v.facture_pdf %}
-            <a href="{{ v.facture_pdf.url }}" target="_blank" class="btn btn-ghost text-xs" style="padding:4px 10px;color:var(--gold);">
-              <i class="fas fa-file-pdf"></i> PDF
+          <td class="text-sm">{{ v.libelle|default:"—"|truncatechars:30 }}</td>
+          <td style="text-align:right;color:var(--green);font-weight:700;font-size:15px;">{{ v.montant|floatformat:0 }}</td>
+          <td onclick="event.stopPropagation()">
+            {% if v.fichier_justificatif %}
+            <a href="{{ v.fichier_justificatif.url }}" target="_blank" class="btn btn-ghost text-xs" style="padding:4px 10px;color:var(--gold);" title="Justificatif">
+              <i class="fas fa-file-pdf"></i>
             </a>
-            {% else %}
-            <span class="text-muted text-xs">—</span>
-            {% endif %}
+            {% else %}<span class="text-muted text-xs">—</span>{% endif %}
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
-          <div style="font-size:32px;margin-bottom:12px;">💳</div>
-          Aucun versement trouvé
+        <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">
+          <div style="font-size:36px;margin-bottom:12px;">💳</div>
+          Aucun versement trouvé.<br>
+          <a href="{% url 'ui_versement_create' %}" class="btn btn-primary" style="margin-top:16px;"><i class="fas fa-plus"></i> Ajouter un versement</a>
         </td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Live search
-const si = document.getElementById('searchInput');
-if (si) {
-  let t;
-  si.addEventListener('input', function() {
-    clearTimeout(t);
-    t = setTimeout(() => {
-      const q = this.value.toLowerCase().trim();
-      document.querySelectorAll('.versement-row').forEach(row => {
-        row.style.display = (!q || row.dataset.search.includes(q)) ? '' : 'none';
-      });
-    }, 180);
-  });
-}
-
-// Chart
-const typesLabels = {{ types_labels_json|safe }};
-const typesValues = {{ types_values_json|safe }};
-const COLORS = ['#f0a500','#1e6fff','#00c48c','#a55aea','#00d2ff','#ff6b6b'];
-
-if (typesLabels.length) {
-  new Chart(document.getElementById('chartTypes'), {
-    type: 'doughnut',
-    data: {
-      labels: typesLabels.map(l => l || 'Autre'),
-      datasets: [{
-        data: typesValues,
-        backgroundColor: typesLabels.map((_, i) => COLORS[i % COLORS.length]),
-        borderColor: '#0f1629', borderWidth: 3,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '60%',
-      plugins: {
-        legend: { position: 'right', labels: { color: 'rgba(240,244,255,0.6)', padding: 10, font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed.toLocaleString() + ' XOF' } }
-      }
-    }
-  });
-}
+document.addEventListener('DOMContentLoaded', function() {
+  initDynamicFilter('dynSearch', 'q', 350);
+  initSelectFilter('dynType', 'type');
+});
 </script>
 {% endblock %}

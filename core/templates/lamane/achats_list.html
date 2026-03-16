@@ -31,19 +31,21 @@
 </div>
 
 <!-- Filtres -->
-<form method="get" class="filters-bar mb-6 animate-fade-up">
-  <input type="text" name="q" id="searchInput" value="{{ q }}" placeholder="🔍 Rechercher (projet, fournisseur, n° facture)…" class="filter-input" style="min-width:320px;">
-  <select name="mode" class="filter-select">
+<div class="filters-bar mb-6 animate-fade-up" style="gap:10px;flex-wrap:wrap;">
+  <div style="position:relative;flex:1;min-width:240px;">
+    <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+    <input type="text" name="q" id="dynSearch" value="{{ q }}" placeholder="Projet, fournisseur, n° facture…" class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
+  </div>
+  <select id="dynMode" class="filter-select" style="min-width:180px;">
     <option value="">Tous modes de paiement</option>
     {% for m in modes_choices %}
     <option value="{{ m }}" {% if mode_filter == m %}selected{% endif %}>{{ m|capfirst }}</option>
     {% endfor %}
   </select>
-  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrer</button>
   {% if q or mode_filter %}
   <a href="{% url 'ui_achats' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
   {% endif %}
-</form>
+</div>
 
 <!-- Tableau achats -->
 <div class="card animate-fade-up delay-1" id="tableCard">
@@ -113,20 +115,9 @@
 
 {% block extra_js %}
 <script>
-// Live search côté client (en complément du filtre serveur)
-const si = document.getElementById('searchInput');
-if (si) {
-  let t;
-  si.addEventListener('input', function() {
-    clearTimeout(t);
-    t = setTimeout(() => {
-      const q = this.value.toLowerCase().trim();
-      document.querySelectorAll('.achat-row').forEach(row => {
-        const match = !q || row.dataset.search.includes(q);
-        row.style.display = match ? '' : 'none';
-      });
-    }, 180);
-  });
-}
+document.addEventListener('DOMContentLoaded', function() {
+  initDynamicFilter('dynSearch', 'q', 350);
+  initSelectFilter('dynMode', 'mode');
+});
 </script>
 {% endblock %}

@@ -4,74 +4,17 @@
 {% block page_sub %}{% if obj %}Modification{% else %}Création{% endif %}{% endblock %}
 
 {% block extra_css %}
-<style>
-/* Form styles */
-.form-input, .form-select, .form-textarea {
-  width: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 1.5px solid var(--border-light);
-  border-radius: 10px;
-  padding: 11px 14px;
-  color: var(--text-primary);
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.2s, background 0.2s;
-  outline: none;
-}
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-  border-color: var(--gold);
-  background: rgba(240,165,0,0.06);
-}
-.form-select option { background: #1a2540; color: #f0f4ff; }
-.form-file { width:100%; padding:6px 0; color:var(--text-muted); font-size:13px; }
-.form-checkbox { width:18px; height:18px; accent-color:var(--gold); cursor:pointer; }
-.form-group { margin-bottom: 18px; }
-.form-label {
-  display:block;
-  font-size:12px;
-  font-weight:600;
-  color:var(--text-muted);
-  margin-bottom:6px;
-  text-transform:uppercase;
-  letter-spacing:0.04em;
-}
-.form-label .required { color: #ff5050; margin-left:3px; }
-.form-help { font-size:11px; color:var(--text-muted); margin-top:4px; }
-.field-error { font-size:11px; color:#ff5050; margin-top:4px; display:block; }
-.form-section {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-.form-section-title {
-  font-size:12px;
-  font-weight:700;
-  color:var(--gold);
-  text-transform:uppercase;
-  letter-spacing:0.06em;
-  margin-bottom:16px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
-@media (max-width:768px) { .form-grid-2,.form-grid-3 { grid-template-columns:1fr; } }
-</style>
+{% include "lamane/includes/wizard_css.html" %}
 {% endblock %}
 
 {% block content %}
 
-<!-- Actions -->
-<div class="flex items-center justify-between mb-6 animate-fade-up">
+<div class="flex items-center justify-between mb-5 animate-fade-up">
   <a href="{{ back_url }}" class="btn btn-ghost">
     <i class="fas fa-arrow-left"></i> Retour
   </a>
 </div>
 
-<!-- Messages -->
 {% if messages %}
 {% for msg in messages %}
 <div class="alert alert-{{ msg.tags }} mb-4 animate-fade-up"
@@ -89,45 +32,71 @@
 <form method="post" enctype="multipart/form-data" novalidate class="animate-fade-up">
   {% csrf_token %}
 
-  <div class="card" style="max-width:800px;">
-    <div class="card-header">
-      <div class="card-title"><i class="fas fa-edit text-gold"></i> {{ title }}</div>
+  <div style="max-width:860px;">
+
+    <!-- Form header card -->
+    <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border-light);border-radius:16px;overflow:hidden;margin-bottom:20px;">
+      <div style="padding:16px 22px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:14px;font-weight:700;color:var(--text-primary);">
+          <i class="fas fa-edit text-gold" style="margin-right:8px;"></i>{{ title }}
+        </div>
+        {% if obj %}
+        <span style="font-size:11px;background:rgba(30,111,255,0.12);color:var(--blue-light);padding:3px 10px;border-radius:20px;">Modification</span>
+        {% else %}
+        <span style="font-size:11px;background:rgba(0,196,140,0.12);color:var(--green);padding:3px 10px;border-radius:20px;">Création</span>
+        {% endif %}
+      </div>
+
+      <div style="padding:22px;">
+        {% if form.non_field_errors %}
+        <div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;border:1px solid rgba(255,80,80,0.3);">
+          <i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="wz-section">
+          {% for field in form %}
+          <div class="form-group">
+            <label class="form-label" for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if field.field.required %}<span class="req">*</span>{% endif %}
+            </label>
+            {% if field.field.widget.input_type == 'file' %}
+            <div class="file-input-wrap">
+              <i class="fas fa-cloud-upload-alt" style="font-size:20px;color:var(--gold);"></i>
+              <div class="file-input-label">
+                <span>Cliquer pour choisir</span> ou glisser-déposer<br>
+                <small style="color:var(--text-muted);">Max 10 Mo</small>
+              </div>
+              {{ field }}
+            </div>
+            {% elif field.field.widget.input_type == 'checkbox' %}
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:rgba(255,255,255,0.03);border-radius:8px;border:1.5px solid var(--border-light);cursor:pointer;" onclick="this.querySelector('input').click()">
+              {{ field }}
+              <span style="font-size:13px;color:var(--text-primary);">{{ field.label }}</span>
+            </div>
+            {% else %}
+            {{ field }}
+            {% endif %}
+            {% if field.errors %}
+            {% for err in field.errors %}<span class="field-error"><i class="fas fa-exclamation-circle"></i> {{ err }}</span>{% endfor %}
+            {% endif %}
+            {% if field.help_text %}
+            <p class="form-help">{{ field.help_text }}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <div style="display:flex;gap:12px;padding-top:16px;border-top:1px solid var(--border-light);">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> {{ action }}
+          </button>
+          <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+        </div>
+      </div>
     </div>
 
-    {% if form.non_field_errors %}
-    <div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;">
-      {{ form.non_field_errors }}
-    </div>
-    {% endif %}
-
-    {% for field in form %}
-    <div class="form-group">
-      <label class="form-label" for="{{ field.id_for_label }}">
-        {{ field.label }}
-        {% if field.field.required %}<span class="required">*</span>{% endif %}
-      </label>
-      {{ field }}
-      {% if field.errors %}
-      {% for err in field.errors %}<span class="field-error">{{ err }}</span>{% endfor %}
-      {% endif %}
-      {% if field.help_text %}
-      <p class="form-help">{{ field.help_text }}</p>
-      {% endif %}
-    </div>
-    {% endfor %}
-
-    <div class="flex gap-3" style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-light);">
-      <button type="submit" class="btn btn-primary">
-        <i class="fas fa-save"></i> {{ action }}
-      </button>
-      <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
-      {% if obj %}
-      <a href="{{ back_url }}" class="btn btn-ghost" style="margin-left:auto;color:#ff5050;border-color:rgba(255,80,80,0.3);"
-         onclick="return confirm('Êtes-vous sûr de vouloir annuler ?')">
-        Annuler les modifications
-      </a>
-      {% endif %}
-    </div>
   </div>
 </form>
 

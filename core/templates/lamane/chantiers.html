@@ -48,7 +48,7 @@
 {% for item in chantiers_data %}
 {% with p=item.projet av=item.dernier_avancement m=item.marche %}
 
-<div class="card" style="transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+<div class="card" style="transition:transform 0.2s,box-shadow 0.2s;cursor:pointer;" onclick="window.location='{% url 'ui_chantier_detail' p.id %}'" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(30,111,255,0.18)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
   <!-- Header -->
   <div class="flex items-center justify-between mb-4">
     <div>

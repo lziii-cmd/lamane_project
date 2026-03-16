@@ -1,0 +1,97 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ four.entreprise|default:four.nom }}{% endblock %}
+{% block page_title %}{% if four.est_moral %}{{ four.entreprise }}{% else %}{{ four.prenom }} {{ four.nom }}{% endif %}{% endblock %}
+{% block page_sub %}Fournisseur · {{ nb_achats }} achat{{ nb_achats|pluralize }}{% endblock %}
+
+{% block content %}
+
+<!-- Actions -->
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_fournisseurs' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour fournisseurs</a>
+  <div class="flex gap-3">
+    <a href="{% url 'ui_fournisseur_edit' four.pk %}" class="btn btn-ghost"><i class="fas fa-edit"></i> Modifier</a>
+    <a href="{% url 'ui_fournisseur_delete' four.pk %}" class="btn" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);color:var(--red);"><i class="fas fa-trash-alt"></i></a>
+  </div>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up">
+
+  <!-- Infos fournisseur -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-building text-gold"></i> Fiche fournisseur</div>
+      <span class="badge {% if four.est_moral %}badge-blue{% else %}badge-green{% endif %}">{% if four.est_moral %}Entreprise{% else %}Particulier{% endif %}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% if four.est_moral %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Entreprise</span><span style="font-weight:700;">{{ four.entreprise }}</span>
+      </div>
+      {% if four.ninea %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">NINEA</span><span style="font-weight:600;">{{ four.ninea }}</span>
+      </div>
+      {% endif %}
+      {% else %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm">Nom complet</span><span style="font-weight:700;">{{ four.prenom }} {{ four.nom }}</span>
+      </div>
+      {% endif %}
+      {% if four.telephone %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm"><i class="fas fa-phone"></i> Téléphone</span><span>{{ four.telephone }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Résumé achats -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-shopping-cart text-gold"></i> Résumé achats</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="padding:14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between items-center">
+        <span class="text-muted">Achats HT</span>
+        <span style="font-size:16px;font-weight:600;">{{ total_ht }} <span class="text-xs text-muted">XOF</span></span>
+      </div>
+      <div style="padding:16px;background:rgba(240,165,0,0.1);border-radius:10px;border:1px solid rgba(240,165,0,0.2);" class="flex justify-between items-center">
+        <span style="font-weight:700;">Achats TTC</span>
+        <span style="font-size:22px;font-weight:800;color:var(--gold);">{{ total_ttc }} <span class="text-sm text-muted">XOF</span></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Historique achats -->
+<div class="card animate-fade-up delay-1">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-history text-gold"></i> Historique des achats</div>
+    <span class="badge badge-yellow">{{ nb_achats }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>N° Facture</th><th>Projet</th><th>Mode</th><th>Total TTC</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for a in achats %}
+        <tr onclick="window.location='{% url 'ui_achat_detail' a.pk %}'" style="cursor:pointer;"
+            onmouseover="this.style.background='rgba(240,165,0,0.05)'" onmouseout="this.style.background=''">
+          <td class="text-muted text-sm">{{ a.date_achat|date:"d/m/Y" }}</td>
+          <td>{% if a.numero_facture %}<span class="badge badge-yellow text-xs">{{ a.numero_facture }}</span>{% else %}<span class="text-muted text-xs">—</span>{% endif %}</td>
+          <td class="font-bold text-sm">{{ a.projet.nom|truncatechars:22 }}</td>
+          <td><span class="badge badge-blue text-xs">{{ a.mode_paiement }}</span></td>
+          <td class="amount text-gold font-bold">{{ a.total_ttc|floatformat:0 }}</td>
+          <td><i class="fas fa-chevron-right" style="color:var(--text-muted);font-size:11px;"></i></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">Aucun achat pour ce fournisseur</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

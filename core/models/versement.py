@@ -119,13 +119,7 @@ class Versement(models.Model):
 
 
     def generate_facture_pdf(self):
-        # ---------- HELPERS ----------
-        def _fmt_cfa(n):
-            try:
-                return f"{int(n):,}".replace(",", " ") + " FCFA"
-            except Exception:
-                return f"{n} FCFA"
-
+        """Generate a professional payment receipt PDF using ReportLab."""
         from pathlib import Path
         from io import BytesIO
         from django.core.files.base import ContentFile
@@ -135,189 +129,358 @@ class Versement(models.Model):
         from reportlab.lib import colors
         from reportlab.lib.units import cm
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.enums import TA_RIGHT
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+        from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable
         from reportlab.graphics.barcode import qr
         from reportlab.graphics.shapes import Drawing
         from reportlab.graphics import renderPDF
 
+        # ── Color palette ────────────────────────────────────────────────
+        NAVY    = colors.HexColor("#0f2547")   # dark navy header
+        BLUE    = colors.HexColor("#1a6b9e")   # secondary blue
+        GOLD    = colors.HexColor("#f0a500")   # gold accent
+        LIGHT   = colors.HexColor("#eef4fa")   # light blue background
+        MUTED   = colors.HexColor("#6b7280")   # muted text
+        GREEN   = colors.HexColor("#059669")   # positive amount
+        WHITE   = colors.white
+        BORDER  = colors.HexColor("#d1dce9")
+
+        # ── Image helper ─────────────────────────────────────────────────
         def _safe_img(path, w=None, h=None):
             try:
                 p = Path(path)
-                if p.exists():
-                    return Image(str(p), width=w, height=h, kind="proportional")
+                for candidate in [p, p.with_suffix(p.suffix.swapcase())] + \
+                                  [p.with_suffix(e) for e in ['.png','.PNG','.jpg','.JPG','.jpeg']]:
+                    if candidate.exists():
+                        return Image(str(candidate), width=w, height=h, kind="proportional")
             except Exception:
                 pass
             return None
 
-        # ---------- DONNÉES MÉTIER (comme ta 1ère facture) ----------
-        # cumul avant CE versement (sur même projet, jusqu'à la date courante exclue)
+        def _fmt(n):
+            try:
+                return f"{int(n):,}".replace(",", "\u202f") + " FCFA"
+            except Exception:
+                return f"{n} FCFA"
+
+        # ── Business data ─────────────────────────────────────────────────
         total_anterieur = (
-            self.__class__
-            .objects.filter(projet=self.projet, date_versement__lt=self.date_versement)
+            self.__class__.objects
+            .filter(projet=self.projet, date_versement__lt=self.date_versement)
             .aggregate(s=Sum("montant"))["s"] or 0
         )
-        total_verse_ce_jour = total_anterieur + (self.montant or 0)
-
-        # budget/contrat du projet si présent (on essaie plusieurs noms possibles)
+        total_ce_jour = total_anterieur + (self.montant or 0)
         budget = None
-        for attr in ("budget", "montant_total", "cout_previsionnel", "montant_marche"):
-            if hasattr(self.projet, attr) and getattr(self.projet, attr):
-                budget = getattr(self.projet, attr)
+        for attr in ("cout_estime_lamane", "budget", "montant_total", "cout_previsionnel"):
+            v = getattr(self.projet, attr, None)
+            if v:
+                budget = v
                 break
-        reste = (budget - total_verse_ce_jour) if budget is not None else None
+        # Try marché
+        if budget is None:
+            try:
+                m = self.projet.marche
+                budget = m.montant_marche
+            except Exception:
+                pass
+        reste = (budget - total_ce_jour) if budget is not None else None
 
-        # ---------- DOC & STYLES ----------
+        num_facture = getattr(self, "numero_facture", None) or f"FAC-{self.pk}"
+        mode_paiement = getattr(self, "get_type_versement_display", lambda: str(self.type_versement).title())()
+        ref_paiement  = getattr(self, "reference_paiement", None) or "—"
+
+        # ── Images ────────────────────────────────────────────────────────
+        base  = Path(settings.BASE_DIR)
+        logo  = _safe_img(base / "logos" / "lamane_logo.png",       w=3.2*cm, h=3.2*cm)
+        sign  = _safe_img(base / "logos" / "lamane_signature.png",  w=4*cm,   h=2.5*cm)
+        stamp = _safe_img(base / "logos" / "lamane_cachet.png",     w=3.5*cm, h=3.5*cm)
+
+        # ── Document ──────────────────────────────────────────────────────
         buf = BytesIO()
         doc = SimpleDocTemplate(
             buf, pagesize=A4,
-            leftMargin=2*cm, rightMargin=2*cm, topMargin=1.5*cm, bottomMargin=2*cm,
-            title=f"Facture de Versement - {self.projet.nom}",
+            leftMargin=1.8*cm, rightMargin=1.8*cm,
+            topMargin=1.5*cm, bottomMargin=2.2*cm,
+            title=f"Reçu de Versement – {self.projet.nom}",
         )
+        W = A4[0] - 3.6*cm  # usable width
+
+        # ── Styles ────────────────────────────────────────────────────────
         S = getSampleStyleSheet()
-        P = S["BodyText"]; P.fontSize = 10; P.leading = 14
-        small = ParagraphStyle("small", parent=P, fontSize=9, textColor=colors.HexColor("#6b7280"))
-        right = ParagraphStyle("right", parent=P, alignment=TA_RIGHT)
-        head  = ParagraphStyle("head", parent=S["Heading2"], textColor=colors.HexColor("#2f6f8f"), spaceAfter=8)
+        def sty(name, **kw):
+            base_sty = S.get(name, S["Normal"])
+            return ParagraphStyle(
+                f"_lm_{name}_{id(kw)}", parent=base_sty, **kw
+            )
 
-        # ---------- IMAGES (optionnelles) ----------
-        base = Path(settings.BASE_DIR)
-        logo      = _safe_img(base / "logos" / "lamane_logo.png",      w=2.5*cm, h=2.5*cm)
-        sign      = _safe_img(base / "logos" / "lamane_signature.png", w=3.5*cm, h=2*cm)
-        stamp     = _safe_img(base / "logos" / "lamane_cachet.png",    w=3*cm,   h=3*cm)
+        body   = sty("Normal",    fontSize=9,  leading=13, textColor=colors.HexColor("#1e293b"))
+        small  = sty("Normal",    fontSize=8,  leading=11, textColor=MUTED)
+        bold   = sty("Normal",    fontSize=9,  leading=13, textColor=colors.HexColor("#1e293b"), fontName="Helvetica-Bold")
+        right  = sty("Normal",    fontSize=9,  leading=13, alignment=TA_RIGHT, textColor=colors.HexColor("#1e293b"))
+        center = sty("Normal",    fontSize=9,  leading=13, alignment=TA_CENTER)
+        h2     = sty("Heading2",  fontSize=10, leading=14, textColor=NAVY, fontName="Helvetica-Bold", spaceAfter=4, spaceBefore=0)
+        white_bold = sty("Normal", fontSize=11, fontName="Helvetica-Bold", textColor=WHITE, leading=15)
+        white_sm   = sty("Normal", fontSize=8,  textColor=colors.HexColor("#cbd5e1"), leading=11)
+        gold_big   = sty("Normal", fontSize=20, fontName="Helvetica-Bold", textColor=GOLD, alignment=TA_CENTER, leading=26)
+        gold_lbl   = sty("Normal", fontSize=8,  textColor=MUTED, alignment=TA_CENTER, leading=11, fontName="Helvetica-Bold")
 
-        # ---------- HEADER STYLÉ (bleu) + infos facture (NUMÉRO + DATE) ----------
-        header_table = Table(
-            [[logo,
-            Paragraph("<b><font color='white' size=14>FACTURE DE VERSEMENT</font></b>", right)]],
-            colWidths=[5*cm, 11*cm]
+        story = []
+
+        # ════════════════════════════════════════════════════════════════
+        # 1. HEADER  (logo | company info | document badge)
+        # ════════════════════════════════════════════════════════════════
+        company_info = [
+            Paragraph("<b>LAMANE CONSTRUCTION & GESTION</b>", white_bold),
+            Spacer(1, 3),
+            Paragraph("Dakar, Sénégal  ·  (+221) 77 000 00 00", white_sm),
+            Paragraph("contact@lamane.sn  ·  www.lamane.sn", white_sm),
+            Paragraph("NINEA : 00000000 0A1", white_sm),
+        ]
+        doc_badge = [
+            Paragraph("<b><font size=18 color='#f0a500'>REÇU DE</font></b>", right),
+            Paragraph("<b><font size=18 color='#f0a500'>VERSEMENT</font></b>", right),
+            Spacer(1, 6),
+            Paragraph(f"<font size=9 color='#94a3b8'>N° </font><b><font size=11 color='white'>{num_facture}</font></b>", right),
+            Paragraph(f"<font size=8 color='#94a3b8'>Date : {self.date_versement.strftime('%d %B %Y')}</font>", right),
+        ]
+
+        logo_cell   = logo if logo else Paragraph("", body)
+        header_data = [[logo_cell, company_info, doc_badge]]
+        header = Table(header_data, colWidths=[3.5*cm, 8.5*cm, 5.5*cm])
+        header.setStyle(TableStyle([
+            ("BACKGROUND",    (0,0), (-1,-1), NAVY),
+            ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+            ("TOPPADDING",    (0,0), (-1,-1), 14),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 14),
+            ("LEFTPADDING",   (0,0), (0,-1),  12),
+            ("LEFTPADDING",   (1,0), (1,-1),  8),
+            ("RIGHTPADDING",  (-1,0),(-1,-1), 14),
+            ("LINEAFTER",     (0,0), (0,-1),  0.5, colors.HexColor("#1e3a5f")),
+        ]))
+        story.append(header)
+
+        # Gold accent stripe
+        story.append(Table([[""]], colWidths=[W], rowHeights=[4]))
+        story[-1].setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1), GOLD)]))
+        story.append(Spacer(1, 14))
+
+        # ════════════════════════════════════════════════════════════════
+        # 2. AMOUNT HIGHLIGHT BOX
+        # ════════════════════════════════════════════════════════════════
+        amount_box = Table(
+            [[Paragraph("MONTANT DU VERSEMENT", gold_lbl)],
+             [Paragraph(_fmt(self.montant), gold_big)]],
+            colWidths=[W]
         )
-        header_table.setStyle(TableStyle([
-            ("BACKGROUND", (0,0), (-1,-1), colors.HexColor("#2f6f8f")),
-            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
-            ("TEXTCOLOR", (0,0), (-1,-1), colors.white),
+        amount_box.setStyle(TableStyle([
+            ("BACKGROUND",    (0,0), (-1,-1), LIGHT),
+            ("LINEABOVE",     (0,0), (-1,0),  2, GOLD),
+            ("LINEBELOW",     (0,-1),(-1,-1), 2, GOLD),
+            ("TOPPADDING",    (0,0), (-1,-1), 10),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 10),
+            ("LEFTPADDING",   (0,0), (-1,-1), 0),
+            ("RIGHTPADDING",  (0,0), (-1,-1), 0),
+        ]))
+        story.append(amount_box)
+        story.append(Spacer(1, 18))
+
+        # ════════════════════════════════════════════════════════════════
+        # 3. CLIENT  |  PROJET  (two-column info block)
+        # ════════════════════════════════════════════════════════════════
+        try:
+            client_name = self.projet.proprietaire.nom_complet()
+            try: client_tel  = self.projet.proprietaire.telephone or ""
+            except: client_tel = ""
+            try: client_addr = self.projet.proprietaire.adresse or ""
+            except: client_addr = ""
+        except Exception:
+            client_name = "—"
+            client_tel = client_addr = ""
+
+        phase_str = self.phase.libelle if self.phase else "—"
+        etape_str = self.etape.nom    if self.etape  else "—"
+
+        left_col = [
+            Paragraph("CLIENT", sty("Normal", fontSize=8, fontName="Helvetica-Bold",
+                                    textColor=WHITE, leading=11)),
+            Spacer(1, 4),
+            Paragraph(f"<b>{client_name}</b>", body),
+        ]
+        if client_tel:
+            left_col.append(Paragraph(f"Tél : {client_tel}", small))
+        if client_addr:
+            left_col.append(Paragraph(client_addr, small))
+
+        right_col = [
+            Paragraph("PROJET", sty("Normal", fontSize=8, fontName="Helvetica-Bold",
+                                    textColor=WHITE, leading=11)),
+            Spacer(1, 4),
+            Paragraph(f"<b>{self.projet.nom}</b>", body),
+            Paragraph(f"Phase : {phase_str}", small),
+            Paragraph(f"Étape : {etape_str}", small),
+            Paragraph(f"Localisation : {getattr(self.projet,'localisation','')}", small),
+        ]
+
+        info_tbl = Table([[left_col, right_col]], colWidths=[W/2, W/2])
+        info_tbl.setStyle(TableStyle([
+            ("BACKGROUND",    (0,0), (0,-1), NAVY),
+            ("BACKGROUND",    (1,0), (1,-1), BLUE),
+            ("VALIGN",        (0,0), (-1,-1), "TOP"),
+            ("TOPPADDING",    (0,0), (-1,-1), 12),
             ("BOTTOMPADDING", (0,0), (-1,-1), 12),
-            ("TOPPADDING", (0,0), (-1,-1), 12),
+            ("LEFTPADDING",   (0,0), (-1,-1), 14),
+            ("RIGHTPADDING",  (0,0), (-1,-1), 14),
+            ("LINEBEFORE",    (1,0), (1,-1), 0.5, colors.HexColor("#1e5a8f")),
+            ("ROUNDEDCORNERS", [6]),
         ]))
+        story.append(info_tbl)
+        story.append(Spacer(1, 18))
 
-        fac_infos = Table(
-            [[Paragraph(f"<b>N° facture :</b> {getattr(self, 'numero_facture', '')}", P),
-            Paragraph(f"<b>Date :</b> {self.date_versement.strftime('%d/%m/%Y')}", right)]],
-            colWidths=[8*cm, 8*cm]
-        )
-        fac_infos.setStyle(TableStyle([
-            ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-            ("TOPPADDING", (0,0), (-1,-1), 6),
-            ("LINEBELOW", (0,0), (-1,0), 0.6, colors.HexColor("#e5e7eb")),
-        ]))
+        # ════════════════════════════════════════════════════════════════
+        # 4. PAYMENT DETAILS TABLE
+        # ════════════════════════════════════════════════════════════════
+        story.append(Paragraph("DÉTAIL DU PAIEMENT", h2))
+        story.append(HRFlowable(width=W, thickness=1.5, color=NAVY, spaceAfter=8))
 
-        # ---------- CLIENT / PROJET (avec Phase & Étape comme avant) ----------
-        client = [
-            Paragraph("<b>Client</b>", head),
-            Paragraph(self.projet.proprietaire.nom_complet(), P),
+        detail_data = [
+            [Paragraph("<b>Description</b>", bold),    Paragraph("<b>Valeur</b>", bold)],
+            [Paragraph("Mode de paiement", body),      Paragraph(mode_paiement, right)],
+            [Paragraph("Date du versement", body),     Paragraph(self.date_versement.strftime("%d/%m/%Y"), right)],
+            [Paragraph("Référence / N° transaction", body), Paragraph(ref_paiement, right)],
+            [Paragraph("Phase de versement", body),    Paragraph(phase_str, right)],
+            [Paragraph("Montant versé", sty("Normal", fontSize=10, fontName="Helvetica-Bold", textColor=GREEN)),
+             Paragraph(f"<b><font color='#059669'>{_fmt(self.montant)}</font></b>", right)],
         ]
-        projet_lines = [
-            Paragraph("<b>Projet</b>", head),
-            Paragraph(self.projet.nom, P),
-        ]
-        if self.phase:
-            projet_lines.append(Paragraph(f"Phase : {self.phase.libelle}", small))
-        if self.etape:
-            projet_lines.append(Paragraph(f"Étape : {self.etape.nom}", small))
-        cp = Table([[client, projet_lines]], colWidths=[8*cm, 8*cm])
-        cp.setStyle(TableStyle([
-            ("BOX", (0,0), (-1,-1), 1, colors.HexColor("#e5e7eb")),
-            ("BACKGROUND", (0,0), (0,-1), colors.HexColor("#e9f2f7")),
-            ("VALIGN", (0,0), (-1,-1), "TOP"),
-            ("TOPPADDING", (0,0), (-1,-1), 8),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 8),
+        detail_tbl = Table(detail_data, colWidths=[9*cm, W-9*cm])
+        detail_tbl.setStyle(TableStyle([
+            ("BACKGROUND",    (0,0), (-1,0),  NAVY),
+            ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
+            ("ROWBACKGROUNDS",(0,1), (-1,-1), [colors.white, LIGHT]),
+            ("LINEBELOW",     (0,0), (-1,-1), 0.5, BORDER),
+            ("TOPPADDING",    (0,0), (-1,-1), 7),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 7),
+            ("LEFTPADDING",   (0,0), (-1,-1), 10),
+            ("RIGHTPADDING",  (0,0), (-1,-1), 10),
+            ("ALIGN",         (1,0), (1,-1),  "RIGHT"),
+            ("BOX",           (0,0), (-1,-1), 0.8, BORDER),
+            ("LINEBELOW",     (0,-1),(-1,-1), 1.5, NAVY),
         ]))
+        story.append(detail_tbl)
+        story.append(Spacer(1, 18))
 
-        # ---------- DÉTAIL DU VERSEMENT (toutes les infos de la 1ère facture) ----------
-        rows = [
-            ["Montant payé",       _fmt_cfa(self.montant)],
-            ["Mode de paiement",   getattr(self, "get_type_versement_display", lambda: str(self.type_versement).title())()],
-            ["Date du paiement",   self.date_versement.strftime("%d/%m/%Y")],
-            ["Référence paiement", getattr(self, "reference_paiement", None) or "-"],
+        # ════════════════════════════════════════════════════════════════
+        # 5. FINANCIAL SUMMARY
+        # ════════════════════════════════════════════════════════════════
+        story.append(Paragraph("RÉCAPITULATIF FINANCIER", h2))
+        story.append(HRFlowable(width=W, thickness=1.5, color=NAVY, spaceAfter=8))
+
+        recap_data = [
+            [Paragraph("Versements antérieurs", body),
+             Paragraph(_fmt(total_anterieur), right)],
+            [Paragraph("Ce versement", body),
+             Paragraph(f"<b>{_fmt(self.montant)}</b>", right)],
+            [Paragraph("<b>Total versé à ce jour</b>",
+                       sty("Normal", fontSize=10, fontName="Helvetica-Bold", textColor=NAVY)),
+             Paragraph(f"<b><font color='#0f2547'>{_fmt(total_ce_jour)}</font></b>", right)],
         ]
-        detail = Table(rows, colWidths=[6*cm, 10*cm])
-        detail.setStyle(TableStyle([
-            ("GRID", (0,0), (-1,-1), 0.5, colors.HexColor("#e5e7eb")),
-            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#e9f2f7")),
-            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.white]),
-            ("ALIGN", (1,0), (1,-1), "LEFT"),
-            ("TOPPADDING", (0,0), (-1,-1), 6),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-        ]))
+        if reste is not None:
+            color_reste = "#dc2626" if reste > 0 else "#059669"
+            recap_data.append([
+                Paragraph("Reste à payer", body),
+                Paragraph(f"<b><font color='{color_reste}'>{_fmt(reste)}</font></b>", right),
+            ])
+        if budget:
+            recap_data.insert(0, [
+                Paragraph("Budget / Montant contrat", body),
+                Paragraph(_fmt(budget), right),
+            ])
 
-        # ---------- RÉCAP (avec cumul & reste à payer comme ta 1ère version) ----------
-        recap_rows = [
-            ["Total déjà versé avant ce paiement", _fmt_cfa(total_anterieur)],
-            ["Montant de ce versement",            _fmt_cfa(self.montant)],
-            ["Total versé à ce jour",              _fmt_cfa(total_verse_ce_jour)],
-            ["Reste à payer",                      (_fmt_cfa(reste) if reste is not None else "-")],
+        recap_tbl = Table(recap_data, colWidths=[10*cm, W-10*cm])
+        recap_tbl.setStyle(TableStyle([
+            ("LINEBELOW",     (0,0), (-1,-1), 0.5, BORDER),
+            ("BACKGROUND",    (0,-2),(-1,-2), LIGHT),
+            ("FONTNAME",      (0,-2),(-1,-2), "Helvetica-Bold"),
+            ("TOPPADDING",    (0,0), (-1,-1), 7),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 7),
+            ("LEFTPADDING",   (0,0), (-1,-1), 10),
+            ("RIGHTPADDING",  (0,0), (-1,-1), 10),
+            ("ALIGN",         (1,0), (1,-1),  "RIGHT"),
+            ("BOX",           (0,0), (-1,-1), 0.8, BORDER),
+            ("LINEABOVE",     (0,-2),(-1,-2), 1.5, NAVY),
+            ("LINEBELOW",     (0,-1),(-1,-1), 1.5, NAVY),
+        ]))
+        story.append(recap_tbl)
+        story.append(Spacer(1, 26))
+
+        # ════════════════════════════════════════════════════════════════
+        # 6. SIGNATURE & STAMP BLOCK
+        # ════════════════════════════════════════════════════════════════
+        story.append(HRFlowable(width=W, thickness=0.5, color=BORDER, spaceAfter=12))
+
+        sig_left = [
+            Paragraph("<b>Approuvé par :</b>", body),
+            Spacer(1, 6),
+            Paragraph("<b>Direction Générale</b>", h2),
+            Paragraph("LAMANE Construction & Gestion", small),
+            Spacer(1, 8),
         ]
-        recap = Table(recap_rows, colWidths=[9*cm, 7*cm])
-        recap.setStyle(TableStyle([
-            ("GRID", (0,0), (-1,-1), 0.6, colors.HexColor("#e5e7eb")),
-            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#e9f2f7")),
-            ("TEXTCOLOR", (0,0), (-1,0), colors.HexColor("#2f6f8f")),
-            ("ALIGN", (1,0), (1,-1), "RIGHT"),
-            ("TOPPADDING", (0,0), (-1,-1), 6),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-        ]))
-
-        # ---------- SIGNATURE & CACHET (comme ta 2ᵉ version) ----------
-        sign_title = Paragraph("<b>LAMANE</b>", head)
-        
-        
-            # ---------- SIGNATURE & CACHET côte à côte ----------
-        #sign_title = Paragraph("<b>Signature & Cachet</b>", head)
-
-        # contenu gauche : texte + signature + cachet alignés horizontalement
-        left_items = [Paragraph("", P), Spacer(1, 6)]
-        img_row = []
         if sign:
-            img_row.append(sign)
+            sig_left.append(sign)
+
+        sig_right = []
         if stamp:
-            img_row.append(stamp)
-        if img_row:
-            left_items.append(Table([img_row], style=[("VALIGN", (0,0), (-1,-1), "BOTTOM")]))
+            sig_right.append(stamp)
+        else:
+            sig_right.append(Paragraph("", body))
 
-        sign_block = Table([[left_items]], colWidths=[16*cm])
-        sign_block.setStyle(TableStyle([
-            ("VALIGN", (0,0), (-1,-1), "TOP"),
+        sig_tbl = Table([[sig_left, sig_right]], colWidths=[W*0.6, W*0.4])
+        sig_tbl.setStyle(TableStyle([
+            ("VALIGN",       (0,0),(-1,-1), "TOP"),
+            ("ALIGN",        (1,0),(1,-1),  "CENTER"),
+            ("LINEAFTER",    (0,0),(0,-1),  0.5, BORDER),
+            ("TOPPADDING",   (0,0),(-1,-1), 0),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 0),
         ]))
+        story.append(sig_tbl)
 
-
-        # ---------- FOOTER avec QR (vers admin de l’objet) ----------
+        # ════════════════════════════════════════════════════════════════
+        # 7. FOOTER (canvas — drawn outside story)
+        # ════════════════════════════════════════════════════════════════
         site_url = getattr(settings, "SITE_URL", "http://127.0.0.1:8000")
-        qrw = qr.QrCodeWidget(f"{site_url}/admin/core/versement/{self.pk}/change/")
-        b = qrw.getBounds(); w, h = b[2]-b[0], b[3]-b[1]
-        d = Drawing(2.5*cm, 2.5*cm, transform=[2.5*cm/w,0,0,2.5*cm/h,0,0]); d.add(qrw)
+        try:
+            qrw = qr.QrCodeWidget(f"{site_url}/versements/{self.pk}/")
+            b   = qrw.getBounds()
+            qw, qh = b[2]-b[0], b[3]-b[1]
+            qd  = Drawing(2*cm, 2*cm, transform=[2*cm/qw, 0, 0, 2*cm/qh, 0, 0])
+            qd.add(qrw)
+            qr_available = True
+        except Exception:
+            qr_available = False
 
-        def footer(canvas, _doc):
+        def on_page(canvas, _doc):
             canvas.saveState()
-            canvas.setFont("Helvetica", 8)
-            canvas.setFillColor(colors.grey)
-            canvas.drawString(2*cm, 1.5*cm, f"Facture générée le {self.date_versement.strftime('%d/%m/%Y')}")
-            renderPDF.draw(d, canvas, A4[0]-2*cm-2.5*cm, 1.2*cm)
+            # Bottom bar
+            canvas.setFillColor(NAVY)
+            canvas.rect(0, 0, A4[0], 1.8*cm, fill=1, stroke=0)
+            # Gold line above footer
+            canvas.setFillColor(GOLD)
+            canvas.rect(0, 1.8*cm, A4[0], 3, fill=1, stroke=0)
+            # Footer text
+            canvas.setFont("Helvetica", 7.5)
+            canvas.setFillColor(colors.HexColor("#94a3b8"))
+            canvas.drawString(1.8*cm, 0.9*cm,
+                f"Document généré le {self.date_versement.strftime('%d/%m/%Y')}  |  "
+                f"Réf : {num_facture}  |  Ce document est valide sans signature manuscrite si muni du cachet officiel.")
+            # QR code
+            if qr_available:
+                try:
+                    renderPDF.draw(qd, canvas, A4[0]-2.6*cm, 0.2*cm)
+                except Exception:
+                    pass
             canvas.restoreState()
 
-        # ---------- BUILD ----------
-        story = [
-            header_table, Spacer(1, 10),
-            fac_infos, Spacer(1, 14),
-            cp, Spacer(1, 16),
-            Paragraph("<b>Détail du versement</b>", head),
-            detail, Spacer(1, 18),
-            Paragraph("<b>Récapitulatif</b>", head),
-            recap, Spacer(1, 26),
-            sign_title, Spacer(1, 6),
-            sign_block,
-        ]
-        doc.build(story, onFirstPage=footer, onLaterPages=footer)
+        doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
 
-        filename = f"facture_{self.projet.nom}_{self.date_versement.strftime('%Y%m%d')}.pdf"
+        filename = f"recu_versement_{self.projet.nom}_{self.date_versement.strftime('%Y%m%d')}_{self.pk}.pdf"
         self.facture_pdf.save(filename, ContentFile(buf.getvalue()), save=False)
         buf.close()

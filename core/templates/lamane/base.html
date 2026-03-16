@@ -260,6 +260,7 @@
     @media (max-width:768px)  { :root{--sidebar-w:0px} .sidebar{display:none} .main{margin-left:0;padding:14px} .topbar{left:0} }
   </style>
   {% block extra_head %}{% endblock %}
+  {% block extra_css %}{% endblock %}
 </head>
 <body id="body-root">
 
@@ -338,13 +339,13 @@
   </nav>
 
   <div class="sidebar-footer">
-    <div class="user-card">
-      <div class="user-avatar-sm">L</div>
+    <a href="{% url 'ui_profil' %}" class="user-card" style="text-decoration:none;">
+      <div class="user-avatar-sm">{% if request.user.is_authenticated %}{{ request.user.username|slice:":1"|upper }}{% else %}L{% endif %}</div>
       <div class="user-info">
-        <strong>LAMANE SARL</strong>
+        <strong>{% if request.user.is_authenticated %}{{ request.user.get_full_name|default:request.user.username }}{% else %}LAMANE SARL{% endif %}</strong>
         <small>● Système actif</small>
       </div>
-    </div>
+    </a>
   </div>
 </aside>
 
@@ -367,17 +368,17 @@
     <!-- USER DROPDOWN -->
     <div class="user-menu" id="userMenuWrap">
       <button class="user-menu-btn" id="userMenuBtn" onclick="toggleUserMenu()">
-        <div class="user-avatar-top">L</div>
-        <span style="font-weight:600;">LAMANE</span>
+        <div class="user-avatar-top">{% if request.user.is_authenticated %}{{ request.user.username|slice:":1"|upper }}{% else %}L{% endif %}</div>
+        <span style="font-weight:600;">{% if request.user.is_authenticated %}{{ request.user.get_full_name|default:request.user.username|truncatechars:10 }}{% else %}LAMANE{% endif %}</span>
         <i class="fas fa-chevron-down"></i>
       </button>
       <div class="user-dropdown" id="userDropdown">
         <div class="dropdown-header">
-          <strong>LAMANE SARL</strong>
-          <span>Administrateur</span>
+          <strong>{% if request.user.is_authenticated %}{{ request.user.get_full_name|default:request.user.username }}{% else %}LAMANE SARL{% endif %}</strong>
+          <span>{% if request.user.is_superuser %}Administrateur{% elif request.user.is_authenticated %}Utilisateur{% else %}Système{% endif %}</span>
         </div>
-        <a href="/admin/" class="dropdown-item" target="_blank">
-          <i class="fas fa-user-shield text-blue"></i> Profil admin
+        <a href="{% url 'ui_profil' %}" class="dropdown-item">
+          <i class="fas fa-user-circle text-blue"></i> Mon profil
         </a>
         <button class="dropdown-item" onclick="toggleTheme()">
           <i class="fas fa-palette text-purple"></i>
@@ -455,6 +456,43 @@ function initLiveSearch(inputId, containerSel, itemSel, noResultsSel) {
       if (noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
     }, 220);
   });
+}
+
+/* ── DYNAMIC URL FILTER (live reload with debounce) ──────────────────── */
+function initDynamicFilter(inputId, paramName, debounceMs) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  debounceMs = debounceMs || 350;
+  let timer;
+  input.addEventListener('input', function() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const url = new URL(window.location.href);
+      const val = this.value.trim();
+      if (val) url.searchParams.set(paramName, val);
+      else url.searchParams.delete(paramName);
+      url.searchParams.delete('page');
+      window.location.href = url.toString();
+    }, debounceMs);
+  });
+  // Preserve value on reload
+  const url = new URL(window.location.href);
+  const currentVal = url.searchParams.get(paramName) || '';
+  if (currentVal) input.value = currentVal;
+}
+
+function initSelectFilter(selectId, paramName) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.addEventListener('change', function() {
+    const url = new URL(window.location.href);
+    if (this.value) url.searchParams.set(paramName, this.value);
+    else url.searchParams.delete(paramName);
+    window.location.href = url.toString();
+  });
+  const url = new URL(window.location.href);
+  const currentVal = url.searchParams.get(paramName) || '';
+  if (currentVal) sel.value = currentVal;
 }
 
 /* ── GLOBAL SEARCH (redirect to projects) ──────────────────────────────── */

@@ -7,13 +7,15 @@
 
 <!-- Filters + Actions -->
 <div class="flex items-center justify-between mb-4 animate-fade-up">
-  <form method="get" class="filters-bar" style="margin:0;flex:1;">
-    <input type="text" name="q" value="{{ q }}" placeholder="🔍 Rechercher un fournisseur…" class="filter-input" style="min-width:280px;">
-    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+  <div class="filters-bar" style="margin:0;flex:1;">
+    <div style="position:relative;flex:1;">
+      <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+      <input type="text" name="q" id="dynSearch" value="{{ q }}" placeholder="Rechercher un fournisseur…" class="filter-input" style="min-width:240px;padding-left:34px;" autocomplete="off">
+    </div>
     {% if q %}
     <a href="{% url 'ui_fournisseurs' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
     {% endif %}
-  </form>
+  </div>
   <a href="{% url 'ui_fournisseur_create' %}" class="btn btn-primary" style="margin-left:12px;white-space:nowrap;">
     <i class="fas fa-plus"></i> Nouveau fournisseur
   </a>
@@ -24,7 +26,10 @@
 
 {% for d in f_data %}
 {% with f=d.fournisseur %}
-<div class="card" style="transition:transform 0.2s,border-color 0.2s;" onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(240,165,0,0.3)'" onmouseout="this.style.transform='';this.style.borderColor=''">
+<div class="card" style="transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s;cursor:pointer;border:1px solid var(--border);"
+  onclick="window.location='{% url 'ui_fournisseur_detail' f.pk %}'"
+  onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(240,165,0,0.3)';this.style.boxShadow='0 10px 30px rgba(240,165,0,0.1)'"
+  onmouseout="this.style.transform='';this.style.borderColor='var(--border)';this.style.boxShadow=''">
 
   <!-- Header -->
   <div class="flex items-center gap-3 mb-4">
@@ -107,4 +112,12 @@
 
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initDynamicFilter('dynSearch', 'q', 400);
+});
+</script>
 {% endblock %}
