@@ -62,15 +62,18 @@ REST_FRAMEWORK = {
 }
 
 
+_whitenoise = []
+try:
+    import whitenoise  # noqa: F401
+    _whitenoise = ['whitenoise.middleware.WhiteNoiseMiddleware']
+except ImportError:
+    pass
+
 MIDDLEWARE = [
-
-
-    "corsheaders.middleware.CorsMiddleware",  # ← tout en premier
-
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    *_whitenoise,
     'django.middleware.common.CommonMiddleware',
-
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -110,14 +113,22 @@ WSGI_APPLICATION = 'lamane.wsgi.application'
 # ── Base de données ──────────────────────────────────────────────────────────
 # En local (dev) : SQLite par défaut.
 # Sur Render : définir DATABASE_URL dans les variables d'environnement.
-import dj_database_url
-
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
-}
+try:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=600,
+        )
+    }
+except ImportError:
+    # Fallback SQLite si dj-database-url pas installé (dev local)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -163,7 +174,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+if _whitenoise:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
