@@ -52,9 +52,7 @@ class Personne(models.Model):
                     "numero_identite": "Ce numéro de pièce d’identité est déjà utilisé par une autre personne."
                 })
 
-        # Validation 2 — sexe obligatoire si civilité utilisée
-        if self.sexe is None:
-            raise ValidationError({"sexe": "Le sexe est requis pour déterminer la civilité."})
+        # Validation 2 — sexe facultatif (null autorisé sur le champ)
 
         # Validation 3 — téléphone format simple si renseigné
         if self.telephone:

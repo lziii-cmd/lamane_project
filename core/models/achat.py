@@ -167,3 +167,4 @@ class Achat(models.Model):
         fname = f"bon_entree_{self.date_achat.strftime('%Y%m%d')}_{str(self.id)[:8]}.pdf"
         self.bon_entree_pdf.save(fname, ContentFile(buf.getvalue()), save=False)
         buf.close()
+        models.Model.save(self, update_fields=["bon_entree_pdf"])

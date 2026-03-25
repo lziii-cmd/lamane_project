@@ -116,7 +116,8 @@ class Projet(models.Model):
     @property
     def marge_brute_estimee(self):
         """Marge brute = Versements clients - Achats matériaux TTC."""
+        from django.db.models import Sum
         return self.total_versements - (
-            self.achats.aggregate(s=__import__("django.db.models", fromlist=["Sum"]).Sum("total_ttc"))["s"]
+            self.achats.aggregate(s=Sum("total_ttc"))["s"]
             or Decimal("0.00")
         )

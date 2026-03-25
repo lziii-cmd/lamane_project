@@ -25,8 +25,8 @@ class LigneAchat(models.Model):
         Materiel,
         on_delete=models.PROTECT
     )
-    quantite = models.PositiveIntegerField(verbose_name="Quantité", default=Decimal("0"))
-    prix_unitaire = models.DecimalField(max_digits=10, default=Decimal("0"), decimal_places=0, verbose_name="Prix unitaire HT")
+    quantite = models.PositiveIntegerField(verbose_name="Quantité", default=0)
+    prix_unitaire = models.DecimalField(max_digits=10, default=Decimal("0"), decimal_places=2, verbose_name="Prix unitaire HT")
     commentaire = models.CharField(max_length=255, blank=True, verbose_name="Commentaire")
     #unite = models.CharField(max_length=50, blank=True, null=True)
 
