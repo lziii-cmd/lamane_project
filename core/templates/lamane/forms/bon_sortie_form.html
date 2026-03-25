@@ -1,0 +1,92 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Créer un bon de sortie{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}
+<style>
+.lignes-table{background:var(--bg-card2);border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px;}
+body.light-mode .lignes-table{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.08);}
+.lignes-header{display:grid;grid-template-columns:2fr 1fr 1fr 40px;gap:10px;padding:10px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);}
+.ligne-row{display:grid;grid-template-columns:2fr 1fr 1fr 40px;gap:10px;align-items:center;padding:10px 14px;background:var(--bg-card2);border-bottom:1px solid var(--border);margin-bottom:0;}
+.ligne-row:last-child{border-bottom:none;}
+body.light-mode .ligne-row{background:rgba(0,0,0,0.02);}
+.ligne-row .form-group{margin-bottom:0;}
+.btn-del-ligne{padding:7px 11px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:#ff4757;border-radius:9px;cursor:pointer;font-size:12px;transition:all 0.2s;width:40px;}
+.btn-del-ligne:hover{background:rgba(255,71,87,0.2);}
+</style>
+{% endblock %}
+{% block content %}
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_bons_sortie' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux bons</a>
+  {% if obj %}<a href="{% url 'ui_bon_sortie_delete' obj.pk %}" class="wz-btn wz-btn-danger"><i class="fas fa-trash-alt"></i> Supprimer</a>{% endif %}
+</div>
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}{{ formset.management_form }}
+<div class="wz-stepbar">
+  <div class="wz-step" data-step="1" onclick="wzGoTo(1)"><div class="wz-step-circle">1</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Bon de sortie</span></div></div>
+  <div class="wz-step" data-step="2" onclick="wzGoTo(2)"><div class="wz-step-circle">2</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 2</span><span class="wz-step-label">Matériaux</span></div></div>
+</div>
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill"></div></div>
+{% if form.non_field_errors %}<div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;"><i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}</div>{% endif %}
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-file-export"></i></div><div><div class="wz-section-title">Informations du bon</div><div class="wz-section-sub">Projet destinataire et date de sortie</div></div></div>
+    <div class="wz-section-body">
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Projet / Chantier <span class="req"></span></label><div class="input-icon-wrap"><i class="fas fa-hard-hat input-icon"></i>{{ form.projet }}</div>{% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+        <div class="form-group"><label class="form-label">Date de sortie <span class="req"></span></label><div class="input-icon-wrap"><i class="fas fa-calendar input-icon"></i>{{ form.date_sortie }}</div>{% for e in form.date_sortie.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+      </div>
+      <div class="form-group"><label class="form-label">Responsable</label><div class="input-icon-wrap"><i class="fas fa-user-tie input-icon"></i>{{ form.responsable }}</div></div>
+      <div class="form-group"><label class="form-label">Observations</label>{{ form.observations }}</div>
+    </div>
+  </div>
+</div>
+<div class="wz-panel" data-step="2">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-boxes"></i></div><div><div class="wz-section-title">Matériaux sortants</div><div class="wz-section-sub">Indiquez les matières et quantités à sortir du stock</div></div></div>
+    <div class="wz-section-body">
+      <div class="lignes-table">
+        <div class="lignes-header">
+          <span>Matériel</span>
+          <span>Quantité</span>
+          <span>Commentaire</span>
+          <span></span>
+        </div>
+        <div id="lignes-container">{% for lf in formset %}
+          <div class="ligne-row" id="ligne-{{ forloop.counter0 }}">
+            {{ lf.id }}<span style="display:none">{{ lf.DELETE }}</span>
+            <div class="form-group">{{ lf.materiel }}{% for e in lf.materiel.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+            <div class="form-group">{{ lf.quantite }}{% for e in lf.quantite.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+            <div class="form-group">{{ lf.commentaire }}</div>
+            <button type="button" class="btn-del-ligne" onclick="removeLigne(this, {{ forloop.counter0 }})"><i class="fas fa-trash"></i></button>
+          </div>{% endfor %}
+        </div>
+      </div>
+      <button type="button" onclick="addLigne()" class="wz-btn wz-btn-ghost" style="margin-top:10px;"><i class="fas fa-plus"></i> Ajouter une ligne</button>
+    </div>
+  </div>
+</div>
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_bons_sortie' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+    <button type="button" id="wzPrev" style="display:none;" class="wz-btn wz-btn-ghost" onclick="wzPrev()"><i class="fas fa-arrow-left"></i> Précédent</button>
+  </div>
+  <div class="wz-nav-right">
+    <span class="wz-nav-counter" id="wzBadge"></span>
+    <button type="button" id="wzNext" class="wz-btn wz-btn-primary" onclick="wzNext()">Suivant <i class="fas fa-arrow-right"></i></button>
+    <button type="submit" id="wzSave" style="display:none;" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> {{ action }}</button>
+  </div>
+</div>
+</form>
+</div>
+{% endblock %}
+{% block extra_js %}{% include "lamane/includes/wizard_js.html" %}
+<script>
+var TOTAL_FORMS_ID = '{{ formset.management_form.prefix }}-TOTAL_FORMS';
+var ligneCount = {{ formset.total_form_count }};
+var prefix = '{{ formset.management_form.prefix }}';
+function addLigne(){var c=document.getElementById('lignes-container');var idx=ligneCount;var fs=document.querySelector('[name="'+prefix+'-0-materiel"]');var d=document.createElement('div');d.className='ligne-row';d.id='ligne-'+idx;d.innerHTML='<input type="hidden" name="'+prefix+'-'+idx+'-id" value=""><span style="display:none"><input type="hidden" name="'+prefix+'-'+idx+'-DELETE" value=""></span><div class="form-group"><select name="'+prefix+'-'+idx+'-materiel" class="form-select">'+(fs?fs.innerHTML:'')+'</select></div><div class="form-group"><input type="number" name="'+prefix+'-'+idx+'-quantite" class="form-input" step="0.001" min="0" value="0"></div><div class="form-group"><input type="text" name="'+prefix+'-'+idx+'-commentaire" class="form-input" placeholder="Commentaire..."></div><button type="button" class="btn-del-ligne" onclick="removeLigne(this,'+idx+')"><i class="fas fa-trash"></i></button>';c.appendChild(d);document.getElementById(TOTAL_FORMS_ID).value=++ligneCount;}
+function removeLigne(btn,idx){var row=document.getElementById('ligne-'+idx);var del=row.querySelector('[name$="-DELETE"]')||null;if(del){del.value='on';row.style.display='none';}else row.remove();}
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Django
+db.sqlite3
+db.sqlite3.*
+db_enriched_backup.sqlite3
+*.bak*
+staticfiles/
+media/
+
+# Uploaded / generated files (not source code)
+achats/
+factures/
+factures_versement/
+proprietaires/
+bons_entree/
+contrats_sous_traitance/
+justificatifs_versement/
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude worktrees
+.claude/

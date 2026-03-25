@@ -1,0 +1,53 @@
+# scripts/load_fournisseur.py
+# -*- coding: utf-8 -*-
+"""
+Script de création de fournisseurs par défaut.
+Exécution :
+    python manage.py shell < scripts/load_fournisseur.py
+"""
+
+import random
+from django.apps import apps
+
+Fournisseur = apps.get_model("core", "Fournisseur")
+
+def run():
+    fournisseurs = [
+        # Entreprises
+        {"est_moral": True, "entreprise": "SENBAT Matériaux", "ninea": "1234567-1",
+         "telephone": "+221771112233", "email": "contact@senbat.com", "adresse": "Avenue Cheikh Anta Diop - Dakar"},
+        {"est_moral": True, "entreprise": "AFRIBAT SA", "ninea": "7654321-9",
+         "telephone": "+221781234567", "email": "info@afribat.com", "adresse": "VDN - Dakar"},
+        {"est_moral": True, "entreprise": "Global Matériaux", "ninea": "2345678-3",
+         "telephone": "+221701112233", "email": "global@materiaux.com", "adresse": "Route de Rufisque - Dakar"},
+        {"est_moral": True, "entreprise": "ElectroSen Group", "ninea": "8765432-5",
+         "telephone": "+221751234567", "email": "contact@electrosen.com", "adresse": "Cité Keur Gorgui - Dakar"},
+        {"est_moral": True, "entreprise": "Plumb’Tech", "ninea": "3456789-7",
+         "telephone": "+221761234567", "email": "service@plumbtech.com", "adresse": "Point E - Dakar"},
+
+        # Personnes physiques
+        {"est_moral": False, "prenom": "Mamadou", "nom": "Diop", "sexe": "H", "numero_identite": "CNI100000001",
+         "telephone": "+221770000111", "email": "mamadou.diop@example.com", "adresse": "Saint-Louis"},
+        {"est_moral": False, "prenom": "Awa", "nom": "Ndiaye", "sexe": "F", "numero_identite": "CNI100000002",
+         "telephone": "+221770000222", "email": "awa.ndiaye@example.com", "adresse": "Thiès"},
+        {"est_moral": False, "prenom": "Ousmane", "nom": "Ba", "sexe": "H", "numero_identite": "CNI100000003",
+         "telephone": "+221770000333", "email": "ousmane.ba@example.com", "adresse": "Kaolack"},
+        {"est_moral": False, "prenom": "Fatou", "nom": "Sow", "sexe": "F", "numero_identite": "CNI100000004",
+         "telephone": "+221770000444", "email": "fatou.sow@example.com", "adresse": "Mbour"},
+        {"est_moral": False, "prenom": "Cheikh", "nom": "Fall", "sexe": "H", "numero_identite": "CNI100000005",
+         "telephone": "+221770000555", "email": "cheikh.fall@example.com", "adresse": "Ziguinchor"},
+    ]
+
+    for data in fournisseurs:
+        obj, created = Fournisseur.objects.get_or_create(
+            numero_identite=data.get("numero_identite","") or None,
+            entreprise=data.get("entreprise",""),
+            defaults=data
+        )
+        if created:
+            print(f"[OK] Fournisseur créé : {obj}")
+        else:
+            print(f"[SKIP] Fournisseur existant : {obj}")
+
+if __name__ == "__main__":
+    run()

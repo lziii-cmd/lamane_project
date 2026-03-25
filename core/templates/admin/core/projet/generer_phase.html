@@ -1,0 +1,69 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1 style="margin-bottom:10px;">
+  {% blocktrans %}Générer des phases pour le projet{% endblocktrans %} : <em>{{ original }}</em>
+</h1>
+
+<div class="module" style="padding:12px;">
+  <form method="post">
+    {% csrf_token %}
+
+    <fieldset class="module aligned">
+      <h2>{% trans "Étape 1 — Paramètres" %}</h2>
+      {{ header_form.as_p }}
+    </fieldset>
+
+    {% if not formset %}
+      <div class="submit-row">
+        <button type="submit" class="default">{% trans "Continuer" %}</button>
+      </div>
+    {% endif %}
+
+    {% if formset %}
+      <fieldset class="module aligned" style="margin-top:16px;">
+        <h2>{% trans "Étape 2 — Lignes à créer" %}</h2>
+        <p class="help">
+          {% trans "Saisissez les niveaux (si applicable), les échéances (facultatives) et les montants. L'ordre est optionnel ; s'il est vide, il sera positionné automatiquement à la suite." %}
+        </p>
+        {{ formset.management_form }}
+        <table class="adminlist" style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th>{% trans "Niveau (ex. 0=R+0, 1=R+1, -1=S-1)" %}</th>
+              <th>{% trans "Échéance (facultative)" %}</th>
+              <th>{% trans "Montant prévu (XOF)" %}</th>
+              <th>{% trans "Ordre (optionnel)" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset.forms %}
+              <tr>
+                <td>{{ form.niveau }}</td>
+                <td>{{ form.echeance }}</td>
+                <td>{{ form.montant_prevu }}</td>
+                <td>{{ form.ordre }}</td>
+              </tr>
+              {% if form.errors %}
+                <tr><td colspan="4"><ul class="errorlist">{{ form.errors }}</ul></td></tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </fieldset>
+
+      <input type="hidden" name="phase_standard" value="{{ header_form.cleaned_data.phase_standard.pk }}">
+      <input type="hidden" name="nb_lignes" value="{{ header_form.cleaned_data.nb_lignes }}">
+
+      <div class="submit-row">
+        <button type="submit" class="default">{% trans "Créer ces phases" %}</button>
+      </div>
+    {% endif %}
+  </form>
+
+  <p style="margin-top:12px;">
+    <a href="{% url 'admin:core_projet_change' original.pk %}">&larr; {% trans "Retour au projet" %}</a>
+  </p>
+</div>
+{% endblock %}

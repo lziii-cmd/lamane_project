@@ -1,0 +1,63 @@
+# core/management/commands/load_etapes_standard.py
+from django.core.management.base import BaseCommand
+from django.db import transaction
+from core.models.etape_standard import EtapeStandard
+
+
+ETAPES_SENEGAL = [
+    (1,  "Signaature"),
+    (2,  "Préparation & Études"),
+    (3,  "Fondations"),
+    (4,  "Élévation RDC"),
+    (5,  "Plancher RDC"),
+    (6,  "Élévation étages"),
+    (7,  "Menuiseries extérieures"),
+    (8,  "Second œuvre"),
+    (9,  "Revêtements"),
+    (10, "Finitions"),
+    (11, "Aménagements extérieurs & VRD"),
+    (12, "Réception & Livraison"),
+]
+
+
+class Command(BaseCommand):
+    help = "Charge/Met à jour les ÉtapesStandard (référentiel Sénégal) dans la base."
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reset-order",
+            action="store_true",
+            help="Réécrit l'ordre pour toutes les étapes présentes dans la liste, même si elles existent déjà.",
+        )
+
+    @transaction.atomic
+    def handle(self, *args, **options):
+        created, updated = 0, 0
+        reset_order = options.get("reset_order", False)
+
+        # Création / mise à jour des étapes standard
+        for ordre, nom in ETAPES_SENEGAL:
+            obj, was_created = EtapeStandard.objects.get_or_create(nom=nom, defaults={"ordre": ordre})
+            if was_created:
+                created += 1
+                self.stdout.write(self.style.SUCCESS(f"Créé: [{ordre}] {nom}"))
+            else:
+                if reset_order and obj.ordre != ordre:
+                    obj.ordre = ordre
+                    obj.save(update_fields=["ordre"])
+                    updated += 1
+                    self.stdout.write(self.style.WARNING(f"MàJ ordre: [{ordre}] {nom}"))
+                else:
+                    # Si pas de --reset-order, on met à jour seulement si l'ordre est vide/incohérent
+                    if obj.ordre is None or obj.ordre <= 0:
+                        obj.ordre = ordre
+                        obj.save(update_fields=["ordre"])
+                        updated += 1
+                        self.stdout.write(self.style.WARNING(f"MàJ ordre (auto): [{ordre}] {nom}"))
+                    else:
+                        self.stdout.write(f"Existant: [{obj.ordre}] {nom}")
+
+        # Récapitulatif
+        self.stdout.write("")
+        self.stdout.write(self.style.SUCCESS(f"Terminé. Créés: {created}, Mis à jour: {updated}"))
+        self.stdout.write(self.style.NOTICE("Astuce: utilisez --reset-order pour forcer les positions."))
+

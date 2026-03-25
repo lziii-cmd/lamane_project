@@ -1,0 +1,198 @@
+{% extends "lamane/base.html" %}
+{% block title %}Ressources Humaines{% endblock %}
+{% block page_title %}Ressources Humaines{% endblock %}
+{% block page_sub %}Équipe LAMANE SARL — {{ total_employes }} employé{{ total_employes|pluralize }}{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-users"></i></div>
+    <div class="kpi-value">{{ total_employes }}</div>
+    <div class="kpi-label">Employés LAMANE</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue-light);--icon-bg:rgba(77,143,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-mars"></i></div>
+    <div class="kpi-value">{{ hommes }}</div>
+    <div class="kpi-label">Hommes</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-venus"></i></div>
+    <div class="kpi-value">{{ femmes }}</div>
+    <div class="kpi-label">Femmes</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-briefcase"></i></div>
+    <div class="kpi-value">{{ nb_affectes }}</div>
+    <div class="kpi-label">Affectés à des projets</div>
+  </div>
+</div>
+
+<!-- Postes résumé + recherche -->
+<div class="grid-2 mb-6 animate-fade-up delay-1">
+
+  <!-- Répartition postes (sans chart - visuel par barres) -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-sitemap text-gold"></i> Postes & fonctions</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for p in postes|slice:":8" %}
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:12px;color:var(--text-secondary);width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.poste|default:"—" }}</div>
+        <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;">
+          <div style="height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--purple));width:{% widthratio p.count total_employes 100 %}%;min-width:6px;"></div>
+        </div>
+        <span class="badge badge-blue text-xs">{{ p.count }}</span>
+      </div>
+      {% empty %}
+      <div class="text-muted text-sm" style="padding:20px;text-align:center;">Aucun poste renseigné</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Filtre dynamique + actions -->
+  <div class="card">
+    <div class="card-title mb-3"><i class="fas fa-search text-gold"></i> Rechercher un employé</div>
+    <div style="position:relative;margin-bottom:12px;">
+      <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+      <input type="text" id="dynSearch" placeholder="Nom, prénom, poste…" class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
+    </div>
+    <a href="{% url 'ui_employe_create' %}" class="btn btn-primary" style="width:100%;justify-content:center;">
+      <i class="fas fa-user-plus"></i> Nouvel employé
+    </a>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border-light);">
+      <div class="flex justify-between text-xs" style="margin-bottom:8px;">
+        <span class="text-muted">Hommes</span>
+        <span style="font-weight:700;color:var(--blue-light);">{{ hommes }}</span>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill blue" style="width:{% if total_employes %}{% widthratio hommes total_employes 100 %}{% else %}0{% endif %}%;"></div></div>
+      <div class="flex justify-between text-xs" style="margin-top:8px;margin-bottom:4px;">
+        <span class="text-muted">Femmes</span>
+        <span style="font-weight:700;color:var(--purple);">{{ femmes }}</span>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill purple" style="width:{% if total_employes %}{% widthratio femmes total_employes 100 %}{% else %}0{% endif %}%;"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Grille employés (cliquables) -->
+<div class="flex items-center justify-between mb-3 animate-fade-up delay-2">
+  <div class="section-title">Annuaire des employés</div>
+  <span class="badge badge-blue" id="empCount">{{ total_employes }} employé{{ total_employes|pluralize }}</span>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:28px;" class="animate-fade-up delay-2" id="empGrid">
+  {% for emp in employes %}
+  <div class="card emp-card" style="padding:18px;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;border:1px solid var(--border);"
+       onclick="window.location='{% url 'ui_employe_detail' emp.pk %}'"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(30,111,255,0.15)';this.style.borderColor='rgba(30,111,255,0.3)'"
+       onmouseout="this.style.transform='';this.style.boxShadow='';this.style.borderColor='var(--border)'"
+       data-search="{{ emp.prenom|lower }} {{ emp.nom|lower }} {{ emp.poste|lower }}">
+    <div class="flex items-center gap-3 mb-3">
+      <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;
+        background:{% if emp.sexe == 'F' %}rgba(165,94,234,0.2){% else %}rgba(30,111,255,0.2){% endif %};
+        color:{% if emp.sexe == 'F' %}var(--purple){% else %}var(--blue-light){% endif %};">
+        {{ emp.prenom|slice:":1" }}{{ emp.nom|slice:":1" }}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:13.5px;">{{ emp.prenom }} {{ emp.nom }}</div>
+        <div class="text-xs text-muted">
+          {% if emp.sexe == 'F' %}<i class="fas fa-venus" style="color:var(--purple);"></i> Femme
+          {% elif emp.sexe == 'M' %}<i class="fas fa-mars" style="color:var(--blue-light);"></i> Homme
+          {% else %}{{ emp.sexe|default:"" }}{% endif %}
+        </div>
+      </div>
+      {% if not emp.actif %}<span class="badge badge-yellow text-xs" style="margin-left:auto;">Inactif</span>{% endif %}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      <div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:6px 10px;">
+        <span class="text-xs text-muted">Poste : </span>
+        <span style="font-size:12px;font-weight:600;color:var(--gold);">{{ emp.poste|default:"—" }}</span>
+      </div>
+      {% if emp.telephone %}
+      <div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:6px 10px;">
+        <i class="fas fa-phone text-xs text-muted"></i>
+        <span style="font-size:12px;color:var(--text-secondary);margin-left:4px;">{{ emp.telephone }}</span>
+      </div>
+      {% endif %}
+      {% if emp.date_embauche %}
+      <div style="font-size:10px;color:var(--text-muted);padding:4px 10px;">
+        <i class="fas fa-calendar-plus"></i> Embauche : {{ emp.date_embauche|date:"d/m/Y" }}
+      </div>
+      {% endif %}
+    </div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;color:var(--text-muted);">{{ emp.matricule|default:"" }}</span>
+      <span style="font-size:16px;color:var(--blue-light);opacity:0.7;">→</span>
+    </div>
+  </div>
+  {% empty %}
+  <div class="card" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+    <div style="font-size:48px;margin-bottom:16px;">👥</div>
+    Aucun employé enregistré
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Affectations -->
+<div class="card animate-fade-up delay-3">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-project-diagram text-gold"></i> Affectations aux projets</div>
+    <span class="badge badge-blue">{{ affectations|length }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Employé</th><th>Poste</th><th>Projet</th><th>Statut projet</th></tr>
+      </thead>
+      <tbody>
+        {% for a in affectations %}
+        <tr>
+          <td style="font-weight:600;">{{ a.employe.prenom }} {{ a.employe.nom }}</td>
+          <td class="text-muted text-sm">{{ a.employe.poste|default:"—" }}</td>
+          <td>
+            <a href="{% url 'ui_projet_detail' a.projet.id %}" style="font-weight:600;font-size:13px;color:var(--blue-light);text-decoration:none;">
+              {{ a.projet.nom|truncatechars:28 }}
+            </a>
+          </td>
+          <td>
+            {% with s=a.projet.statut %}
+            <span class="badge {% if s == 'En cours' %}badge-blue{% elif s == 'Terminé' %}badge-green{% elif s == 'En pause' %}badge-orange{% else %}badge-yellow{% endif %} text-xs">{{ s }}</span>
+            {% endwith %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted);">Aucune affectation enregistrée</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('dynSearch');
+  if (!input) return;
+  let timer;
+  input.addEventListener('input', function() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const q = this.value.toLowerCase().trim();
+      let visible = 0;
+      document.querySelectorAll('.emp-card').forEach(card => {
+        const show = !q || card.dataset.search.includes(q);
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      const cnt = document.getElementById('empCount');
+      if (cnt) cnt.textContent = visible + ' employé' + (visible > 1 ? 's' : '');
+    }, 200);
+  });
+});
+</script>
+{% endblock %}

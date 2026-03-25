@@ -1,0 +1,263 @@
+{% extends "lamane/base.html" %}
+{% block title %}Finances{% endblock %}
+{% block page_title %}Tableau financier{% endblock %}
+{% block page_sub %}Achats, versements & situations mensuelles — {{ today|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
+    <div class="kpi-value">{{ total_ht }}</div>
+    <div class="kpi-label">Total Achats HT (XOF)</div>
+    <div class="kpi-trend text-muted">TVA : {{ total_tva }} XOF</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);">
+    <div class="kpi-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+    <div class="kpi-value">{{ total_ttc }}</div>
+    <div class="kpi-label">Total Achats TTC (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hand-holding-usd"></i></div>
+    <div class="kpi-value">{{ total_versements }}</div>
+    <div class="kpi-label">Versements reçus (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:{% if solde_positif %}var(--green){% else %}var(--red){% endif %};--icon-bg:rgba({% if solde_positif %}0,196,140{% else %}255,71,87{% endif %},0.12);">
+    <div class="kpi-icon"><i class="fas fa-balance-scale"></i></div>
+    <div class="kpi-value {% if solde_positif %}text-green{% else %}text-red{% endif %}">{{ solde }}</div>
+    <div class="kpi-label">Solde net (XOF)</div>
+    <div class="kpi-trend {% if solde_positif %}trend-up{% else %}trend-down{% endif %}">
+      <i class="fas fa-arrow-{% if solde_positif %}up{% else %}down{% endif %}"></i>
+      {% if solde_positif %}Excédent{% else %}Déficit{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="grid-2 mb-6 animate-fade-up delay-1">
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Évolution mensuelle — 12 mois</div>
+        <div class="card-subtitle">Achats TTC vs Versements (XOF)</div>
+      </div>
+    </div>
+    <canvas id="chartEvolution" height="180"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Répartition par mode de paiement</div>
+        <div class="card-subtitle">Volume TTC total</div>
+      </div>
+    </div>
+    <div style="position:relative;height:180px;display:flex;align-items:center;justify-content:center;">
+      <canvas id="chartModes"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Top projets + fournisseurs -->
+<div class="grid-2 mb-6 animate-fade-up delay-2">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-building text-gold"></i> Top projets par achats</div>
+    </div>
+    <canvas id="chartTopProjets" height="180"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-truck text-gold"></i> Top 10 fournisseurs</div>
+    </div>
+    <div class="table-wrapper" style="max-height:280px;overflow-y:auto;">
+      <table>
+        <thead><tr><th>#</th><th>Fournisseur</th><th>Achats</th><th>Volume TTC</th></tr></thead>
+        <tbody>
+          {% for f in top_fournisseurs %}
+          <tr>
+            <td class="text-muted text-sm">{{ forloop.counter }}</td>
+            <td class="bold text-sm">
+              {% if f.fournisseur__entreprise %}{{ f.fournisseur__entreprise }}
+              {% else %}{{ f.fournisseur__prenom }} {{ f.fournisseur__nom }}{% endif %}
+            </td>
+            <td class="text-sm text-muted">{{ f.count }}</td>
+            <td class="amount text-gold text-sm">{{ f.total|floatformat:0 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Aucun fournisseur</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Situations mensuelles stats -->
+<div class="card mb-6 animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-file-invoice text-gold"></i> Statistiques situations mensuelles CCAG</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:16px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">MONTANT BRUT CUMULÉ</div>
+      <div style="font-size:20px;font-weight:700;color:var(--gold);">{{ situations_stats.total_brut|floatformat:0 }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">XOF</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:16px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">RETENUES DE GARANTIE</div>
+      <div style="font-size:20px;font-weight:700;color:var(--red);">{{ situations_stats.total_retenue|floatformat:0 }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">XOF (5% CCAG)</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:16px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">MONTANT NET À PAYER</div>
+      <div style="font-size:20px;font-weight:700;color:var(--green);">{{ situations_stats.total_net|floatformat:0 }}</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">XOF</div>
+    </div>
+  </div>
+</div>
+
+<!-- Derniers achats + versements -->
+<div class="grid-2 animate-fade-up delay-3">
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-shopping-cart text-gold"></i> Derniers achats</div>
+      <span class="badge badge-yellow">{{ recent_achats|length }}</span>
+    </div>
+    <div class="table-wrapper" style="max-height:340px;overflow-y:auto;">
+      <table>
+        <thead><tr><th>Date</th><th>Projet</th><th>Mode</th><th>TTC</th></tr></thead>
+        <tbody>
+          {% for a in recent_achats %}
+          <tr>
+            <td class="text-xs text-muted">{{ a.date_achat|date:"d/m/Y" }}</td>
+            <td class="bold text-sm">{{ a.projet.nom|truncatechars:22 }}</td>
+            <td><span class="badge badge-blue text-xs">{{ a.mode_paiement|default:"—" }}</span></td>
+            <td class="amount text-gold text-sm">{{ a.total_ttc|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-money-check-alt text-gold"></i> Derniers versements</div>
+      <span class="badge badge-green">{{ recent_versements|length }}</span>
+    </div>
+    <div class="table-wrapper" style="max-height:340px;overflow-y:auto;">
+      <table>
+        <thead><tr><th>Date</th><th>Projet</th><th>Phase</th><th>Montant</th></tr></thead>
+        <tbody>
+          {% for v in recent_versements %}
+          <tr>
+            <td class="text-xs text-muted">{{ v.date_versement|date:"d/m/Y" }}</td>
+            <td class="bold text-sm">{{ v.projet.nom|truncatechars:20 }}</td>
+            <td class="text-sm text-muted">{{ v.phase.libelle|default:"—"|truncatechars:16 }}</td>
+            <td class="amount text-green text-sm">{{ v.montant|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const monthly_labels = {{ monthly_labels_json|safe }};
+const monthly_ttc    = {{ monthly_ttc_json|safe }};
+const monthly_verse  = {{ monthly_verse_json|safe }};
+const modes_labels   = {{ modes_labels_json|safe }};
+const modes_values   = {{ modes_values_json|safe }};
+const tp_labels      = {{ top_projets_labels_json|safe }};
+const tp_values      = {{ top_projets_values_json|safe }};
+
+// Évolution mensuelle
+new Chart(document.getElementById('chartEvolution'), {
+  type: 'line',
+  data: {
+    labels: monthly_labels,
+    datasets: [
+      {
+        label: 'Achats TTC', data: monthly_ttc,
+        borderColor: '#f0a500', backgroundColor: 'rgba(240,165,0,0.12)',
+        borderWidth: 2, tension: 0.4, fill: true,
+      },
+      {
+        label: 'Versements', data: monthly_verse,
+        borderColor: '#00c48c', backgroundColor: 'rgba(0,196,140,0.05)',
+        borderWidth: 2, tension: 0.4, borderDash: [6,3],
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: 'rgba(240,244,255,0.4)', maxRotation: 45, font: { size: 10 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: {
+        color: 'rgba(240,244,255,0.4)',
+        callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v
+      }}
+    }
+  }
+});
+
+// Modes paiement doughnut
+const PALETTES = ['#f0a500','#1e6fff','#00c48c','#a55eea','#ff793f','#00d2ff'];
+new Chart(document.getElementById('chartModes'), {
+  type: 'doughnut',
+  data: {
+    labels: modes_labels,
+    datasets: [{
+      data: modes_values,
+      backgroundColor: PALETTES,
+      borderColor: '#0f1629',
+      borderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '60%',
+    plugins: { legend: { position: 'right', labels: { color: 'rgba(240,244,255,0.6)', padding: 10 } } }
+  }
+});
+
+// Top projets horizontal bar
+new Chart(document.getElementById('chartTopProjets'), {
+  type: 'bar',
+  data: {
+    labels: tp_labels,
+    datasets: [{
+      label: 'Achats TTC (XOF)',
+      data: tp_values,
+      backgroundColor: tp_values.map((v, i) => `hsla(${220 + i * 15}, 80%, 60%, 0.7)`),
+      borderRadius: 5,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: {
+        color: 'rgba(240,244,255,0.4)',
+        callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v
+      }},
+      y: { grid: { display: false }, ticks: { color: 'rgba(240,244,255,0.6)', font: { size: 10 } } }
+    }
+  }
+});
+</script>
+{% endblock %}

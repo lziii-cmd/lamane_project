@@ -1,0 +1,69 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if obj %}Modifier le matériau{% else %}Ajouter un matériau au catalogue{% endif %}{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}{% endblock %}
+{% block content %}
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_stock' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour au stock</a>
+</div>
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}
+<div class="wz-stepbar">
+  <div class="wz-step wz-active" data-step="1" onclick="wzGoTo(1)"><div class="wz-step-circle">1</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Matériau</span></div></div>
+</div>
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill" style="width:100%"></div></div>
+{% if form.non_field_errors %}<div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;"><i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}</div>{% endif %}
+
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-boxes"></i></div>
+      <div><div class="wz-section-title">Informations du matériau</div><div class="wz-section-sub">Nom, unité de mesure et catégorie</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="form-group">
+        <label class="form-label">Désignation / Nom <span class="req">*</span></label>
+        <div class="input-icon-wrap"><i class="fas fa-box input-icon"></i>{{ form.nom }}</div>
+        {% for e in form.nom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Unité de mesure <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-ruler input-icon"></i>{{ form.unite }}</div>
+          {% for e in form.unite.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catégorie</label>
+          <div class="input-icon-wrap"><i class="fas fa-tag input-icon"></i>{{ form.categorie }}</div>
+        </div>
+      </div>
+      <div style="padding:12px 16px;background:rgba(30,111,255,0.06);border-radius:10px;border:1px solid rgba(30,111,255,0.15);color:var(--text-secondary);font-size:12px;">
+        <i class="fas fa-lightbulb" style="color:#1e6fff;margin-right:6px;"></i>
+        Si la catégorie souhaitée n'existe pas encore, <a href="{% url 'ui_categorie_create' %}" style="color:#1e6fff;font-weight:600;">créez-la ici</a> puis revenez.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_stock' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+  </div>
+  <div class="wz-nav-right">
+    <button type="submit" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> {{ action }}</button>
+  </div>
+</div>
+</form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+// Single step — mark as active immediately
+document.addEventListener('DOMContentLoaded', function() {
+  var panel = document.querySelector('[data-step="1"]');
+  if (panel) panel.classList.add('wz-active');
+});
+</script>
+{% endblock %}

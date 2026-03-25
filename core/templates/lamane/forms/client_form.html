@@ -1,0 +1,107 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if obj %}Modifier le client{% else %}Nouveau client{% endif %}{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}{% endblock %}
+{% block content %}
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_clients' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux clients</a>
+  {% if obj %}<a href="{% url 'ui_client_delete' obj.pk %}" class="wz-btn wz-btn-danger"><i class="fas fa-trash-alt"></i> Supprimer</a>{% endif %}
+</div>
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if "success" in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if "success" in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if "success" in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if "success" in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}
+{{ form.est_moral }}
+<div class="wz-stepbar">
+  <div class="wz-step" data-step="1" onclick="wzGoTo(1)"><div class="wz-step-circle">1</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Type</span></div></div>
+  <div class="wz-step" data-step="2" onclick="wzGoTo(2)"><div class="wz-step-circle">2</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 2</span><span class="wz-step-label">Identité</span></div></div>
+  <div class="wz-step" data-step="3" onclick="wzGoTo(3)"><div class="wz-step-circle">3</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 3</span><span class="wz-step-label">Coordonnées</span></div></div>
+</div>
+
+</div>
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill"></div></div>
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-tag"></i></div><div><div class="wz-section-title">Type de client</div><div class="wz-section-sub">Particulier ou entreprise ?</div></div></div>
+    <div class="form-grid-2">
+      <div id="typeParticulier" onclick="setClientType(false)" style="padding:20px;border-radius:12px;border:2px solid var(--border);cursor:pointer;text-align:center;transition:all 0.2s;background:var(--bg-card2);">
+        <i class="fas fa-user" style="font-size:28px;color:var(--gold);margin-bottom:10px;display:block;"></i>
+        <div style="font-weight:700;font-size:14px;color:var(--text-primary);">Particulier</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Personne physique</div>
+      </div>
+      <div id="typeEntreprise" onclick="setClientType(true)" style="padding:20px;border-radius:12px;border:2px solid var(--border);cursor:pointer;text-align:center;transition:all 0.2s;background:var(--bg-card2);">
+        <i class="fas fa-building" style="font-size:28px;color:var(--gold);margin-bottom:10px;display:block;"></i>
+        <div style="font-weight:700;font-size:14px;color:var(--text-primary);">Entreprise</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Personne morale</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wz-panel" data-step="2">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-user"></i></div><div><div class="wz-section-title">Identité</div><div class="wz-section-sub">Informations d'identification du client</div></div></div>
+    <div id="fieldsParticulier">
+      <div class="form-grid-2">
+        <div class="form-group"><label class="form-label">Prénom</label>{{ form.prenom }}</div>
+        <div class="form-group"><label class="form-label">Nom<span class="req">*</span></label>{{ form.nom }}{% for e in form.nom.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+      </div>
+    </div>
+    <div id="fieldsEntreprise" style="display:none;">
+      <div class="form-group"><label class="form-label">Raison sociale<span class="req">*</span></label>{{ form.raison_sociale }}</div>
+      <div class="form-group"><label class="form-label">NINEA / Registre de commerce</label>{{ form.ninea }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="wz-panel" data-step="3">
+  <div class="wz-section">
+    <div class="wz-section-header"><div class="wz-section-icon"><i class="fas fa-phone-alt"></i></div><div><div class="wz-section-title">Coordonnées</div><div class="wz-section-sub">Contact et adresse du client</div></div></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">Téléphone</label><div class="input-icon-wrap"><i class="fas fa-phone input-icon"></i>{{ form.telephone }}</div></div>
+      <div class="form-group"><label class="form-label">Email</label><div class="input-icon-wrap"><i class="fas fa-envelope input-icon"></i>{{ form.email }}</div></div>
+    </div>
+    <div class="form-group"><label class="form-label">Adresse</label><div class="input-icon-wrap"><i class="fas fa-map-marker-alt input-icon"></i>{{ form.adresse }}</div></div>
+    <div class="form-group"><label class="form-label">Ville</label><div class="input-icon-wrap"><i class="fas fa-city input-icon"></i>{{ form.ville }}</div></div>
+  </div>
+</div>
+
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_clients' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+    <button type="button" id="wzPrev" style="display:none;" class="wz-btn wz-btn-ghost" onclick="wzPrev()"><i class="fas fa-arrow-left"></i> Précédent</button>
+  </div>
+  <div class="wz-nav-right">
+    <span class="wz-nav-counter" id="wzBadge"></span>
+    <button type="button" id="wzNext" class="wz-btn wz-btn-primary" onclick="wzNext()">Suivant <i class="fas fa-arrow-right"></i></button>
+    <button type="submit" id="wzSave" style="display:none;" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> {{ action }}</button>
+  </div>
+</div>
+</form>
+</div>
+{% endblock %}
+{% block extra_js %}{% include "lamane/includes/wizard_js.html" %}
+<script>
+function setClientType(isMoral) {
+  document.getElementById('id_est_moral').value = isMoral ? 'True' : 'False';
+  var tp = document.getElementById('typeParticulier');
+  var te = document.getElementById('typeEntreprise');
+  var fp = document.getElementById('fieldsParticulier');
+  var fe = document.getElementById('fieldsEntreprise');
+  if (isMoral) {
+    te.style.borderColor = 'var(--gold)'; te.style.background = 'rgba(240,165,0,0.06)';
+    tp.style.borderColor = ''; tp.style.background = '';
+    fe.style.display = 'block'; fp.style.display = 'none';
+  } else {
+    tp.style.borderColor = 'var(--gold)'; tp.style.background = 'rgba(240,165,0,0.06)';
+    te.style.borderColor = ''; te.style.background = '';
+    fp.style.display = 'block'; fe.style.display = 'none';
+  }
+}
+(function(){
+  var v = document.getElementById('id_est_moral');
+  if (v) setClientType(v.value === 'True');
+  else setClientType(false);
+})();
+</script>
+{% endblock %}

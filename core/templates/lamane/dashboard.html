@@ -1,0 +1,231 @@
+{% extends "lamane/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+{% block page_sub %}Vue d'ensemble — LAMANE SARL BTP{% endblock %}
+
+{% block content %}
+
+<!-- KPI row 1 -->
+<div class="kpi-grid animate-fade-up">
+
+  <a href="{% url 'ui_projets_list' %}" class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);text-decoration:none;cursor:pointer;" onmouseover="this.style.borderColor='rgba(30,111,255,0.35)'" onmouseout="this.style.borderColor=''">
+    <div class="kpi-icon"><i class="fas fa-building"></i></div>
+    <div class="kpi-value">{{ total_projets }}</div>
+    <div class="kpi-label">Projets totaux</div>
+    <div class="kpi-trend"><span class="badge-dot" style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;"></span>{{ en_cours }} en cours <i class="fas fa-arrow-right" style="font-size:10px;margin-left:4px;opacity:0.5;"></i></div>
+  </a>
+
+  <a href="{% url 'ui_achats' %}" class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);text-decoration:none;cursor:pointer;" onmouseover="this.style.borderColor='rgba(240,165,0,0.35)'" onmouseout="this.style.borderColor=''">
+    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+    <div class="kpi-value">{{ total_ttc_fmt }}</div>
+    <div class="kpi-label">Total Achats TTC (XOF)</div>
+    <div class="kpi-trend text-muted"><i class="fas fa-boxes"></i> HT : {{ total_ht_fmt }} XOF <i class="fas fa-arrow-right" style="font-size:10px;margin-left:4px;opacity:0.5;"></i></div>
+  </a>
+
+  <a href="{% url 'ui_versements' %}" class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);text-decoration:none;cursor:pointer;" onmouseover="this.style.borderColor='rgba(0,196,140,0.35)'" onmouseout="this.style.borderColor=''">
+    <div class="kpi-icon"><i class="fas fa-wallet"></i></div>
+    <div class="kpi-value">{{ total_versements_fmt }}</div>
+    <div class="kpi-label">Total Versements (XOF)</div>
+    <div class="kpi-trend {% if solde_positif %}trend-up{% else %}trend-down{% endif %}">
+      <i class="fas fa-{% if solde_positif %}arrow-up{% else %}arrow-down{% endif %}"></i>
+      Solde : {{ solde_fmt }} XOF <i class="fas fa-arrow-right" style="font-size:10px;margin-left:4px;opacity:0.5;"></i>
+    </div>
+  </a>
+
+  <a href="{% url 'ui_marches' %}" class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);text-decoration:none;cursor:pointer;" onmouseover="this.style.borderColor='rgba(165,94,234,0.35)'" onmouseout="this.style.borderColor=''">
+    <div class="kpi-icon"><i class="fas fa-file-contract"></i></div>
+    <div class="kpi-value">{{ total_marches }}</div>
+    <div class="kpi-label">Marchés de travaux</div>
+    <div class="kpi-trend text-muted"><i class="fas fa-money-bill-wave"></i> {{ montant_marches_fmt }} XOF <i class="fas fa-arrow-right" style="font-size:10px;margin-left:4px;opacity:0.5;"></i></div>
+  </a>
+
+  <a href="{% url 'ui_chantiers' %}" class="kpi-card" style="--accent-color:var(--cyan);--icon-bg:rgba(0,210,255,0.12);text-decoration:none;cursor:pointer;" onmouseover="this.style.borderColor='rgba(0,210,255,0.35)'" onmouseout="this.style.borderColor=''">
+    <div class="kpi-icon"><i class="fas fa-hard-hat"></i></div>
+    <div class="kpi-value">{{ avancement_moyen }}%</div>
+    <div class="kpi-label">Avancement moyen chantiers</div>
+    <div class="progress-bar-wrap" style="margin-top:10px;">
+      <div class="progress-bar-fill blue" style="width:{{ avancement_moyen }}%;"></div>
+    </div>
+  </a>
+
+  <a href="{% url 'ui_sous_traitants' %}" class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);text-decoration:none;cursor:pointer;" onmouseover="this.style.borderColor='rgba(255,121,63,0.35)'" onmouseout="this.style.borderColor=''">
+    <div class="kpi-icon"><i class="fas fa-people-group"></i></div>
+    <div class="kpi-value">{{ total_sous_traitants }}</div>
+    <div class="kpi-label">Sous-traitants actifs</div>
+    <div class="kpi-trend text-muted"><i class="fas fa-users"></i> {{ total_employes }} employés LAMANE <i class="fas fa-arrow-right" style="font-size:10px;margin-left:4px;opacity:0.5;"></i></div>
+  </a>
+
+</div>
+
+<!-- Statuts projets quick + accès rapides -->
+<div class="flex gap-2 mb-6" style="flex-wrap:wrap;align-items:center;">
+  <a href="{% url 'ui_projets_list' %}?statut=En+cours" class="badge badge-blue" style="text-decoration:none;"><span class="badge-dot" style="background:var(--blue-light)"></span>{{ en_cours }} En cours</a>
+  <a href="{% url 'ui_projets_list' %}?statut=Terminé" class="badge badge-green" style="text-decoration:none;"><span class="badge-dot" style="background:var(--green)"></span>{{ termines }} Terminés</a>
+  <a href="{% url 'ui_projets_list' %}?statut=En+attente" class="badge badge-yellow" style="text-decoration:none;"><span class="badge-dot" style="background:var(--gold)"></span>{{ en_attente }} En attente</a>
+  <a href="{% url 'ui_projets_list' %}?statut=En+pause" class="badge badge-orange" style="text-decoration:none;"><span class="badge-dot" style="background:var(--orange)"></span>{{ en_pause }} En pause</a>
+  <span style="width:1px;height:16px;background:var(--border-light);margin:0 4px;"></span>
+  <a href="{% url 'ui_clients' %}" class="badge badge-purple" style="text-decoration:none;"><i class="fas fa-users"></i> {{ total_clients }} clients</a>
+  <a href="{% url 'ui_fournisseurs' %}" class="badge badge-cyan" style="text-decoration:none;"><i class="fas fa-truck"></i> Fournisseurs</a>
+  <a href="{% url 'ui_stock' %}" class="badge badge-yellow" style="text-decoration:none;"><i class="fas fa-boxes"></i> Stock</a>
+  <a href="{% url 'ui_rh' %}" class="badge badge-orange" style="text-decoration:none;"><i class="fas fa-hard-hat"></i> RH</a>
+</div>
+
+<!-- Charts row -->
+<div class="grid-2 mb-6 delay-1 animate-fade-up">
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Achats mensuels (6 mois)</div>
+        <div class="card-subtitle">Volume TTC en XOF</div>
+      </div>
+      <span class="badge badge-yellow"><i class="fas fa-chart-bar"></i> TTC</span>
+    </div>
+    <canvas id="chartMensuel" height="200"></canvas>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Répartition des projets</div>
+        <div class="card-subtitle">Par statut</div>
+      </div>
+    </div>
+    <div style="position:relative;height:200px;display:flex;align-items:center;justify-content:center;">
+      <canvas id="chartStatuts"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Activité récente -->
+<div class="card delay-2 animate-fade-up">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Achats récents</div>
+      <div class="card-subtitle">Dernières transactions enregistrées</div>
+    </div>
+    <a href="{% url 'ui_finances' %}" class="btn btn-ghost text-sm"><i class="fas fa-arrow-right"></i> Voir tout</a>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Projet</th>
+          <th>Fournisseur</th>
+          <th>Mode paiement</th>
+          <th>Total HT</th>
+          <th>Total TTC</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recent_achats %}
+        <tr>
+          <td class="text-muted text-sm">{{ a.date_achat|date:"d/m/Y" }}</td>
+          <td class="bold">{{ a.projet.nom|truncatechars:30 }}</td>
+          <td>
+            {% if a.fournisseur %}
+              {% if a.fournisseur.est_moral %}{{ a.fournisseur.entreprise }}
+              {% else %}{{ a.fournisseur.prenom }} {{ a.fournisseur.nom }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td><span class="badge badge-blue">{{ a.mode_paiement|default:"—" }}</span></td>
+          <td class="amount">{{ a.total_ht|floatformat:0 }}</td>
+          <td class="amount text-gold">{{ a.total_ttc|floatformat:0 }}</td>
+          <td><span class="badge badge-green"><span class="badge-dot" style="background:var(--green)"></span>Enregistré</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">Aucun achat enregistré</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Liens rapides -->
+<div class="grid-3 mt-4 delay-3 animate-fade-up">
+  <a href="{% url 'ui_projets_list' %}" class="card" style="text-decoration:none;text-align:center;padding:28px;cursor:pointer;transition:transform 0.2s,border-color 0.2s;border-color:rgba(30,111,255,0.3);" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+    <div style="font-size:32px;margin-bottom:12px;">🏗️</div>
+    <div style="font-weight:600;margin-bottom:4px;">Gérer les Projets</div>
+    <div class="text-muted text-sm">{{ total_projets }} projets</div>
+  </a>
+  <a href="{% url 'ui_marches' %}" class="card" style="text-decoration:none;text-align:center;padding:28px;cursor:pointer;transition:transform 0.2s;border-color:rgba(165,94,234,0.3);" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+    <div style="font-size:32px;margin-bottom:12px;">📋</div>
+    <div style="font-weight:600;margin-bottom:4px;">Marchés CCAG</div>
+    <div class="text-muted text-sm">{{ total_marches }} marchés</div>
+  </a>
+  <a href="{% url 'ui_finances' %}" class="card" style="text-decoration:none;text-align:center;padding:28px;cursor:pointer;transition:transform 0.2s;border-color:rgba(240,165,0,0.3);" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+    <div style="font-size:32px;margin-bottom:12px;">💰</div>
+    <div style="font-weight:600;margin-bottom:4px;">Tableau Financier</div>
+    <div class="text-muted text-sm">Achats & versements</div>
+  </a>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const monthly_labels = {{ monthly_labels_json|safe }};
+const monthly_achats = {{ monthly_achats_json|safe }};
+const statuts_data   = {{ statuts_data_json|safe }};
+
+// Chart mensuel
+new Chart(document.getElementById('chartMensuel'), {
+  type: 'bar',
+  data: {
+    labels: monthly_labels,
+    datasets: [{
+      label: 'Achats TTC',
+      data: monthly_achats,
+      backgroundColor: ctx => {
+        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+        g.addColorStop(0, 'rgba(240,165,0,0.8)');
+        g.addColorStop(1, 'rgba(240,165,0,0.15)');
+        return g;
+      },
+      borderColor: '#f0a500',
+      borderWidth: 1,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: 'rgba(240,244,255,0.4)' } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: {
+        color: 'rgba(240,244,255,0.4)',
+        callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v
+      }}
+    }
+  }
+});
+
+// Chart statuts
+const statuts_keys = Object.keys(statuts_data);
+const statuts_vals = Object.values(statuts_data);
+const COLORS = ['#1e6fff','#00c48c','#f0a500','#ff793f'];
+new Chart(document.getElementById('chartStatuts'), {
+  type: 'doughnut',
+  data: {
+    labels: statuts_keys,
+    datasets: [{
+      data: statuts_vals,
+      backgroundColor: COLORS,
+      borderColor: '#0f1629',
+      borderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'right', labels: { color: 'rgba(240,244,255,0.6)', padding: 12 } }
+    }
+  }
+});
+</script>
+{% endblock %}

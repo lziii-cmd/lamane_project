@@ -1,0 +1,135 @@
+{% extends "lamane/base.html" %}
+{% block title %}Projets{% endblock %}
+{% block page_title %}Projets{% endblock %}
+{% block page_sub %}{{ nb_resultats }} résultat{{ nb_resultats|pluralize }} — {{ total_projets }} projets au total{% endblock %}
+
+{% block content %}
+
+<!-- Barre d'actions + Filtres -->
+<div class="flex items-center justify-between mb-4 animate-fade-up">
+  <div style="font-size:13px;color:var(--text-muted);">
+    <i class="fas fa-building text-gold"></i> {{ nb_resultats }} résultat{{ nb_resultats|pluralize }} affiché{{ nb_resultats|pluralize }}
+  </div>
+  <a href="{% url 'ui_projet_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouveau projet
+  </a>
+</div>
+
+<div class="filters-bar mb-6 animate-fade-up" style="flex-wrap:wrap;gap:10px;">
+  <div style="position:relative;flex:1;min-width:240px;">
+    <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+    <input type="text" name="q" id="dynSearch" value="{{ q }}" placeholder="Projet, localisation…" class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
+  </div>
+  <select id="dynStatut" class="filter-select" style="min-width:160px;">
+    <option value="">Tous les statuts</option>
+    {% for s in statuts %}
+    <option value="{{ s }}" {% if statut_filter == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  {% if q or statut_filter %}
+  <a href="{% url 'ui_projets_list' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Réinitialiser</a>
+  {% endif %}
+</div>
+
+<!-- Projet cards grid -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;" class="animate-fade-up delay-1" id="projetsGrid">
+
+{% for item in projets_data %}
+{% with p=item.projet av=item.avancement m=item.marche %}
+<a href="{% url 'ui_projet_detail' p.id %}" class="card projet-card" data-search="{{ p.nom|lower }} {{ p.localisation|lower }} {{ p.statut|lower }}" style="text-decoration:none;display:block;transition:transform 0.2s,border-color 0.2s;cursor:pointer;"
+   onmouseover="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(240,165,0,0.3)'"
+   onmouseout="this.style.transform='';this.style.borderColor=''">
+
+  <!-- Card header -->
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <div class="avatar-circle"
+        style="background:{% cycle 'rgba(30,111,255,0.15)' 'rgba(0,196,140,0.15)' 'rgba(240,165,0,0.15)' 'rgba(165,94,234,0.15)' 'rgba(255,121,63,0.15)' %};
+               color:{% cycle 'var(--blue-light)' 'var(--green)' 'var(--gold)' 'var(--purple)' 'var(--orange)' %};">
+        <i class="fas fa-building" style="font-size:15px;"></i>
+      </div>
+      <div>
+        <div style="font-size:13.5px;font-weight:600;color:var(--text-primary);">{{ p.nom|truncatechars:32 }}</div>
+        <div class="text-xs text-muted"><i class="fas fa-map-marker-alt"></i> {{ p.localisation }}</div>
+      </div>
+    </div>
+    {% if p.statut == "En cours" %}
+      <span class="badge badge-blue"><span class="badge-dot" style="background:var(--blue-light)"></span>En cours</span>
+    {% elif p.statut == "Terminé" %}
+      <span class="badge badge-green"><span class="badge-dot" style="background:var(--green)"></span>Terminé</span>
+    {% elif p.statut == "En pause" %}
+      <span class="badge badge-orange"><span class="badge-dot" style="background:var(--orange)"></span>En pause</span>
+    {% else %}
+      <span class="badge badge-yellow"><span class="badge-dot" style="background:var(--gold)"></span>{{ p.statut }}</span>
+    {% endif %}
+  </div>
+
+  <!-- Avancement -->
+  {% if av %}
+  <div class="mb-4">
+    <div class="flex justify-between text-xs text-muted mb-4" style="margin-bottom:6px;">
+      <span>Avancement physique</span>
+      <span class="text-gold font-bold">{{ av.taux_physique }}%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill{% if av.taux_physique >= 75 %} green{% elif av.taux_physique >= 40 %}{% else %} blue{% endif %}"
+           style="width:{{ av.taux_physique }}%;"></div>
+    </div>
+    <div class="flex justify-between text-xs" style="margin-top:4px;color:var(--text-muted);">
+      <span>Financier: <span class="text-gold">{{ av.taux_financier }}%</span></span>
+      <span>Planifié: {{ av.taux_planifie }}%</span>
+    </div>
+  </div>
+  {% else %}
+  <div class="mb-4" style="height:34px;"></div>
+  {% endif %}
+
+  <!-- Infos financières -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+    <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;">
+      <div class="text-xs text-muted">Budget estimé</div>
+      <div style="font-size:13px;font-weight:600;color:var(--gold);">{{ p.cout_estime_lamane|floatformat:0 }} <span class="text-muted" style="font-size:10px;font-weight:400;">XOF</span></div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;">
+      <div class="text-xs text-muted">Achats réels</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);">{{ item.total_achats_fmt }} <span class="text-muted" style="font-size:10px;font-weight:400;">XOF</span></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="flex items-center justify-between" style="border-top:1px solid var(--border-light);padding-top:12px;">
+    <div class="text-xs text-muted">
+      <i class="fas fa-calendar"></i>
+      {{ p.date_debut|date:"d/m/Y" }}
+      {% if p.date_fin %} → {{ p.date_fin|date:"d/m/Y" }}{% endif %}
+    </div>
+    {% if p.type_projet %}
+    <span class="badge badge-purple" style="font-size:10px;">{{ p.type_projet.nom }}</span>
+    {% endif %}
+    {% if m %}
+    <span class="badge badge-cyan" style="font-size:10px;"><i class="fas fa-file-contract"></i> Marché</span>
+    {% endif %}
+  </div>
+
+</a>
+{% endwith %}
+{% empty %}
+<div class="card" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+  <div style="font-size:48px;margin-bottom:16px;">🔍</div>
+  <div style="font-size:16px;margin-bottom:8px;">Aucun projet trouvé</div>
+  <a href="{% url 'ui_projets_list' %}" class="btn btn-ghost" style="margin-top:12px;">Réinitialiser les filtres</a>
+</div>
+{% endfor %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initDynamicFilter('dynSearch', 'q', 350);
+  initSelectFilter('dynStatut', 'statut');
+});
+</script>
+{% endblock %}

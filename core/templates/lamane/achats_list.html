@@ -1,0 +1,123 @@
+{% extends "lamane/base.html" %}
+{% block title %}Achats{% endblock %}
+{% block page_title %}Bons d'achats{% endblock %}
+{% block page_sub %}{{ total_achats }} achat{{ total_achats|pluralize }} — Total TTC : {{ total_ttc_fmt }} XOF{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-shopping-cart"></i></div>
+    <div class="kpi-value">{{ total_achats }}</div>
+    <div class="kpi-label">Bons d'achat</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-file-invoice"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ total_ht_fmt }}</div>
+    <div class="kpi-label">Total HT (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ total_ttc_fmt }}</div>
+    <div class="kpi-label">Total TTC (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-percentage"></i></div>
+    <div class="kpi-value">18%</div>
+    <div class="kpi-label">TVA standard</div>
+    <div class="kpi-trend text-muted">Régime fiscal Sénégal</div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="filters-bar mb-6 animate-fade-up" style="gap:10px;flex-wrap:wrap;">
+  <div style="position:relative;flex:1;min-width:240px;">
+    <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+    <input type="text" name="q" id="dynSearch" value="{{ q }}" placeholder="Projet, fournisseur, n° facture…" class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
+  </div>
+  <select id="dynMode" class="filter-select" style="min-width:180px;">
+    <option value="">Tous modes de paiement</option>
+    {% for m in modes_choices %}
+    <option value="{{ m }}" {% if mode_filter == m %}selected{% endif %}>{{ m|capfirst }}</option>
+    {% endfor %}
+  </select>
+  {% if q or mode_filter %}
+  <a href="{% url 'ui_achats' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer</a>
+  {% endif %}
+</div>
+
+<!-- Tableau achats -->
+<div class="card animate-fade-up delay-1" id="tableCard">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list text-gold"></i> Liste des achats</div>
+    <div class="flex items-center gap-2">
+      <span class="badge badge-yellow">{{ achats|length }} résultats</span>
+      <a href="{% url 'ui_achat_create' %}" class="btn btn-primary" style="font-size:12px;padding:6px 12px;">
+        <i class="fas fa-plus"></i> Nouvel achat
+      </a>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>N° Facture</th><th>Projet</th><th>Fournisseur</th>
+          <th>Mode paiement</th><th>HT</th><th>TVA</th><th>TTC</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="achatsTableBody">
+        {% for a in achats %}
+        <tr class="achat-row" data-search="{{ a.projet.nom|lower }} {{ a.fournisseur.entreprise|lower }} {{ a.fournisseur.nom|lower }} {{ a.numero_facture|lower }}">
+          <td class="text-muted text-sm">{{ a.date_achat|date:"d/m/Y" }}</td>
+          <td>
+            {% if a.numero_facture %}
+            <span class="badge badge-yellow text-xs">{{ a.numero_facture }}</span>
+            {% else %}
+            <span class="text-muted text-xs">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'ui_projet_detail' a.projet.id %}" style="color:var(--text-primary);font-weight:600;font-size:13px;text-decoration:none;">
+              {{ a.projet.nom|truncatechars:22 }}
+            </a>
+          </td>
+          <td class="text-sm">
+            {% if a.fournisseur.entreprise %}{{ a.fournisseur.entreprise }}
+            {% else %}{{ a.fournisseur.prenom }} {{ a.fournisseur.nom }}{% endif %}
+          </td>
+          <td>
+            <span class="badge badge-{% if a.mode_paiement == 'virement' %}blue{% elif a.mode_paiement == 'espèces' %}green{% elif a.mode_paiement == 'chèque' %}purple{% else %}yellow{% endif %} text-xs">
+              {{ a.mode_paiement|default:"—" }}
+            </span>
+          </td>
+          <td class="amount text-sm">{{ a.total_ht|floatformat:0 }}</td>
+          <td class="text-muted text-sm">{{ a.total_tva|floatformat:0 }}</td>
+          <td class="amount" style="color:var(--gold);font-weight:700;">{{ a.total_ttc|floatformat:0 }}</td>
+          <td>
+            <a href="{% url 'ui_achat_detail' a.id %}" class="btn btn-ghost text-xs" style="padding:4px 10px;">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
+          <div style="font-size:32px;margin-bottom:12px;">🛒</div>
+          Aucun achat trouvé
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initDynamicFilter('dynSearch', 'q', 350);
+  initSelectFilter('dynMode', 'mode');
+});
+</script>
+{% endblock %}

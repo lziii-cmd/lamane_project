@@ -1,0 +1,104 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ materiel.nom }}{% endblock %}
+{% block page_title %}{{ materiel.nom }}{% endblock %}
+{% block page_sub %}{% if materiel.categorie %}{{ materiel.categorie.nom }} · {% endif %}Unité : {{ materiel.unite|default:"—" }}{% endblock %}
+
+{% block content %}
+
+<!-- Actions -->
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_materiaux_list' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour matériaux</a>
+  <div class="flex gap-3">
+    <a href="{% url 'ui_materiel_edit' materiel.pk %}" class="btn btn-ghost"><i class="fas fa-edit"></i> Modifier</a>
+    <a href="{% url 'ui_bon_sortie_create' %}" class="btn btn-primary" style="background:rgba(255,121,63,0.8);border-color:var(--orange);"><i class="fas fa-arrow-alt-circle-up"></i> Bon de sortie</a>
+  </div>
+</div>
+
+<!-- KPIs stock -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-arrow-alt-circle-down"></i></div>
+    <div class="kpi-value" style="color:var(--green);">{{ entrees }}</div>
+    <div class="kpi-label">Total entrées</div>
+    <div class="kpi-trend text-muted">{{ materiel.unite|default:"unités" }}</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--red);--icon-bg:rgba(255,71,87,0.12);">
+    <div class="kpi-icon"><i class="fas fa-arrow-alt-circle-up"></i></div>
+    <div class="kpi-value" style="color:var(--red);">{{ sorties }}</div>
+    <div class="kpi-label">Total sorties</div>
+    <div class="kpi-trend text-muted">{{ materiel.unite|default:"unités" }}</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:{% if alerte_rupture %}var(--red){% elif stock_actuel < 5 %}var(--orange){% else %}var(--blue){% endif %};--icon-bg:{% if alerte_rupture %}rgba(255,71,87,0.12){% else %}rgba(30,111,255,0.12){% endif %};">
+    <div class="kpi-icon"><i class="fas fa-warehouse"></i></div>
+    <div class="kpi-value" style="color:{% if alerte_rupture %}var(--red){% elif stock_actuel < 5 %}var(--orange){% else %}var(--blue-light){% endif %};">{{ stock_actuel }}</div>
+    <div class="kpi-label">Stock actuel</div>
+    <div class="kpi-trend" style="color:{% if alerte_rupture %}var(--red){% elif stock_actuel < 5 %}var(--orange){% else %}var(--green){% endif %};">
+      {% if alerte_rupture %}<i class="fas fa-exclamation-triangle"></i> Rupture{% elif stock_actuel < 5 %}<i class="fas fa-exclamation"></i> Stock faible{% else %}<i class="fas fa-check"></i> OK{% endif %}
+    </div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{{ valeur_stock }}</div>
+    <div class="kpi-label">Valeur stock (XOF)</div>
+    <div class="kpi-trend text-muted">Prix moy. {{ prix_moyen }} XOF</div>
+  </div>
+</div>
+
+<!-- Historique -->
+<div class="grid-2 animate-fade-up delay-1">
+
+  <!-- Entrées (achats) -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-arrow-alt-circle-down text-green"></i> Entrées (achats)</div>
+      <span class="badge badge-green">{{ lignes_achat|length }}</span>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Date</th><th>Projet</th><th>Qté</th><th>Prix unit.</th></tr></thead>
+        <tbody>
+          {% for l in lignes_achat %}
+          <tr onclick="window.location='{% url 'ui_achat_detail' l.achat.pk %}'" style="cursor:pointer;"
+              onmouseover="this.style.background='rgba(0,196,140,0.05)'" onmouseout="this.style.background=''">
+            <td class="text-xs text-muted">{{ l.achat.date_achat|date:"d/m/Y" }}</td>
+            <td class="text-sm">{{ l.achat.projet.nom|truncatechars:20 }}</td>
+            <td style="font-weight:700;color:var(--green);">+{{ l.quantite }}</td>
+            <td class="text-xs text-muted">{{ l.prix_unitaire|floatformat:0 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">Aucune entrée</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Sorties -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-arrow-alt-circle-up text-red"></i> Sorties</div>
+      <span class="badge badge-red">{{ lignes_sortie|length }}</span>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Date</th><th>Projet</th><th>Qté</th><th>Référence</th></tr></thead>
+        <tbody>
+          {% for l in lignes_sortie %}
+          <tr onclick="window.location='{% url 'ui_bon_sortie_detail' l.bon.pk %}'" style="cursor:pointer;"
+              onmouseover="this.style.background='rgba(255,71,87,0.05)'" onmouseout="this.style.background=''">
+            <td class="text-xs text-muted">{{ l.bon.date_sortie|date:"d/m/Y" }}</td>
+            <td class="text-sm">{{ l.bon.projet.nom|truncatechars:20 }}</td>
+            <td style="font-weight:700;color:var(--red);">-{{ l.quantite }}</td>
+            <td class="text-xs text-muted">{{ l.bon.reference|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">Aucune sortie</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

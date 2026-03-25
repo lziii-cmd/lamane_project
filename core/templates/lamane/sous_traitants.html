@@ -1,0 +1,186 @@
+{% extends "lamane/base.html" %}
+{% block title %}Sous-traitants{% endblock %}
+{% block page_title %}Sous-traitants{% endblock %}
+{% block page_sub %}Gestion de la sous-traitance — {{ total_contrats }} contrats actifs{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);">
+    <div class="kpi-icon"><i class="fas fa-people-group"></i></div>
+    <div class="kpi-value">{{ total_st }}</div>
+    <div class="kpi-label">Sous-traitants référencés</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-handshake"></i></div>
+    <div class="kpi-value">{{ total_contrats }}</div>
+    <div class="kpi-label">Contrats de sous-traitance</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{{ total_montant_st }}</div>
+    <div class="kpi-label">Volume total (XOF)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{{ total_paye_st }}</div>
+    <div class="kpi-label">Montant payé (XOF)</div>
+  </div>
+</div>
+
+<!-- Barre d'action + recherche -->
+<div class="card mb-4 animate-fade-up" style="padding:14px 18px;">
+  <div class="flex items-center gap-3" style="flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;position:relative;">
+      <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+      <input type="text" id="dynSearch" placeholder="Rechercher un sous-traitant…" class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
+    </div>
+    <a href="{% url 'ui_contrat_st_create' %}" class="btn btn-ghost" style="white-space:nowrap;">
+      <i class="fas fa-file-contract"></i> Nouveau contrat
+    </a>
+    <a href="{% url 'ui_sous_traitant_create' %}" class="btn btn-primary" style="white-space:nowrap;">
+      <i class="fas fa-plus"></i> Nouveau sous-traitant
+    </a>
+  </div>
+</div>
+
+<!-- Grille de cards sous-traitants -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;margin-bottom:28px;" class="animate-fade-up delay-1" id="stGrid">
+{% for d in st_data %}
+<div class="card st-card" style="cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;border:1px solid var(--border);"
+     onclick="window.location='{% url 'ui_sous_traitant_detail' d.st.pk %}'"
+     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(255,121,63,0.15)';this.style.borderColor='rgba(255,121,63,0.3)'"
+     onmouseout="this.style.transform='';this.style.boxShadow='';this.style.borderColor='var(--border)'"
+     data-search="{{ d.st.nom|lower }} {{ d.st.specialite|lower }} {{ d.st.telephone|lower }}">
+
+  <!-- En-tête -->
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center gap-3">
+      <div style="width:42px;height:42px;background:linear-gradient(135deg,rgba(255,121,63,0.3),rgba(165,94,234,0.3));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+        {% if d.st.specialite == 'electricite_cfa' %}⚡
+        {% elif d.st.specialite == 'plomberie_sanitaire' %}🔧
+        {% elif d.st.specialite == 'menuiserie_bois' %}🪵
+        {% elif d.st.specialite == 'climatisation' %}❄️
+        {% elif d.st.specialite == 'carrelage_faience' %}🪴
+        {% elif d.st.specialite == 'panneaux_solaires' %}☀️
+        {% elif d.st.specialite == 'piscine' %}🏊
+        {% elif d.st.specialite == 'ascenseur' %}🛗
+        {% elif d.st.specialite == 'menuiserie_alu' %}🔩
+        {% elif d.st.specialite == 'vrd' %}🛣️
+        {% else %}🏗️{% endif %}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:14px;color:var(--text-primary);">{{ d.st.nom|truncatechars:28 }}</div>
+        <div class="text-xs text-muted">{{ d.st.get_specialite_display|default:d.st.specialite }}</div>
+      </div>
+    </div>
+    <span class="badge {% if d.st.actif %}badge-green{% else %}badge-yellow{% endif %} text-xs">
+      {% if d.st.actif %}Actif{% else %}Inactif{% endif %}
+    </span>
+  </div>
+
+  <!-- Stats financières -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+    <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;text-align:center;">
+      <div class="text-xs text-muted">Volume</div>
+      <div style="font-weight:700;font-size:14px;color:var(--gold);">{{ d.total_montant_fmt }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;text-align:center;">
+      <div class="text-xs text-muted">Payé</div>
+      <div style="font-weight:700;font-size:14px;color:var(--green);">{{ d.total_paye_fmt }}</div>
+    </div>
+  </div>
+
+  <!-- Barre de paiement -->
+  <div style="margin-bottom:10px;">
+    <div class="flex justify-between text-xs mb-1">
+      <span class="text-muted">Taux de règlement</span>
+      <span style="font-weight:700;color:{% if d.taux_paiement >= 80 %}var(--green){% elif d.taux_paiement >= 50 %}var(--gold){% else %}var(--red){% endif %};">{{ d.taux_paiement }}%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" style="width:{{ d.taux_paiement }}%;background:{% if d.taux_paiement >= 80 %}var(--green){% elif d.taux_paiement >= 50 %}var(--gold){% else %}var(--red){% endif %};"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="flex justify-between items-center" style="border-top:1px solid var(--border-light);padding-top:10px;">
+    <div class="text-xs text-muted">
+      <i class="fas fa-file-contract"></i> {{ d.nb_contrats }} contrat{{ d.nb_contrats|pluralize }}
+      {% if d.st.telephone %} · <i class="fas fa-phone"></i> {{ d.st.telephone }}{% endif %}
+    </div>
+    <span style="font-size:18px;color:var(--orange);opacity:0.7;">→</span>
+  </div>
+</div>
+{% empty %}
+<div class="card" style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+  <div style="font-size:48px;margin-bottom:16px;">🏗️</div>
+  <p style="font-size:16px;font-weight:600;margin-bottom:20px;">Aucun sous-traitant enregistré</p>
+  <a href="{% url 'ui_sous_traitant_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Ajouter un sous-traitant</a>
+</div>
+{% endfor %}
+</div>
+
+<!-- Contrats récents -->
+<div class="card animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-handshake text-gold"></i> Derniers contrats de sous-traitance</div>
+    <div class="flex items-center gap-2">
+      <span class="badge badge-purple">{{ contrats_recents|length }}</span>
+      <a href="{% url 'ui_contrat_st_create' %}" class="btn btn-primary" style="font-size:12px;padding:6px 12px;">
+        <i class="fas fa-plus"></i> Nouveau contrat
+      </a>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Projet</th><th>Sous-traitant</th><th>Lot</th><th>Montant</th><th>Payé</th><th>Début</th><th>Fin prévue</th><th>Statut</th></tr>
+      </thead>
+      <tbody>
+        {% for c in contrats_recents %}
+        <tr onclick="window.location='{% url 'ui_sous_traitant_detail' c.sous_traitant.pk %}'" style="cursor:pointer;"
+            onmouseover="this.style.background='rgba(165,94,234,0.05)'" onmouseout="this.style.background=''">
+          <td class="font-bold text-sm">{{ c.projet.nom|truncatechars:22 }}</td>
+          <td class="text-sm">{{ c.sous_traitant.nom|truncatechars:22 }}</td>
+          <td class="text-xs text-muted">{{ c.lot|truncatechars:20 }}</td>
+          <td class="amount text-gold text-sm">{{ c.montant|floatformat:0 }}</td>
+          <td class="amount text-green text-sm">{{ c.montant_paye|floatformat:0 }}</td>
+          <td class="text-muted text-xs">{{ c.date_debut|date:"d/m/Y" }}</td>
+          <td class="text-muted text-xs">{{ c.date_fin_prevue|date:"d/m/Y"|default:"—" }}</td>
+          <td>
+            {% if c.statut == "termine" %}<span class="badge badge-green text-xs">Terminé</span>
+            {% elif c.statut == "en_cours" %}<span class="badge badge-blue text-xs">En cours</span>
+            {% elif c.statut == "resilie" %}<span class="badge badge-red text-xs">Résilié</span>
+            {% else %}<span class="badge badge-yellow text-xs">{{ c.statut }}</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);">Aucun contrat enregistré</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('dynSearch');
+  if (!input) return;
+  let timer;
+  input.addEventListener('input', function() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const q = this.value.toLowerCase().trim();
+      document.querySelectorAll('.st-card').forEach(card => {
+        const show = !q || card.dataset.search.includes(q);
+        card.style.display = show ? '' : 'none';
+      });
+    }, 200);
+  });
+});
+</script>
+{% endblock %}

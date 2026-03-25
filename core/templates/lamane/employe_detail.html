@@ -1,0 +1,101 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ employe.prenom }} {{ employe.nom }}{% endblock %}
+{% block page_title %}{{ employe.prenom }} {{ employe.nom }}{% endblock %}
+{% block page_sub %}{{ employe.poste|default:"Employé" }} · {{ employe.matricule }}{% endblock %}
+
+{% block content %}
+
+<!-- Actions -->
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_rh' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour RH</a>
+  <div class="flex gap-3">
+    <a href="{% url 'ui_employe_edit' employe.pk %}" class="btn btn-ghost"><i class="fas fa-edit"></i> Modifier</a>
+    <a href="{% url 'ui_employe_delete' employe.pk %}" class="btn" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);color:var(--red);"><i class="fas fa-trash-alt"></i></a>
+  </div>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up">
+
+  <!-- Profil -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-user text-gold"></i> Profil</div>
+      <span class="badge {% if employe.actif %}badge-green{% else %}badge-yellow{% endif %}">{% if employe.actif %}Actif{% else %}Inactif{% endif %}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;margin-bottom:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+      <div style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;
+        background:{% if employe.sexe == 'F' %}rgba(165,94,234,0.2){% else %}rgba(30,111,255,0.2){% endif %};
+        color:{% if employe.sexe == 'F' %}var(--purple){% else %}var(--blue-light){% endif %};">
+        {{ employe.prenom|slice:":1" }}{{ employe.nom|slice:":1" }}
+      </div>
+      <div>
+        <div style="font-size:18px;font-weight:700;">{{ employe.prenom }} {{ employe.nom }}</div>
+        <div style="font-size:13px;color:var(--gold);font-weight:600;">{{ employe.poste|default:"Poste non défini" }}</div>
+        <div class="text-xs text-muted">{{ employe.matricule }}</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% if employe.telephone %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm"><i class="fas fa-phone"></i> Téléphone</span>
+        <span style="font-weight:600;">{{ employe.telephone }}</span>
+      </div>
+      {% endif %}
+      {% if employe.email %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm"><i class="fas fa-envelope"></i> Email</span>
+        <span style="font-size:13px;">{{ employe.email }}</span>
+      </div>
+      {% endif %}
+      {% if employe.adresse %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm"><i class="fas fa-map-marker-alt"></i> Adresse</span>
+        <span style="font-size:13px;">{{ employe.adresse }}</span>
+      </div>
+      {% endif %}
+      {% if employe.date_embauche %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm"><i class="fas fa-calendar-plus"></i> Embauche</span>
+        <span style="font-weight:600;">{{ employe.date_embauche|date:"d/m/Y" }}</span>
+      </div>
+      {% endif %}
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;" class="flex justify-between">
+        <span class="text-muted text-sm"><i class="fas fa-venus-mars"></i> Genre</span>
+        <span>{% if employe.sexe == 'F' %}<i class="fas fa-venus" style="color:var(--purple);"></i> Femme{% elif employe.sexe == 'M' %}<i class="fas fa-mars" style="color:var(--blue-light);"></i> Homme{% else %}—{% endif %}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Affectations -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-project-diagram text-gold"></i> Projets assignés</div>
+      <span class="badge badge-blue">{{ nb_projets }}</span>
+    </div>
+    {% if affectations %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for a in affectations %}
+      <a href="{% url 'ui_projet_detail' a.projet.id %}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;text-decoration:none;transition:background 0.2s;"
+         onmouseover="this.style.background='rgba(30,111,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+        <div style="width:36px;height:36px;background:rgba(30,111,255,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+          <i class="fas fa-hard-hat" style="color:var(--blue-light);font-size:14px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.projet.nom|truncatechars:30 }}</div>
+          <div class="text-xs text-muted">{{ a.projet.statut }}</div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--text-muted);font-size:11px;"></i>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:30px;color:var(--text-muted);">
+      <i class="fas fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;"></i>
+      Aucun projet assigné
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

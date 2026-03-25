@@ -1,0 +1,175 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Saisir un relevé d'avancement mensuel{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}
+<style>
+.gauge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:8px;}
+.gauge-box{background:var(--bg-card2);border-radius:12px;padding:16px;border:1px solid var(--border);text-align:center;}
+body.light-mode .gauge-box{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.08);}
+.gauge-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px;}
+.gauge-value{font-size:28px;font-weight:800;margin-bottom:6px;}
+.gauge-value.gold{color:var(--gold);}
+.gauge-value.green{color:var(--green);}
+.gauge-value.blue{color:#1e6fff;}
+.gauge-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:4px;}
+.gauge-bar-fill{height:100%;border-radius:3px;transition:width 0.4s ease;}
+.gauge-bar-fill.gold{background:var(--gold);}
+.gauge-bar-fill.green{background:var(--green);}
+.gauge-bar-fill.blue{background:#1e6fff;}
+.effectif-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+</style>
+{% endblock %}
+{% block content %}
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_chantiers' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux chantiers</a>
+</div>
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}
+<div class="wz-stepbar">
+  <div class="wz-step" data-step="1" onclick="wzGoTo(1)"><div class="wz-step-circle">1</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Identification</span></div></div>
+  <div class="wz-step" data-step="2" onclick="wzGoTo(2)"><div class="wz-step-circle">2</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 2</span><span class="wz-step-label">Avancements</span></div></div>
+  <div class="wz-step" data-step="3" onclick="wzGoTo(3)"><div class="wz-step-circle">3</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 3</span><span class="wz-step-label">Effectifs & Notes</span></div></div>
+</div>
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill"></div></div>
+{% if form.non_field_errors %}<div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;"><i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}</div>{% endif %}
+
+<!-- ÉTAPE 1 : Projet + Période -->
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-hard-hat"></i></div>
+      <div><div class="wz-section-title">Identification du relevé</div><div class="wz-section-sub">Chantier concerné et période de reporting</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Chantier / Projet <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-hard-hat input-icon"></i>{{ form.projet }}</div>
+          {% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Période (mois du relevé) <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-calendar input-icon"></i>{{ form.periode }}</div>
+          {% for e in form.periode.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+      <div style="padding:12px 16px;background:rgba(30,111,255,0.06);border-radius:10px;border:1px solid rgba(30,111,255,0.15);color:var(--text-secondary);font-size:13px;">
+        <i class="fas fa-info-circle" style="color:#1e6fff;margin-right:6px;"></i>
+        Indiquez le <strong>1er jour du mois</strong> concerné par ce relevé. Ex : pour Mars 2025, entrez <strong>01/03/2025</strong>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÉTAPE 2 : Taux d'avancement -->
+<div class="wz-panel" data-step="2">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-chart-line"></i></div>
+      <div><div class="wz-section-title">Taux d'avancement</div><div class="wz-section-sub">Pourcentages d'avancement pour la période</div></div>
+    </div>
+    <div class="wz-section-body">
+      <!-- Aperçu live des jauges -->
+      <div class="gauge-grid" style="margin-bottom:20px;">
+        <div class="gauge-box">
+          <div class="gauge-label">Physique</div>
+          <div class="gauge-value gold" id="previewPhysique">0%</div>
+          <div class="gauge-bar"><div class="gauge-bar-fill gold" id="barPhysique" style="width:0%"></div></div>
+        </div>
+        <div class="gauge-box">
+          <div class="gauge-label">Financier</div>
+          <div class="gauge-value green" id="previewFinancier">0%</div>
+          <div class="gauge-bar"><div class="gauge-bar-fill green" id="barFinancier" style="width:0%"></div></div>
+        </div>
+        <div class="gauge-box">
+          <div class="gauge-label">Planifié</div>
+          <div class="gauge-value blue" id="previewPlanifie">0%</div>
+          <div class="gauge-bar"><div class="gauge-bar-fill blue" id="barPlanifie" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="form-grid-2" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="form-group">
+          <label class="form-label"><span style="color:var(--gold);font-weight:700;">⬤</span> Avancement physique (%) <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-tasks input-icon"></i>{{ form.taux_physique }}</div>
+          {% for e in form.taux_physique.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label"><span style="color:var(--green);font-weight:700;">⬤</span> Avancement financier (%) <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-coins input-icon"></i>{{ form.taux_financier }}</div>
+          {% for e in form.taux_financier.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label"><span style="color:#1e6fff;font-weight:700;">⬤</span> Avancement planifié (%) <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-calendar-check input-icon"></i>{{ form.taux_planifie }}</div>
+          {% for e in form.taux_planifie.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÉTAPE 3 : Effectifs + Observations -->
+<div class="wz-panel" data-step="3">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-users"></i></div>
+      <div><div class="wz-section-title">Effectifs & Observations</div><div class="wz-section-sub">Personnel présent sur chantier et remarques</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="effectif-grid" style="margin-bottom:18px;">
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-hard-hat" style="color:var(--cyan);margin-right:4px;"></i> Effectif ouvriers</label>
+          <div class="input-icon-wrap"><i class="fas fa-users input-icon"></i>{{ form.effectif_ouvriers }}</div>
+          {% for e in form.effectif_ouvriers.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-user-tie" style="color:var(--purple);margin-right:4px;"></i> Effectif encadrement</label>
+          <div class="input-icon-wrap"><i class="fas fa-user-tie input-icon"></i>{{ form.effectif_encadrement }}</div>
+          {% for e in form.effectif_encadrement.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fas fa-clipboard-list" style="color:var(--gold);margin-right:4px;"></i> Observations</label>
+        {{ form.observations }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_chantiers' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+    <button type="button" id="wzPrev" style="display:none;" class="wz-btn wz-btn-ghost" onclick="wzPrev()"><i class="fas fa-arrow-left"></i> Précédent</button>
+  </div>
+  <div class="wz-nav-right">
+    <span class="wz-nav-counter" id="wzBadge"></span>
+    <button type="button" id="wzNext" class="wz-btn wz-btn-primary" onclick="wzNext()">Suivant <i class="fas fa-arrow-right"></i></button>
+    <button type="submit" id="wzSave" style="display:none;" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> Enregistrer le relevé</button>
+  </div>
+</div>
+</form>
+</div>
+{% endblock %}
+{% block extra_js %}{% include "lamane/includes/wizard_js.html" %}
+<script>
+function updateGauges() {
+  var p = parseFloat(document.getElementById('id_taux_physique')?.value) || 0;
+  var f = parseFloat(document.getElementById('id_taux_financier')?.value) || 0;
+  var pl = parseFloat(document.getElementById('id_taux_planifie')?.value) || 0;
+  document.getElementById('previewPhysique').textContent = p.toFixed(1) + '%';
+  document.getElementById('previewFinancier').textContent = f.toFixed(1) + '%';
+  document.getElementById('previewPlanifie').textContent = pl.toFixed(1) + '%';
+  document.getElementById('barPhysique').style.width = Math.min(p, 100) + '%';
+  document.getElementById('barFinancier').style.width = Math.min(f, 100) + '%';
+  document.getElementById('barPlanifie').style.width = Math.min(pl, 100) + '%';
+}
+['id_taux_physique','id_taux_financier','id_taux_planifie'].forEach(function(id){
+  var el = document.getElementById(id);
+  if (el) el.addEventListener('input', updateGauges);
+});
+updateGauges();
+</script>
+{% endblock %}

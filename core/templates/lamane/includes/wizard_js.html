@@ -1,0 +1,83 @@
+{% comment %}Wizard JS — ENSMG-style with progress bar{% endcomment %}
+<script>
+(function() {
+  'use strict';
+
+  var panels   = Array.from(document.querySelectorAll('.wz-panel'));
+  var steps    = Array.from(document.querySelectorAll('.wz-step'));
+  var wzTotal  = panels.length;
+  var wzCurrent = 1;
+
+  var btnPrev  = document.getElementById('wzPrev');
+  var btnNext  = document.getElementById('wzNext');
+  var btnSave  = document.getElementById('wzSave');
+  var badge    = document.getElementById('wzBadge');
+  var progFill = document.getElementById('wzProgressFill');
+
+  function wzUpdate() {
+    // Panels
+    panels.forEach(function(p) {
+      var n = parseInt(p.dataset.step, 10);
+      p.classList.toggle('wz-active', n === wzCurrent);
+    });
+
+    // Steps
+    steps.forEach(function(s) {
+      var n = parseInt(s.dataset.step, 10);
+      s.classList.remove('wz-active', 'wz-done');
+      if (n === wzCurrent) s.classList.add('wz-active');
+      if (n < wzCurrent)   s.classList.add('wz-done');
+    });
+
+    // Nav buttons
+    if (btnPrev) btnPrev.style.display = wzCurrent > 1 ? 'inline-flex' : 'none';
+    if (btnNext) btnNext.style.display = wzCurrent < wzTotal ? 'inline-flex' : 'none';
+    if (btnSave) btnSave.style.display = wzCurrent === wzTotal ? 'inline-flex' : 'none';
+
+    // Badge
+    if (badge) badge.textContent = wzCurrent + ' / ' + wzTotal;
+
+    // Progress bar
+    if (progFill) {
+      var pct = Math.round((wzCurrent / wzTotal) * 100);
+      progFill.style.width = pct + '%';
+    }
+  }
+
+  window.wzNext = function() {
+    if (wzCurrent < wzTotal) {
+      wzCurrent++;
+      wzUpdate();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  window.wzPrev = function() {
+    if (wzCurrent > 1) {
+      wzCurrent--;
+      wzUpdate();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  window.wzGoTo = function(n) {
+    var target = Math.max(1, Math.min(n, wzTotal));
+    wzCurrent = target;
+    wzUpdate();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Remove error on input
+  document.addEventListener('input',  function(e) { e.target.classList.remove('wz-error'); });
+  document.addEventListener('change', function(e) { e.target.classList.remove('wz-error'); });
+
+  // Jump to first step with server errors
+  var firstErr = document.querySelector('.wz-panel .field-error');
+  if (firstErr) {
+    var errPanel = firstErr.closest('.wz-panel');
+    if (errPanel) wzCurrent = parseInt(errPanel.dataset.step, 10) || 1;
+  }
+
+  wzUpdate();
+})();
+</script>

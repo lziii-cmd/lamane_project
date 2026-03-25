@@ -1,0 +1,12 @@
+{% comment %}Ligne de total alignée sous la colonne "Montant"{% endcomment %}
+{% if cl and versement_totaux %}
+  <table style="width:100%">
+    <tfoot>
+      <tr>
+        {% for _ in ''|center:versement_totaux.colspan_before_montant %}<td></td>{% endfor %}
+        <td style="font-weight:600;">{{ versement_totaux.montant_total }}</td>
+        {% for _ in ''|center:versement_totaux.cols_after_montant %}<td></td>{% endfor %}
+      </tr>
+    </tfoot>
+  </table>
+{% endif %}

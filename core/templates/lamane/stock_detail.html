@@ -1,0 +1,137 @@
+{% extends "lamane/base.html" %}
+{% block title %}Stock en temps réel{% endblock %}
+{% block page_title %}Stock matériaux{% endblock %}
+{% block page_sub %}{{ total_references }} référence{{ total_references|pluralize }} — {{ nb_ruptures }} en rupture — {{ nb_alertes }} en alerte{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-cubes"></i></div>
+    <div class="kpi-value">{{ total_references }}</div>
+    <div class="kpi-label">Références</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--red);--icon-bg:rgba(255,71,87,0.12);">
+    <div class="kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
+    <div class="kpi-value">{{ nb_ruptures }}</div>
+    <div class="kpi-label">En rupture de stock</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);">
+    <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+    <div class="kpi-value">{{ nb_alertes }}</div>
+    <div class="kpi-label">Stock faible (&lt; 5)</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="kpi-value">{{ total_references|add:"-"|add:nb_ruptures }}</div>
+    <div class="kpi-label">Références disponibles</div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-6 animate-fade-up delay-1">
+  <form method="get" class="flex gap-3 flex-wrap items-end">
+    <div style="flex:2;min-width:200px;">
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Recherche</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Nom du matériau, unité…" class="filter-input">
+    </div>
+    <div style="flex:1;min-width:150px;">
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Catégorie</label>
+      <select name="cat" class="filter-select">
+        <option value="">Toutes les catégories</option>
+        {% for c in categories %}
+        <option value="{{ c.pk }}" {% if cat_filter == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nom }} ({{ c.nb }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filtrer</button>
+      {% if q or cat_filter %}
+      <a href="{% url 'ui_stock_detail' %}" class="btn btn-ghost"><i class="fas fa-times"></i></a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Tableau stock -->
+<div class="card animate-fade-up delay-2">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-warehouse text-gold"></i> Stock en temps réel</div>
+    <div class="flex gap-2">
+      <a href="{% url 'ui_materiel_create' %}" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;">
+        <i class="fas fa-plus"></i> Nouveau matériau
+      </a>
+      <a href="{% url 'ui_bon_sortie_create' %}" class="btn btn-primary" style="font-size:12px;padding:6px 12px;">
+        <i class="fas fa-arrow-up"></i> Sortie de stock
+      </a>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Matériau</th>
+          <th>Catégorie</th>
+          <th>Unité</th>
+          <th style="text-align:right;">Entrées</th>
+          <th style="text-align:right;">Sorties</th>
+          <th style="text-align:right;">Stock actuel</th>
+          <th style="text-align:right;">Valeur estimée</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in stock_data %}
+        <tr style="{% if d.alerte_rupture %}background:rgba(255,71,87,0.04);{% elif d.stock_actuel < 5 %}background:rgba(255,121,63,0.04);{% endif %}">
+          <td>
+            <div style="font-weight:600;font-size:13px;">{{ d.materiel.nom }}</div>
+            {% if d.alerte_rupture %}
+            <div style="font-size:11px;color:var(--red);margin-top:2px;"><i class="fas fa-exclamation-circle"></i> Rupture de stock !</div>
+            {% elif d.stock_actuel < 5 %}
+            <div style="font-size:11px;color:var(--orange);margin-top:2px;"><i class="fas fa-exclamation-triangle"></i> Stock faible</div>
+            {% endif %}
+          </td>
+          <td class="text-sm text-muted">{{ d.materiel.categorie.nom|default:"—" }}</td>
+          <td><span class="badge badge-yellow text-xs">{{ d.materiel.unite }}</span></td>
+          <td style="text-align:right;color:var(--green);font-weight:600;">+{{ d.entrees|floatformat:2 }}</td>
+          <td style="text-align:right;color:var(--red);font-weight:600;">-{{ d.sorties|floatformat:2 }}</td>
+          <td style="text-align:right;">
+            <span style="font-size:16px;font-weight:800;color:{% if d.alerte_rupture %}var(--red){% elif d.stock_actuel < 5 %}var(--orange){% else %}var(--text-primary){% endif %};">
+              {{ d.stock_actuel|floatformat:2 }}
+            </span>
+          </td>
+          <td style="text-align:right;font-size:12px;color:var(--gold);">{{ d.valeur_stock }} XOF</td>
+          <td>
+            {% if d.alerte_rupture %}
+            <span class="badge badge-red"><i class="fas fa-times-circle"></i> Rupture</span>
+            {% elif d.stock_actuel < 5 %}
+            <span class="badge badge-orange"><i class="fas fa-exclamation-triangle"></i> Faible</span>
+            {% else %}
+            <span class="badge badge-green"><i class="fas fa-check-circle"></i> OK</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'ui_materiel_edit' d.materiel.pk %}" class="btn btn-ghost" style="padding:4px 10px;font-size:11px;">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:12px;">📦</div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucun matériau trouvé</div>
+            <a href="{% url 'ui_materiel_create' %}" class="btn btn-primary" style="font-size:13px;margin-top:8px;">
+              <i class="fas fa-plus"></i> Ajouter un matériau
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

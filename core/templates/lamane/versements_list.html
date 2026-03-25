@@ -1,0 +1,119 @@
+{% extends "lamane/base.html" %}
+{% block title %}Versements{% endblock %}
+{% block page_title %}Versements reçus{% endblock %}
+{% block page_sub %}{{ total_versements }} versement{{ total_versements|pluralize }} — Total : {{ montant_total }} XOF{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hand-holding-usd"></i></div>
+    <div class="kpi-value">{{ total_versements }}</div>
+    <div class="kpi-label">Versements totaux</div>
+    <div class="kpi-trend trend-up"><i class="fas fa-arrow-up"></i> Entrées clients</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="kpi-value" style="font-size:17px;">{{ montant_total }}</div>
+    <div class="kpi-label">Montant total (XOF)</div>
+    <div class="kpi-trend trend-up"><i class="fas fa-coins"></i> Cumul général</div>
+  </div>
+  {% for t in types_stats|slice:":2" %}
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-mobile-alt"></i></div>
+    <div class="kpi-value">{{ t.count }}</div>
+    <div class="kpi-label">{{ t.type_versement|default:"Autre"|capfirst }}</div>
+    <div class="kpi-trend text-muted">{{ t.total|floatformat:0 }} XOF</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Barre d'outils dynamique -->
+<div class="card mb-4 animate-fade-up" style="padding:16px 20px;">
+  <div class="flex items-center gap-3" style="flex-wrap:wrap;">
+    <div style="flex:1;min-width:220px;position:relative;">
+      <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
+      <input type="text" id="dynSearch" value="{{ q }}" placeholder="Projet, libellé, référence…"
+             class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
+    </div>
+    <div style="min-width:180px;">
+      <select id="dynType" class="filter-select" style="width:100%;">
+        <option value="">Tous les types</option>
+        {% for t in types_choices %}
+        <option value="{{ t }}" {% if type_filter == t %}selected{% endif %}>{{ t|capfirst }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if q or type_filter %}
+    <a href="{% url 'ui_versements' %}" class="btn btn-ghost" style="white-space:nowrap;"><i class="fas fa-times"></i> Effacer</a>
+    {% endif %}
+    <a href="{% url 'ui_versement_create' %}" class="btn btn-primary" style="white-space:nowrap;margin-left:auto;">
+      <i class="fas fa-plus"></i> Nouveau versement
+    </a>
+  </div>
+</div>
+
+<!-- Tableau versements (lignes cliquables) -->
+<div class="card animate-fade-up delay-1">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list text-gold"></i> Liste des versements</div>
+    <span class="badge badge-green">{{ versements|length }} résultat{{ versements|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Référence</th><th>Projet</th><th>Type</th>
+          <th>Libellé</th><th style="text-align:right;">Montant (XOF)</th><th>Doc</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in versements %}
+        <tr onclick="window.location='{% url 'ui_versement_detail' v.pk %}'"
+            style="cursor:pointer;transition:background 0.15s;"
+            onmouseover="this.style.background='rgba(240,165,0,0.05)'"
+            onmouseout="this.style.background=''">
+          <td class="text-muted text-sm">{{ v.date_versement|date:"d/m/Y" }}</td>
+          <td>
+            {% if v.reference_paiement %}
+            <span class="badge badge-yellow text-xs">{{ v.reference_paiement|truncatechars:16 }}</span>
+            {% else %}<span class="text-muted text-xs">—</span>{% endif %}
+          </td>
+          <td><span style="font-weight:600;font-size:13px;">{{ v.projet.nom|truncatechars:22 }}</span></td>
+          <td>
+            <span class="badge badge-{% if v.type_versement == 'virement bancaire' %}blue{% elif v.type_versement == 'espèces' %}green{% elif v.type_versement == 'wave' %}purple{% elif v.type_versement == 'virement om' %}yellow{% else %}yellow{% endif %} text-xs">
+              {{ v.type_versement|default:"—" }}
+            </span>
+          </td>
+          <td class="text-sm">{{ v.libelle|default:"—"|truncatechars:30 }}</td>
+          <td style="text-align:right;color:var(--green);font-weight:700;font-size:15px;">{{ v.montant|floatformat:0 }}</td>
+          <td onclick="event.stopPropagation()">
+            {% if v.fichier_justificatif %}
+            <a href="{{ v.fichier_justificatif.url }}" target="_blank" class="btn btn-ghost text-xs" style="padding:4px 10px;color:var(--gold);" title="Justificatif">
+              <i class="fas fa-file-pdf"></i>
+            </a>
+            {% else %}<span class="text-muted text-xs">—</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);">
+          <div style="font-size:36px;margin-bottom:12px;">💳</div>
+          Aucun versement trouvé.<br>
+          <a href="{% url 'ui_versement_create' %}" class="btn btn-primary" style="margin-top:16px;"><i class="fas fa-plus"></i> Ajouter un versement</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initDynamicFilter('dynSearch', 'q', 350);
+  initSelectFilter('dynType', 'type');
+});
+</script>
+{% endblock %}

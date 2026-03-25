@@ -1,0 +1,292 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Enregistrer un achat fournisseur{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}
+<style>
+/* ── Table-style header ── */
+.lignes-table { width: 100%; }
+.lignes-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.ligne-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+  gap: 10px; align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-card2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+body.light-mode .lignes-header { border-color: rgba(0,0,0,0.08); }
+body.light-mode .ligne-row { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.08); }
+.ligne-row .form-group { margin-bottom: 0; }
+.ligne-row .form-input, .ligne-row select.form-input { height: 38px; padding: 0 12px; }
+.btn-del-ligne {
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.25);
+  color: #ff4757; border-radius: 8px; cursor: pointer;
+  font-size: 12px; transition: all 0.2s; padding: 0; flex-shrink: 0;
+}
+.btn-del-ligne:hover { background: rgba(255,71,87,0.2); }
+.total-box {
+  margin-top: 20px; padding: 16px 20px;
+  background: var(--bg-card2); border-radius: 12px;
+  border: 1px solid var(--border);
+  display: flex; justify-content: flex-end;
+}
+body.light-mode .total-box { background: rgba(0,0,0,0.02); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_achats' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux achats</a>
+  {% if obj %}<a href="{% url 'ui_achat_delete' obj.pk %}" class="wz-btn wz-btn-danger"><i class="fas fa-trash-alt"></i> Supprimer</a>{% endif %}
+</div>
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if "success" in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if "success" in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if "success" in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if "success" in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate class="animate-fade-up" id="achatForm">{% csrf_token %}
+{{ formset.management_form }}
+
+<!-- ── STEPPER ──────────────────────────────────────────── -->
+<div class="wz-stepbar">
+  <div class="wz-step" data-step="1" onclick="wzGoTo(1)">
+    <div class="wz-step-circle">1</div>
+    <div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Informations</span></div>
+  </div>
+  <div class="wz-step" data-step="2" onclick="wzGoTo(2)">
+    <div class="wz-step-circle">2</div>
+    <div class="wz-step-text"><span class="wz-step-sublabel">Étape 2</span><span class="wz-step-label">Facture fournisseur</span></div>
+  </div>
+  <div class="wz-step" data-step="3" onclick="wzGoTo(3)">
+    <div class="wz-step-circle">3</div>
+    <div class="wz-step-text"><span class="wz-step-sublabel">Étape 3</span><span class="wz-step-label">Lignes d'achat</span></div>
+  </div>
+</div>
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill"></div></div>
+
+{% if form.non_field_errors %}<div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;"><i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}</div>{% endif %}
+
+<!-- ── ÉTAPE 1 ─────────────────────────────────────────── -->
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-file-invoice"></i></div>
+      <div><div class="wz-section-title">Informations générales</div><div class="wz-section-sub">Identifiez le fournisseur et les paramètres de l'achat</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Fournisseur <span class="req"></span></label>
+          <div class="input-icon-wrap"><i class="fas fa-building input-icon"></i>{{ form.fournisseur }}</div>
+          {% for e in form.fournisseur.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date d'achat <span class="req"></span></label>
+          <div class="input-icon-wrap"><i class="fas fa-calendar input-icon"></i>{{ form.date_achat }}</div>
+          {% for e in form.date_achat.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Projet <span class="req"></span></label>
+          <div class="input-icon-wrap"><i class="fas fa-hard-hat input-icon"></i>{{ form.projet }}</div>
+          {% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mode de paiement</label>
+          <div class="input-icon-wrap"><i class="fas fa-credit-card input-icon"></i>{{ form.mode_paiement }}</div>
+          {% for e in form.mode_paiement.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+      <!-- Toggle TVA -->
+      <label class="toggle-row" for="id_tva_active" style="max-width:460px;">
+        <div class="toggle-row-info">
+          <span class="toggle-row-label"><i class="fas fa-percent" style="color:var(--gold);margin-right:7px;"></i>TVA active</span>
+          <span class="toggle-row-sub">Appliquer la taxe sur la valeur ajoutée (18%)</span>
+        </div>
+        <div class="toggle-switch">
+          {{ form.tva_active }}
+          <span class="toggle-track"></span>
+        </div>
+      </label>
+      <div class="form-group" style="margin-top:18px;">
+        <label class="form-label">Commentaire</label>
+        {{ form.commentaire }}
+        {% for e in form.commentaire.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ÉTAPE 2 ─────────────────────────────────────────── -->
+<div class="wz-panel" data-step="2">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-receipt"></i></div>
+      <div><div class="wz-section-title">Facture fournisseur</div><div class="wz-section-sub">Numéro et document de facturation</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="form-group">
+        <label class="form-label">Numéro de facture</label>
+        <div class="input-icon-wrap"><i class="fas fa-hashtag input-icon"></i>{{ form.numero_facture }}</div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Scan facture</label>
+          <div class="file-input-wrap">
+            <i class="fas fa-upload" style="color:var(--gold);font-size:18px;"></i>
+            <span class="file-input-label">Joindre la facture — <span>parcourir</span></span>
+            {{ form.fichier_facture }}
+          </div>
+          {% if form.instance.fichier_facture %}<p style="font-size:11px;color:var(--text-muted);margin-top:6px;"><i class="fas fa-check-circle" style="color:var(--green);"></i> {{ form.instance.fichier_facture }}</p>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bon d'entrée PDF</label>
+          {% if form.instance.bon_entree_pdf %}
+            <div style="padding:12px 16px;background:rgba(0,196,140,0.07);border:1px solid rgba(0,196,140,0.25);border-radius:10px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-file-pdf" style="color:var(--green);font-size:20px;flex-shrink:0;"></i>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--green);">Bon d'entrée généré</div>
+                <a href="/media/{{ form.instance.bon_entree_pdf }}" target="_blank" style="font-size:11px;color:var(--text-muted);">Voir le PDF <i class="fas fa-external-link-alt"></i></a>
+              </div>
+            </div>
+          {% else %}
+            <div style="padding:12px 16px;background:rgba(255,193,7,0.07);border:1px solid rgba(255,193,7,0.2);border-radius:10px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-magic" style="color:var(--gold);font-size:18px;flex-shrink:0;"></i>
+              <span style="font-size:12px;color:var(--text-muted);">Le bon d'entrée sera <strong>généré automatiquement</strong> à l'enregistrement</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ÉTAPE 3 ─────────────────────────────────────────── -->
+<div class="wz-panel" data-step="3">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-boxes"></i></div>
+      <div><div class="wz-section-title">Lignes d'achat</div><div class="wz-section-sub">Ajoutez les matériaux et quantités</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="lignes-table">
+        <div class="lignes-header">
+          <span>Matériel / Désignation</span>
+          <span>Quantité</span>
+          <span>Prix unitaire (XOF)</span>
+          <span>Sous-total</span>
+          <span></span>
+        </div>
+        <div id="lignes-container">
+          {% for lf in formset %}
+          <div class="ligne-row" id="ligne-{{ forloop.counter0 }}">
+            {{ lf.id }}<span style="display:none">{{ lf.DELETE }}</span>
+            <div class="form-group">{{ lf.materiel }}{% for e in lf.materiel.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+            <div class="form-group">{{ lf.quantite }}{% for e in lf.quantite.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+            <div class="form-group">{{ lf.prix_unitaire }}{% for e in lf.prix_unitaire.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+            <div class="form-input" id="sous-total-{{ forloop.counter0 }}" style="background:rgba(0,196,140,0.07);border-color:rgba(0,196,140,0.25);color:var(--green);font-weight:600;font-size:13px;">--</div>
+            <button type="button" class="btn-del-ligne" onclick="removeLigne(this, {{ forloop.counter0 }})"><i class="fas fa-trash"></i></button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <button type="button" onclick="addLigne()" class="wz-btn wz-btn-ghost" style="margin-top:10px;"><i class="fas fa-plus"></i> Ajouter une ligne</button>
+      <div class="total-box">
+        <div style="text-align:right;">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Total HT</div>
+          <div style="font-size:22px;font-weight:800;color:var(--gold);" id="totalHT">0 XOF</div>
+          <div id="tvaLine" style="font-size:12px;color:var(--text-muted);margin-top:4px;display:none;">
+            + TVA 18% = <span id="totalTTC" style="color:var(--text-primary);font-weight:600;"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── NAVIGATION ──────────────────────────────────────── -->
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_achats' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+    <button type="button" id="wzPrev" style="display:none;" class="wz-btn wz-btn-ghost" onclick="wzPrev()"><i class="fas fa-arrow-left"></i> Précédent</button>
+  </div>
+  <div class="wz-nav-right">
+    <span class="wz-nav-counter" id="wzBadge"></span>
+    <button type="button" id="wzNext" class="wz-btn wz-btn-primary" onclick="wzNext()">Suivant <i class="fas fa-arrow-right"></i></button>
+    <button type="submit" id="wzSave" style="display:none;" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> {{ action }}</button>
+  </div>
+</div>
+</form>
+</div>
+{% endblock %}
+{% block extra_js %}{% include "lamane/includes/wizard_js.html" %}
+<script>
+var TOTAL_FORMS_ID = '{{ formset.management_form.prefix }}-TOTAL_FORMS';
+var ligneCount = {{ formset.total_form_count }};
+var prefix = '{{ formset.management_form.prefix }}';
+
+function calcRow(idx) {
+  var q = parseFloat(document.querySelector('[name="' + prefix + '-' + idx + '-quantite"]')?.value) || 0;
+  var p = parseFloat(document.querySelector('[name="' + prefix + '-' + idx + '-prix_unitaire"]')?.value) || 0;
+  var sub = q * p;
+  var el = document.getElementById('sous-total-' + idx);
+  if (el) el.textContent = sub.toLocaleString('fr-FR') + ' XOF';
+  return sub;
+}
+function calcTotal() {
+  var total = 0;
+  document.querySelectorAll('.ligne-row').forEach(function(row) {
+    if (row.style.display !== 'none') total += calcRow(parseInt(row.id.replace('ligne-','')));
+  });
+  document.getElementById('totalHT').textContent = total.toLocaleString('fr-FR') + ' XOF';
+  var avecTva = document.getElementById('id_tva_active');
+  var tvaLine = document.getElementById('tvaLine');
+  if (avecTva && avecTva.checked) {
+    document.getElementById('totalTTC').textContent = (total * 1.18).toLocaleString('fr-FR') + ' XOF';
+    tvaLine.style.display = 'block';
+  } else { tvaLine.style.display = 'none'; }
+}
+document.addEventListener('input', function(e) {
+  if (e.target.name && (e.target.name.includes('-quantite') || e.target.name.includes('-prix_unitaire'))) calcTotal();
+});
+var tvaChk = document.getElementById('id_tva_active');
+if (tvaChk) tvaChk.addEventListener('change', calcTotal);
+
+function addLigne() {
+  var container = document.getElementById('lignes-container');
+  var idx = ligneCount;
+  var firstSelect = document.querySelector('[name="' + prefix + '-0-materiel"]');
+  var div = document.createElement('div');
+  div.className = 'ligne-row'; div.id = 'ligne-' + idx;
+  div.innerHTML = '<input type="hidden" name="' + prefix + '-' + idx + '-id" value="">'
+    + '<input type="hidden" name="' + prefix + '-' + idx + '-DELETE" value="">'
+    + '<div class="form-group"><select name="' + prefix + '-' + idx + '-materiel" class="form-select">'
+    + (firstSelect ? firstSelect.innerHTML : '') + '</select></div>'
+    + '<div class="form-group"><input type="number" name="' + prefix + '-' + idx + '-quantite" class="form-input" step="0.001" min="0" value="1"></div>'
+    + '<div class="form-group"><input type="number" name="' + prefix + '-' + idx + '-prix_unitaire" class="form-input" step="1" min="0" value="0"></div>'
+    + '<div class="form-input" id="sous-total-' + idx + '" style="background:rgba(0,196,140,0.07);border-color:rgba(0,196,140,0.25);color:var(--green);font-weight:600;font-size:13px;">--</div>'
+    + '<button type="button" class="btn-del-ligne" onclick="removeLigne(this,' + idx + ')"><i class="fas fa-trash"></i></button>';
+  container.appendChild(div);
+  document.getElementById(TOTAL_FORMS_ID).value = ++ligneCount;
+}
+function removeLigne(btn, idx) {
+  var row = document.getElementById('ligne-' + idx);
+  var del = row.querySelector('[name$="-DELETE"]');
+  if (del) { del.value = 'on'; row.style.display = 'none'; }
+  else row.remove();
+  calcTotal();
+}
+calcTotal();
+</script>
+{% endblock %}

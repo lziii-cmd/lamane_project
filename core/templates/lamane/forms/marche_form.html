@@ -1,0 +1,144 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{% if obj %}Modifier le marché de travaux{% else %}Créer un nouveau marché de travaux{% endif %}{% endblock %}
+{% block extra_css %}{% include "lamane/includes/wizard_css.html" %}{% endblock %}
+{% block content %}
+<div class="wz-form-wrap">
+<div class="wz-top-row animate-fade-up">
+  <a href="{% url 'ui_marches' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux marchés</a>
+</div>
+{% if messages %}{% for msg in messages %}<div style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};margin-bottom:12px;"><i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}</div>{% endfor %}{% endif %}
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}
+<div class="wz-stepbar">
+  <div class="wz-step" data-step="1" onclick="wzGoTo(1)"><div class="wz-step-circle">1</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 1</span><span class="wz-step-label">Identification</span></div></div>
+  <div class="wz-step" data-step="2" onclick="wzGoTo(2)"><div class="wz-step-circle">2</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 2</span><span class="wz-step-label">Montants</span></div></div>
+  <div class="wz-step" data-step="3" onclick="wzGoTo(3)"><div class="wz-step-circle">3</div><div class="wz-step-text"><span class="wz-step-sublabel">Étape 3</span><span class="wz-step-label">Délais & Statut</span></div></div>
+</div>
+<div class="wz-stepper-progress"><div class="wz-stepper-progress-fill" id="wzProgressFill"></div></div>
+{% if form.non_field_errors %}<div style="padding:10px 14px;background:rgba(255,80,80,0.1);border-radius:8px;margin-bottom:16px;color:#ff5050;"><i class="fas fa-exclamation-triangle"></i> {{ form.non_field_errors }}</div>{% endif %}
+
+<!-- ÉTAPE 1 : Identification -->
+<div class="wz-panel" data-step="1">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-file-contract"></i></div>
+      <div><div class="wz-section-title">Identification du marché</div><div class="wz-section-sub">Projet lié et références contractuelles</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Projet <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-hard-hat input-icon"></i>{{ form.projet }}</div>
+          {% for e in form.projet.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">N° du marché <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-hashtag input-icon"></i>{{ form.numero_marche }}</div>
+          {% for e in form.numero_marche.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Objet du marché</label>
+        {{ form.objet }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÉTAPE 2 : Montants et pénalités -->
+<div class="wz-panel" data-step="2">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-coins"></i></div>
+      <div><div class="wz-section-title">Montants contractuels</div><div class="wz-section-sub">Valeur du marché et conditions financières</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Montant du marché (XOF) <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-coins input-icon"></i>{{ form.montant_marche }}</div>
+          {% for e in form.montant_marche.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Avance de démarrage (XOF)</label>
+          <div class="input-icon-wrap"><i class="fas fa-hand-holding-usd input-icon"></i>{{ form.montant_avance_demarrage }}</div>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Taux retenue de garantie (%)</label>
+          <div class="input-icon-wrap"><i class="fas fa-shield-alt input-icon"></i>{{ form.taux_retenue_garantie }}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pénalité journalière (%)</label>
+          <div class="input-icon-wrap"><i class="fas fa-exclamation-triangle input-icon"></i>{{ form.penalite_journaliere_pct }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÉTAPE 3 : Délais, statut, réception -->
+<div class="wz-panel" data-step="3">
+  <div class="wz-section">
+    <div class="wz-section-header">
+      <div class="wz-section-icon"><i class="fas fa-calendar-alt"></i></div>
+      <div><div class="wz-section-title">Délais & Statut</div><div class="wz-section-sub">Dates clés et état d'avancement contractuel</div></div>
+    </div>
+    <div class="wz-section-body">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Date de signature</label>
+          <div class="input-icon-wrap"><i class="fas fa-calendar input-icon"></i>{{ form.date_signature }}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date ordre de service</label>
+          <div class="input-icon-wrap"><i class="fas fa-calendar-check input-icon"></i>{{ form.date_ordre_service }}</div>
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Délai d'exécution (jours) <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-clock input-icon"></i>{{ form.delai_execution_jours }}</div>
+          {% for e in form.delai_execution_jours.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Statut <span class="req">*</span></label>
+          <div class="input-icon-wrap"><i class="fas fa-tag input-icon"></i>{{ form.statut }}</div>
+          {% for e in form.statut.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Date réception provisoire</label>
+          <div class="input-icon-wrap"><i class="fas fa-check-circle input-icon"></i>{{ form.date_reception_provisoire }}</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date réception définitive</label>
+          <div class="input-icon-wrap"><i class="fas fa-check-double input-icon"></i>{{ form.date_reception_definitive }}</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observations</label>
+        {{ form.observations }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wz-nav">
+  <div class="wz-nav-left">
+    <a href="{% url 'ui_marches' %}" class="wz-btn wz-btn-ghost"><i class="fas fa-times"></i> Annuler</a>
+    <button type="button" id="wzPrev" style="display:none;" class="wz-btn wz-btn-ghost" onclick="wzPrev()"><i class="fas fa-arrow-left"></i> Précédent</button>
+  </div>
+  <div class="wz-nav-right">
+    <span class="wz-nav-counter" id="wzBadge"></span>
+    <button type="button" id="wzNext" class="wz-btn wz-btn-primary" onclick="wzNext()">Suivant <i class="fas fa-arrow-right"></i></button>
+    <button type="submit" id="wzSave" style="display:none;" class="wz-btn wz-btn-save"><i class="fas fa-save"></i> {{ action }}</button>
+  </div>
+</div>
+</form>
+</div>
+{% endblock %}
+{% block extra_js %}{% include "lamane/includes/wizard_js.html" %}{% endblock %}

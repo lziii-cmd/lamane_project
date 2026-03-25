@@ -1,0 +1,120 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ bon.reference }}{% endblock %}
+{% block page_title %}{{ bon.reference }}{% endblock %}
+{% block page_sub %}Bon de sortie matériaux — {{ bon.date_sortie|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <a href="{% url 'ui_bons_sortie' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Retour aux bons de sortie</a>
+  <div class="flex gap-2">
+    {% if bon.bon_pdf %}
+    <a href="{{ bon.bon_pdf.url }}" target="_blank" class="btn" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);color:var(--red);">
+      <i class="fas fa-file-pdf"></i> Télécharger le PDF
+    </a>
+    {% endif %}
+    <a href="{% url 'ui_projet_detail' bon.projet.id %}" class="btn btn-ghost">
+      <i class="fas fa-hard-hat"></i> Voir le projet
+    </a>
+  </div>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+  <!-- Infos bon -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-clipboard text-gold"></i> Informations</div>
+      <span class="badge badge-orange">Sortie de stock</span>
+    </div>
+    <div style="display:grid;gap:12px;">
+      <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
+        <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Référence</span>
+        <span style="font-weight:700;color:var(--gold);">{{ bon.reference }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
+        <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Date de sortie</span>
+        <span style="font-weight:600;">{{ bon.date_sortie|date:"d MMMM Y" }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
+        <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Projet</span>
+        <a href="{% url 'ui_projet_detail' bon.projet.id %}" style="font-weight:600;color:var(--text-primary);text-decoration:none;">{{ bon.projet.nom }}</a>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
+        <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Responsable</span>
+        <span style="font-weight:600;">{{ bon.responsable|default:"—" }}</span>
+      </div>
+      {% if bon.observations %}
+      <div style="padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;">
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Observations</div>
+        <p style="font-size:13px;color:var(--text-secondary);">{{ bon.observations }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-chart-bar text-gold"></i> Résumé</div>
+    </div>
+    <div style="display:grid;gap:10px;">
+      <div style="text-align:center;padding:20px;background:rgba(255,121,63,0.08);border:1px solid rgba(255,121,63,0.2);border-radius:12px;">
+        <div style="font-size:42px;font-weight:800;color:var(--orange);">{{ lignes|length }}</div>
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;">Références de matériaux</div>
+      </div>
+      <div style="padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--text-muted);">Date de création</span>
+        <span style="font-size:12px;font-weight:600;">{{ bon.date_sortie|date:"d/m/Y" }}</span>
+      </div>
+      <div style="padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--text-muted);">Document PDF</span>
+        {% if bon.bon_pdf %}
+        <span class="badge badge-green"><i class="fas fa-check-circle"></i> Généré</span>
+        {% else %}
+        <span class="badge badge-yellow">Non disponible</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tableau des matériaux -->
+<div class="card animate-fade-up delay-1">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-boxes text-gold"></i> Matériaux sortis</div>
+    <span class="badge badge-orange">{{ lignes|length }} ligne{{ lignes|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Matériau</th>
+          <th>Unité</th>
+          <th>Catégorie</th>
+          <th style="text-align:right;">Quantité sortie</th>
+          <th>Commentaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in lignes %}
+        <tr>
+          <td class="text-muted text-sm">{{ forloop.counter }}</td>
+          <td class="bold">{{ ligne.materiel.nom }}</td>
+          <td>
+            <span class="badge badge-yellow text-xs">{{ ligne.materiel.unite }}</span>
+          </td>
+          <td class="text-sm text-muted">{{ ligne.materiel.categorie.nom|default:"—" }}</td>
+          <td style="text-align:right;font-weight:700;color:var(--orange);">
+            {{ ligne.quantite|floatformat:3 }}
+          </td>
+          <td class="text-sm text-muted">{{ ligne.commentaire|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">Aucune ligne de matériau</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

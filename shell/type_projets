@@ -1,0 +1,17 @@
+from core.models import TypeProjet
+
+noms = [
+    "Villa",
+    "Immeuble",
+    "Commerce",
+    "Bureau",
+    "Entrepôt",
+    "Résidence",
+    "Projet social",
+    "Projet personnalisé"
+]
+
+for nom in noms:
+    TypeProjet.objects.create(nom=nom)
+
+print("✅ Types de projet enregistrés avec succès.")
