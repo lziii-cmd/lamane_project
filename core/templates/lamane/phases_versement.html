@@ -1,0 +1,139 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Phases de versement{% endblock %}
+{% block page_title %}Phases de versement{% endblock %}
+{% block page_sub %}{{ total_phases }} phase{{ total_phases|pluralize }} de paiement{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <div class="flex gap-2" style="flex-wrap:wrap;">
+    <!-- Filtre par projet -->
+    <select id="projetFilter" class="filter-select" style="min-width:220px;">
+      <option value="">Tous les projets</option>
+      {% for p in projets %}
+      <option value="{{ p.pk }}" {% if projet_filter == p.pk|slugify %}selected{% endif %}>{{ p.nom }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <a href="{% url 'ui_phase_versement_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouvelle phase
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-tasks text-gold"></i> Phases de versement par projet</div>
+    <span class="badge badge-yellow">{{ total_phases }} phase{{ total_phases|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Projet</th>
+          <th>Phase / Etape</th>
+          <th>Niveau</th>
+          <th>Montant prevu (XOF)</th>
+          <th>Montant verse (XOF)</th>
+          <th>Avancement</th>
+          <th>Echeance</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in phases_data %}
+        <tr>
+          <td>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:rgba(240,165,0,0.12);color:var(--gold);font-weight:700;font-size:12px;">
+              {{ d.phase.ordre }}
+            </span>
+          </td>
+          <td class="bold">
+            <a href="{% url 'ui_projet_detail' d.phase.projet.pk %}" style="text-decoration:none;color:var(--text-primary);">
+              {{ d.phase.projet.nom|truncatechars:25 }}
+            </a>
+          </td>
+          <td>
+            {% if d.phase.etape_standard %}
+            <span class="badge badge-blue">{{ d.phase.etape_standard.nom }}</span>
+            {% elif d.phase.libelle %}
+            <span style="font-size:13px;">{{ d.phase.libelle }}</span>
+            {% else %}
+            <span class="text-muted">--</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if d.phase.niveau != None %}
+              {% if d.phase.niveau >= 0 %}
+              <span class="badge badge-cyan">R+{{ d.phase.niveau }}</span>
+              {% else %}
+              <span class="badge badge-orange">S{{ d.phase.niveau }}</span>
+              {% endif %}
+            {% else %}
+            <span class="text-muted text-sm">--</span>
+            {% endif %}
+          </td>
+          <td class="amount" style="color:var(--gold);">{{ d.montant_prevu_fmt }}</td>
+          <td class="amount" style="color:var(--green);">{{ d.montant_verse_fmt }}</td>
+          <td style="min-width:120px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="progress-bar-wrap" style="flex:1;">
+                <div class="progress-bar-fill {% if d.pct >= 100 %}green{% elif d.pct >= 50 %}{% else %}red{% endif %}"
+                     style="width:{% if d.pct > 100 %}100{% else %}{{ d.pct }}{% endif %}%;"></div>
+              </div>
+              <span style="font-size:11px;font-weight:600;color:{% if d.pct >= 100 %}var(--green){% elif d.pct >= 50 %}var(--gold){% else %}var(--red){% endif %};">
+                {{ d.pct }}%
+              </span>
+            </div>
+          </td>
+          <td class="text-sm">
+            {% if d.phase.echeance %}
+            <span class="text-muted">{{ d.phase.echeance|date:"d/m/Y" }}</span>
+            {% else %}
+            <span class="text-muted">--</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:6px;justify-content:flex-end;">
+              <a href="{% url 'ui_phase_versement_edit' d.phase.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+                <i class="fas fa-edit"></i>
+              </a>
+              <a href="{% url 'ui_phase_versement_delete' d.phase.pk %}" class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);">
+                <i class="fas fa-trash-alt"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;">&#128203;</div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucune phase de versement</div>
+            <div style="font-size:12px;margin-bottom:18px;">Definissez les phases de paiement pour vos projets.</div>
+            <a href="{% url 'ui_phase_versement_create' %}" class="btn btn-primary" style="font-size:13px;">
+              <i class="fas fa-plus"></i> Creer une phase
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initSelectFilter('projetFilter', 'projet');
+});
+</script>
+{% endblock %}

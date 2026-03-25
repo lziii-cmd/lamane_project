@@ -1,75 +1,76 @@
 {% extends "lamane/base.html" %}
 {% block title %}Stock{% endblock %}
 {% block page_title %}Gestion du stock{% endblock %}
-{% block page_sub %}{{ total_materiaux }} matériau{{ total_materiaux|pluralize }} · {{ total_categories }} catégorie{{ total_categories|pluralize }}{% endblock %}
+{% block page_sub %}{{ total_materiaux }} materiau{{ total_materiaux|pluralize:"x" }} · {{ total_categories }} categorie{{ total_categories|pluralize }}{% endblock %}
 
 {% block content %}
 
 <!-- Actions rapides -->
 <div class="flex items-center justify-between mb-4 animate-fade-up">
   <div class="flex gap-2" style="flex-wrap:wrap;">
-    <a href="{% url 'ui_stock_detail' %}" class="btn btn-ghost"><i class="fas fa-warehouse"></i> Stock temps réel</a>
+    <a href="{% url 'ui_stock_detail' %}" class="btn btn-ghost"><i class="fas fa-warehouse"></i> Stock temps reel</a>
     <a href="{% url 'ui_bons_sortie' %}" class="btn btn-ghost"><i class="fas fa-arrow-alt-circle-up"></i> Bons de sortie</a>
+    <a href="{% url 'ui_categories' %}" class="btn btn-ghost"><i class="fas fa-tags"></i> Categories</a>
   </div>
   <div class="flex gap-2">
-    <a href="{% url 'ui_materiel_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Nouveau matériau</a>
+    <a href="{% url 'ui_materiel_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Nouveau materiau</a>
     <a href="{% url 'ui_bon_sortie_create' %}" class="btn btn-primary" style="background:rgba(255,121,63,0.8);border-color:var(--orange);"><i class="fas fa-plus"></i> Sortie stock</a>
   </div>
 </div>
 
-<!-- KPIs (cliquables) -->
+<!-- KPIs -->
 <div class="kpi-grid mb-6 animate-fade-up">
   <a href="{% url 'ui_materiaux_list' %}" class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);text-decoration:none;cursor:pointer;">
     <div class="kpi-icon"><i class="fas fa-boxes"></i></div>
     <div class="kpi-value">{{ total_materiaux }}</div>
-    <div class="kpi-label">Matériaux référencés</div>
+    <div class="kpi-label">Materiaux references</div>
     <div class="kpi-trend text-muted"><i class="fas fa-arrow-right"></i> Voir la liste</div>
   </a>
   <a href="{% url 'ui_stock_detail' %}" class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);text-decoration:none;cursor:pointer;">
     <div class="kpi-icon"><i class="fas fa-warehouse"></i></div>
     <div class="kpi-value">{{ total_materiaux }}</div>
-    <div class="kpi-label">Stock temps réel</div>
+    <div class="kpi-label">Stock temps reel</div>
     <div class="kpi-trend text-muted"><i class="fas fa-arrow-right"></i> Voir le stock</div>
   </a>
   <a href="{% url 'ui_bons_sortie' %}" class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);text-decoration:none;cursor:pointer;">
     <div class="kpi-icon"><i class="fas fa-arrow-alt-circle-up"></i></div>
-    <div class="kpi-value">{{ materiaux_data|length }}</div>
+    <div class="kpi-value">{{ total_bons_sortie }}</div>
     <div class="kpi-label">Bons de sortie</div>
     <div class="kpi-trend text-muted"><i class="fas fa-arrow-right"></i> Voir les bons</div>
   </a>
-  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+  <a href="{% url 'ui_categories' %}" class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);text-decoration:none;cursor:pointer;">
     <div class="kpi-icon"><i class="fas fa-tags"></i></div>
     <div class="kpi-value">{{ total_categories }}</div>
-    <div class="kpi-label">Catégories</div>
-  </div>
+    <div class="kpi-label">Categories</div>
+    <div class="kpi-trend text-muted"><i class="fas fa-arrow-right"></i> Gerer</div>
+  </a>
 </div>
 
-<!-- Barre de recherche dynamique -->
+<!-- Barre de recherche -->
 <div class="card mb-4 animate-fade-up" style="padding:14px 18px;">
   <div class="flex items-center gap-3" style="flex-wrap:wrap;">
     <div style="flex:1;min-width:200px;position:relative;">
       <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;"></i>
-      <input type="text" id="dynSearch" value="{{ q }}" placeholder="Rechercher un matériau…" class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
+      <input type="text" id="dynSearch" value="{{ q }}" placeholder="Rechercher un materiau..." class="filter-input" style="padding-left:34px;width:100%;" autocomplete="off">
     </div>
     {% if cat_filter %}
     <a href="{% url 'ui_stock' %}" class="btn btn-ghost"><i class="fas fa-times"></i> Effacer filtre</a>
     {% endif %}
-    <a href="{% url 'ui_materiel_create' %}" class="btn btn-primary" style="margin-left:auto;"><i class="fas fa-plus"></i> Ajouter</a>
   </div>
 </div>
 
-<!-- Tableau matériaux cliquable (simple, sans bloc catégorie) -->
+<!-- Tableau materiaux -->
 <div class="card animate-fade-up delay-1">
   <div class="card-header">
-    <div class="card-title"><i class="fas fa-boxes text-gold"></i> Catalogue matériaux</div>
-    <span class="badge badge-purple">{{ materiaux_data|length }} résultats</span>
+    <div class="card-title"><i class="fas fa-boxes text-gold"></i> Catalogue materiaux</div>
+    <span class="badge badge-purple">{{ materiaux_data|length }} resultat{{ materiaux_data|length|pluralize:"s" }}</span>
   </div>
   <div class="table-wrapper">
     <table>
       <thead>
         <tr>
-          <th>Matériau</th><th>Catégorie</th><th>Unité</th>
-          <th>Qté consommée</th><th>Nb achats</th><th>Valeur HT (XOF)</th><th></th>
+          <th>Materiau</th><th>Categorie</th><th>Unite</th>
+          <th>Qte consommee</th><th>Nb achats</th><th>Valeur HT (XOF)</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -82,9 +83,9 @@
           <td>
             {% if d.materiel.categorie %}
             <span class="badge badge-blue text-xs">{{ d.materiel.categorie.nom }}</span>
-            {% else %}<span class="text-muted text-xs">—</span>{% endif %}
+            {% else %}<span class="text-muted text-xs">--</span>{% endif %}
           </td>
-          <td><span class="badge badge-yellow text-xs">{{ d.materiel.unite|default:"—" }}</span></td>
+          <td><span class="badge badge-yellow text-xs">{{ d.materiel.unite|default:"--" }}</span></td>
           <td style="font-weight:700;color:var(--cyan);font-size:15px;">{{ d.qty_total }}</td>
           <td class="text-muted text-sm">{{ d.nb_achats }}</td>
           <td class="amount" style="color:var(--gold);font-weight:600;">{{ d.valeur_ht }}</td>
@@ -92,9 +93,9 @@
         </tr>
         {% empty %}
         <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
-          <div style="font-size:32px;margin-bottom:12px;">📦</div>
-          Aucun matériau trouvé
-          <br><a href="{% url 'ui_materiel_create' %}" class="btn btn-primary" style="margin-top:16px;"><i class="fas fa-plus"></i> Ajouter un matériau</a>
+          <div style="font-size:32px;margin-bottom:12px;">&#128230;</div>
+          Aucun materiau trouve
+          <br><a href="{% url 'ui_materiel_create' %}" class="btn btn-primary" style="margin-top:16px;"><i class="fas fa-plus"></i> Ajouter un materiau</a>
         </td></tr>
         {% endfor %}
       </tbody>

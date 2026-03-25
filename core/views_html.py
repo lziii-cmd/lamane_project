@@ -3,6 +3,8 @@ core/views_html.py — Vues HTML (rendu serveur) — LAMANE BTP
 """
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, Avg, Q, Max, Min, F, Value, DecimalField as DjDecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -24,6 +26,7 @@ from core.forms import (
     MarcheTravauxForm, AvancementChantierForm,
     SousTraitantForm, ContratSousTraitanceForm,
     BonSortieForm, LigneBonSortieFormSet,
+    EtapeStandardForm, PhaseVersementForm,
 )
 
 
@@ -35,7 +38,38 @@ def _fmt(val, dec=0):
         return "0"
 
 
+# ─── AUTHENTIFICATION ─────────────────────────────────────────────────────────
+def login_view(request):
+    """Page de connexion."""
+    if request.user.is_authenticated:
+        return redirect("ui_dashboard")
+    error = None
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            next_url = request.GET.get("next") or request.POST.get("next") or "ui_dashboard"
+            return redirect(next_url)
+        else:
+            error = "Nom d'utilisateur ou mot de passe incorrect."
+    return render(request, "lamane/login.html", {"error": error, "next": request.GET.get("next", "")})
+
+
+def logout_view(request):
+    """Déconnexion puis redirection vers la page de reconnexion."""
+    logout(request)
+    return redirect("ui_logged_out")
+
+
+def logged_out_view(request):
+    """Page post-déconnexion avec option de reconnexion."""
+    return render(request, "lamane/logged_out.html")
+
+
 # ─── DASHBOARD ───────────────────────────────────────────────────────────────
+@login_required
 def dashboard_view(request):
     from calendar import monthrange
     today = timezone.now().date()
@@ -96,6 +130,7 @@ def dashboard_view(request):
 
 
 # ─── PROJETS ─────────────────────────────────────────────────────────────────
+@login_required
 def projets_list_view(request):
     q             = request.GET.get("q", "")
     statut_filter = request.GET.get("statut", "")
@@ -127,6 +162,7 @@ def projets_list_view(request):
     return render(request, "lamane/projets_list.html", ctx)
 
 
+@login_required
 def projet_detail_view(request, pk):
     projet     = get_object_or_404(Projet, pk=pk)
     achats     = Achat.objects.filter(projet=projet).select_related("fournisseur").order_by("-date_achat")
@@ -167,6 +203,7 @@ def projet_detail_view(request, pk):
 
 
 # ─── FINANCES ────────────────────────────────────────────────────────────────
+@login_required
 def finances_view(request):
     from calendar import monthrange
     today = timezone.now().date()
@@ -229,6 +266,7 @@ def finances_view(request):
 
 
 # ─── ACHATS ──────────────────────────────────────────────────────────────────
+@login_required
 def achats_list_view(request):
     q             = request.GET.get("q", "")
     mode_filter   = request.GET.get("mode", "")
@@ -256,6 +294,7 @@ def achats_list_view(request):
     return render(request, "lamane/achats_list.html", ctx)
 
 
+@login_required
 def achat_detail_view(request, pk):
     achat  = get_object_or_404(Achat, pk=pk)
     lignes = LigneAchat.objects.filter(achat=achat).select_related("materiel")
@@ -264,6 +303,7 @@ def achat_detail_view(request, pk):
 
 
 # ─── VERSEMENTS ──────────────────────────────────────────────────────────────
+@login_required
 def versements_view(request):
     q           = request.GET.get("q", "")
     type_filter = request.GET.get("type", "")
@@ -295,6 +335,7 @@ def versements_view(request):
 
 
 # ─── CHANTIERS ───────────────────────────────────────────────────────────────
+@login_required
 def chantiers_view(request):
     projets_actifs = Projet.objects.filter(statut="En cours").select_related("proprietaire", "type_projet")
     chantiers_data = []
@@ -320,6 +361,7 @@ def chantiers_view(request):
     return render(request, "lamane/chantiers.html", ctx)
 
 
+@login_required
 def chantier_detail_view(request, pk):
     projet      = get_object_or_404(Projet, pk=pk)
     avancements = AvancementChantier.objects.filter(projet=projet).order_by("periode")
@@ -348,6 +390,7 @@ def chantier_detail_view(request, pk):
 
 
 # ─── MARCHÉS ─────────────────────────────────────────────────────────────────
+@login_required
 def marches_view(request):
     statut_filter = request.GET.get("statut", "")
     marches = MarcheTravaux.objects.select_related("projet").order_by("-date_signature")
@@ -376,6 +419,7 @@ def marches_view(request):
 
 
 # ─── SOUS-TRAITANTS ──────────────────────────────────────────────────────────
+@login_required
 def sous_traitants_view(request):
     sous_traitants = SousTraitant.objects.all().order_by("nom")
     st_data = []
@@ -411,6 +455,7 @@ def sous_traitants_view(request):
 
 
 # ─── CLIENTS ─────────────────────────────────────────────────────────────────
+@login_required
 def clients_view(request):
     q = request.GET.get("q", "")
     clients = Proprietaire.objects.all()
@@ -439,6 +484,7 @@ def clients_view(request):
     return render(request, "lamane/clients_list.html", ctx)
 
 
+@login_required
 def client_detail_view(request, pk):
     from calendar import monthrange
     client  = get_object_or_404(Proprietaire, pk=pk)
@@ -478,6 +524,7 @@ def client_detail_view(request, pk):
 
 
 # ─── STOCK ───────────────────────────────────────────────────────────────────
+@login_required
 def stock_view(request):
     q   = request.GET.get("q", "")
     cat = request.GET.get("cat", "")
@@ -505,12 +552,14 @@ def stock_view(request):
         "page": "stock", "materiaux_data": materiaux_data, "categories": categories,
         "total_materiaux": Materiel.objects.count(),
         "total_categories": CategorieMateriel.objects.count(),
+        "total_bons_sortie": BonSortie.objects.count(),
         "q": q, "cat_filter": cat,
     }
     return render(request, "lamane/stock.html", ctx)
 
 
 # ─── RH ──────────────────────────────────────────────────────────────────────
+@login_required
 def rh_view(request):
     employes = Employe.objects.all().order_by("nom")
     hommes   = employes.filter(sexe="M").count()
@@ -535,6 +584,7 @@ def rh_view(request):
 
 
 # ─── FOURNISSEURS ────────────────────────────────────────────────────────────
+@login_required
 def fournisseurs_view(request):
     q = request.GET.get("q", "")
     fournisseurs = Fournisseur.objects.all()
@@ -572,6 +622,7 @@ def _success(request, msg, url):
 
 # ─── PROJETS CRUD ────────────────────────────────────────────────────────────
 
+@login_required
 def projet_create_view(request):
     form = ProjetForm(request.POST or None)
     if form.is_valid():
@@ -581,6 +632,7 @@ def projet_create_view(request):
                   {"form": form, "title": "Nouveau projet", "action": "Créer", "page": "projets"})
 
 
+@login_required
 def projet_edit_view(request, pk):
     projet = get_object_or_404(Projet, pk=pk)
     form = ProjetForm(request.POST or None, instance=projet)
@@ -592,6 +644,7 @@ def projet_edit_view(request, pk):
                    "action": "Enregistrer", "page": "projets", "obj": projet})
 
 
+@login_required
 def projet_delete_view(request, pk):
     projet = get_object_or_404(Projet, pk=pk)
     if request.method == "POST":
@@ -605,12 +658,14 @@ def projet_delete_view(request, pk):
 
 # ─── TYPES DE PROJETS CRUD ───────────────────────────────────────────────────
 
+@login_required
 def types_projets_view(request):
     types = TypeProjet.objects.annotate(nb_projets=Count("projet")).order_by("nom")
     return render(request, "lamane/types_projets.html",
                   {"page": "types_projets", "types": types})
 
 
+@login_required
 def type_projet_create_view(request):
     form = TypeProjetForm(request.POST or None)
     if form.is_valid():
@@ -622,6 +677,7 @@ def type_projet_create_view(request):
                    "back_url": "/types-projets/"})
 
 
+@login_required
 def type_projet_edit_view(request, pk):
     t = get_object_or_404(TypeProjet, pk=pk)
     form = TypeProjetForm(request.POST or None, instance=t)
@@ -634,6 +690,7 @@ def type_projet_edit_view(request, pk):
                    "back_url": "/types-projets/", "obj": t})
 
 
+@login_required
 def type_projet_delete_view(request, pk):
     t = get_object_or_404(TypeProjet, pk=pk)
     if request.method == "POST":
@@ -647,6 +704,7 @@ def type_projet_delete_view(request, pk):
 
 # ─── CLIENTS (PROPRIETAIRES) CRUD ────────────────────────────────────────────
 
+@login_required
 def client_create_view(request):
     form = ProprietaireForm(request.POST or None)
     if form.is_valid():
@@ -657,6 +715,7 @@ def client_create_view(request):
                    "action": "Créer", "page": "clients", "back_url": "/clients/"})
 
 
+@login_required
 def client_edit_view(request, pk):
     client = get_object_or_404(Proprietaire, pk=pk)
     form = ProprietaireForm(request.POST or None, instance=client)
@@ -671,6 +730,7 @@ def client_edit_view(request, pk):
 
 # ─── FOURNISSEURS CRUD ───────────────────────────────────────────────────────
 
+@login_required
 def fournisseur_create_view(request):
     form = FournisseurForm(request.POST or None)
     if form.is_valid():
@@ -682,6 +742,7 @@ def fournisseur_create_view(request):
                    "back_url": "/fournisseurs/"})
 
 
+@login_required
 def fournisseur_edit_view(request, pk):
     f = get_object_or_404(Fournisseur, pk=pk)
     form = FournisseurForm(request.POST or None, instance=f)
@@ -696,6 +757,7 @@ def fournisseur_edit_view(request, pk):
 
 # ─── EMPLOYES CRUD ───────────────────────────────────────────────────────────
 
+@login_required
 def employe_create_view(request):
     form = EmployeForm(request.POST or None)
     if form.is_valid():
@@ -706,6 +768,7 @@ def employe_create_view(request):
                    "action": "Créer", "page": "rh", "back_url": "/rh/"})
 
 
+@login_required
 def employe_edit_view(request, pk):
     e = get_object_or_404(Employe, pk=pk)
     form = EmployeForm(request.POST or None, instance=e)
@@ -720,6 +783,7 @@ def employe_edit_view(request, pk):
 
 # ─── MATERIAUX CRUD ──────────────────────────────────────────────────────────
 
+@login_required
 def materiel_create_view(request):
     form = MaterielForm(request.POST or None)
     if form.is_valid():
@@ -730,6 +794,7 @@ def materiel_create_view(request):
                    "action": "Créer", "page": "stock", "back_url": "/stock/"})
 
 
+@login_required
 def materiel_edit_view(request, pk):
     m = get_object_or_404(Materiel, pk=pk)
     form = MaterielForm(request.POST or None, instance=m)
@@ -742,6 +807,7 @@ def materiel_edit_view(request, pk):
                    "back_url": "/stock/", "obj": m})
 
 
+@login_required
 def categorie_materiel_create_view(request):
     form = CategorieMaterielForm(request.POST or None)
     if form.is_valid():
@@ -754,6 +820,7 @@ def categorie_materiel_create_view(request):
 
 # ─── ACHATS CRUD ─────────────────────────────────────────────────────────────
 
+@login_required
 def achat_create_view(request):
     form = AchatForm(request.POST or None, request.FILES or None)
     formset = LigneAchatFormSet(request.POST or None, prefix="lignes")
@@ -780,6 +847,7 @@ def achat_create_view(request):
                    "back_url": "/achats/"})
 
 
+@login_required
 def achat_edit_view(request, pk):
     achat = get_object_or_404(Achat, pk=pk)
     form = AchatForm(request.POST or None, request.FILES or None, instance=achat)
@@ -797,6 +865,7 @@ def achat_edit_view(request, pk):
                    "back_url": f"/achats/{pk}/", "obj": achat})
 
 
+@login_required
 def achat_delete_view(request, pk):
     achat = get_object_or_404(Achat, pk=pk)
     if request.method == "POST":
@@ -809,19 +878,25 @@ def achat_delete_view(request, pk):
 
 # ─── VERSEMENTS CRUD ─────────────────────────────────────────────────────────
 
+@login_required
 def versement_create_view(request):
     form = VersementForm(request.POST or None, request.FILES or None)
     if form.is_valid():
         v = form.save()
-        return _success(request,
-                        f"Versement enregistré — Facture PDF générée automatiquement.",
-                        "ui_versements")
+        msg = f"Versement enregistre ({v.numero_facture})"
+        if v.facture_pdf:
+            msg += " — Facture PDF generee automatiquement."
+        else:
+            msg += " — Attention : la facture PDF n'a pas pu etre generee."
+        messages.success(request, msg)
+        return redirect("ui_versement_detail", pk=v.pk)
     return render(request, "lamane/forms/versement_form.html",
                   {"form": form, "title": "Nouveau versement",
                    "action": "Enregistrer", "page": "versements",
                    "back_url": "/versements/"})
 
 
+@login_required
 def versement_delete_view(request, pk):
     v = get_object_or_404(Versement, pk=pk)
     if request.method == "POST":
@@ -834,6 +909,7 @@ def versement_delete_view(request, pk):
 
 # ─── MARCHÉS CRUD ────────────────────────────────────────────────────────────
 
+@login_required
 def marche_create_view(request):
     form = MarcheTravauxForm(request.POST or None)
     if form.is_valid():
@@ -844,6 +920,7 @@ def marche_create_view(request):
                    "action": "Créer", "page": "marches", "back_url": "/marches/"})
 
 
+@login_required
 def marche_edit_view(request, pk):
     marche = get_object_or_404(MarcheTravaux, pk=pk)
     form = MarcheTravauxForm(request.POST or None, instance=marche)
@@ -858,6 +935,7 @@ def marche_edit_view(request, pk):
 
 # ─── AVANCEMENT CHANTIER CRUD ────────────────────────────────────────────────
 
+@login_required
 def avancement_create_view(request):
     projet_id = request.GET.get("projet")
     initial = {}
@@ -879,6 +957,7 @@ def avancement_create_view(request):
 
 # ─── SOUS-TRAITANTS CRUD ─────────────────────────────────────────────────────
 
+@login_required
 def sous_traitant_create_view(request):
     form = SousTraitantForm(request.POST or None)
     if form.is_valid():
@@ -890,6 +969,7 @@ def sous_traitant_create_view(request):
                    "back_url": "/sous-traitants/"})
 
 
+@login_required
 def sous_traitant_edit_view(request, pk):
     st = get_object_or_404(SousTraitant, pk=pk)
     form = SousTraitantForm(request.POST or None, instance=st)
@@ -904,6 +984,7 @@ def sous_traitant_edit_view(request, pk):
 
 # ─── BONS DE SORTIE CRUD ─────────────────────────────────────────────────────
 
+@login_required
 def bons_sortie_list_view(request):
     q = request.GET.get("q", "")
     bons = BonSortie.objects.select_related("projet").order_by("-date_sortie")
@@ -924,6 +1005,7 @@ def bons_sortie_list_view(request):
     return render(request, "lamane/bons_sortie.html", ctx)
 
 
+@login_required
 def bon_sortie_create_view(request):
     form = BonSortieForm(request.POST or None)
     formset = LigneBonSortieFormSet(request.POST or None, prefix="lignes")
@@ -948,6 +1030,7 @@ def bon_sortie_create_view(request):
                    "back_url": "/stock/bons-sortie/"})
 
 
+@login_required
 def bon_sortie_detail_view(request, pk):
     bon = get_object_or_404(BonSortie, pk=pk)
     lignes = bon.lignes.select_related("materiel")
@@ -957,6 +1040,7 @@ def bon_sortie_detail_view(request, pk):
 
 # ─── BILANS FINANCIERS ────────────────────────────────────────────────────────
 
+@login_required
 def bilans_view(request):
     """Page de bilans financiers : P&L par projet, trésorerie, alertes, impayés."""
     from calendar import monthrange
@@ -1126,6 +1210,7 @@ def bilans_view(request):
 
 # ─── STOCK TEMPS RÉEL (vue détaillée) ────────────────────────────────────────
 
+@login_required
 def stock_detail_view(request):
     """Stock réel par matériau : entrées (achats) − sorties (bons de sortie)."""
     q   = request.GET.get("q", "")
@@ -1186,8 +1271,21 @@ def stock_detail_view(request):
 
 # ─── VERSEMENT DETAIL ────────────────────────────────────────────────────────
 
+@login_required
 def versement_detail_view(request, pk):
     versement = get_object_or_404(Versement, pk=pk)
+
+    # Regenerer le PDF si demande ou si absent
+    if request.GET.get("regenerer") == "1" or not versement.facture_pdf:
+        try:
+            versement.generate_facture_pdf()
+            versement.save(update_fields=["facture_pdf"])
+            if request.GET.get("regenerer") == "1":
+                messages.success(request, "Facture PDF regeneree avec succes.")
+                return redirect("ui_versement_detail", pk=pk)
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la generation du PDF : {e}")
+
     ctx = {
         "page": "versements",
         "versement": versement,
@@ -1197,6 +1295,7 @@ def versement_detail_view(request, pk):
 
 # ─── EMPLOYE DETAIL + SUPPRESSION ────────────────────────────────────────────
 
+@login_required
 def employe_detail_view(request, pk):
     employe = get_object_or_404(Employe, pk=pk)
     affectations = ProjetEmploye.objects.filter(employe=employe).select_related("projet").order_by("-projet__date_debut")
@@ -1209,6 +1308,7 @@ def employe_detail_view(request, pk):
     return render(request, "lamane/employe_detail.html", ctx)
 
 
+@login_required
 def employe_delete_view(request, pk):
     employe = get_object_or_404(Employe, pk=pk)
     if request.method == "POST":
@@ -1221,6 +1321,7 @@ def employe_delete_view(request, pk):
 
 # ─── SOUS-TRAITANT DETAIL + SUPPRESSION + CONTRAT ────────────────────────────
 
+@login_required
 def sous_traitant_detail_view(request, pk):
     st = get_object_or_404(SousTraitant, pk=pk)
     contrats = ContratSousTraitance.objects.filter(sous_traitant=st).select_related("projet").order_by("-date_debut")
@@ -1237,6 +1338,7 @@ def sous_traitant_detail_view(request, pk):
     return render(request, "lamane/sous_traitant_detail.html", ctx)
 
 
+@login_required
 def sous_traitant_delete_view(request, pk):
     st = get_object_or_404(SousTraitant, pk=pk)
     if request.method == "POST":
@@ -1247,6 +1349,7 @@ def sous_traitant_delete_view(request, pk):
                    "back_url": "/sous-traitants/"})
 
 
+@login_required
 def contrat_st_create_view(request):
     form = ContratSousTraitanceForm(request.POST or None)
     if form.is_valid():
@@ -1266,6 +1369,7 @@ def contrat_st_create_view(request):
 
 # ─── FOURNISSEUR DETAIL + SUPPRESSION ────────────────────────────────────────
 
+@login_required
 def fournisseur_detail_view(request, pk):
     four = get_object_or_404(Fournisseur, pk=pk)
     achats = Achat.objects.filter(fournisseur=four).select_related("projet").order_by("-date_achat")[:20]
@@ -1283,6 +1387,7 @@ def fournisseur_detail_view(request, pk):
     return render(request, "lamane/fournisseur_detail.html", ctx)
 
 
+@login_required
 def fournisseur_delete_view(request, pk):
     four = get_object_or_404(Fournisseur, pk=pk)
     if request.method == "POST":
@@ -1295,6 +1400,7 @@ def fournisseur_delete_view(request, pk):
 
 # ─── CLIENT SUPPRESSION ───────────────────────────────────────────────────────
 
+@login_required
 def client_delete_view(request, pk):
     client = get_object_or_404(Proprietaire, pk=pk)
     if request.method == "POST":
@@ -1307,6 +1413,7 @@ def client_delete_view(request, pk):
 
 # ─── MATERIAUX LIST + DETAIL ──────────────────────────────────────────────────
 
+@login_required
 def materiaux_list_view(request):
     q = request.GET.get("q", "")
     cat = request.GET.get("cat", "")
@@ -1341,6 +1448,7 @@ def materiaux_list_view(request):
     return render(request, "lamane/materiaux_list.html", ctx)
 
 
+@login_required
 def materiel_detail_view(request, pk):
     materiel = get_object_or_404(Materiel, pk=pk)
     lignes_achat = LigneAchat.objects.filter(materiel=materiel).select_related("achat__projet").order_by("-achat__date_achat")[:20]
@@ -1370,6 +1478,7 @@ def materiel_detail_view(request, pk):
 
 # ─── PROFIL UTILISATEUR ───────────────────────────────────────────────────────
 
+@login_required
 def profil_view(request):
     user = request.user
     ctx = {
@@ -1377,4 +1486,174 @@ def profil_view(request):
         "user": user,
     }
     return render(request, "lamane/profil.html", ctx)
+
+
+# ─── CATEGORIES MATERIAUX ────────────────────────────────────────────────────
+
+@login_required
+def categories_view(request):
+    categories = CategorieMateriel.objects.annotate(
+        nb_materiaux=Count("materiaux")
+    ).order_by("nom")
+    return render(request, "lamane/categories.html",
+                  {"page": "categories", "categories": categories})
+
+
+@login_required
+def categorie_create_view(request):
+    form = CategorieMaterielForm(request.POST or None)
+    if form.is_valid():
+        c = form.save()
+        return _success(request, f"Categorie \u00ab {c.nom} \u00bb creee.", "ui_categories")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouvelle categorie",
+                   "action": "Creer", "page": "categories",
+                   "back_url": "/categories/"})
+
+
+@login_required
+def categorie_edit_view(request, pk):
+    c = get_object_or_404(CategorieMateriel, pk=pk)
+    form = CategorieMaterielForm(request.POST or None, instance=c)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Categorie modifiee.", "ui_categories")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier \u2014 {c.nom}",
+                   "action": "Enregistrer", "page": "categories",
+                   "back_url": "/categories/", "obj": c})
+
+
+@login_required
+def categorie_delete_view(request, pk):
+    c = get_object_or_404(CategorieMateriel, pk=pk)
+    if request.method == "POST":
+        nom = c.nom
+        c.delete()
+        return _success(request, f"Categorie \u00ab {nom} \u00bb supprimee.", "ui_categories")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": c, "titre": c.nom, "page": "categories",
+                   "back_url": "/categories/"})
+
+
+# ─── ETAPES STANDARD ─────────────────────────────────────────────────────────
+
+@login_required
+def etapes_standard_view(request):
+    etapes = EtapeStandard.objects.all().order_by("ordre")
+    ctx = {
+        "page": "etapes_standard",
+        "etapes": etapes,
+        "total_gros": etapes.filter(groupe="gros").count(),
+        "total_second": etapes.filter(groupe="second").count(),
+    }
+    return render(request, "lamane/etapes_standard.html", ctx)
+
+
+@login_required
+def etape_standard_create_view(request):
+    form = EtapeStandardForm(request.POST or None)
+    if form.is_valid():
+        e = form.save()
+        return _success(request, f"Etape \u00ab {e.nom} \u00bb creee.", "ui_etapes_standard")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouvelle etape standard",
+                   "action": "Creer", "page": "etapes_standard",
+                   "back_url": "/etapes-standard/"})
+
+
+@login_required
+def etape_standard_edit_view(request, pk):
+    e = get_object_or_404(EtapeStandard, pk=pk)
+    form = EtapeStandardForm(request.POST or None, instance=e)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Etape modifiee.", "ui_etapes_standard")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier \u2014 {e.nom}",
+                   "action": "Enregistrer", "page": "etapes_standard",
+                   "back_url": "/etapes-standard/", "obj": e})
+
+
+@login_required
+def etape_standard_delete_view(request, pk):
+    e = get_object_or_404(EtapeStandard, pk=pk)
+    if request.method == "POST":
+        nom = e.nom
+        e.delete()
+        return _success(request, f"Etape \u00ab {nom} \u00bb supprimee.", "ui_etapes_standard")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": e, "titre": e.nom, "page": "etapes_standard",
+                   "back_url": "/etapes-standard/"})
+
+
+# ─── PHASES DE VERSEMENT ─────────────────────────────────────────────────────
+
+@login_required
+def phases_versement_view(request):
+    projet_id = request.GET.get("projet", "")
+    phases = PhaseVersement.objects.select_related("projet", "etape_standard").all()
+    if projet_id:
+        phases = phases.filter(projet__pk=projet_id)
+    phases = phases.order_by("projet__nom", "ordre")
+
+    # Calcul du montant verse par phase
+    phases_data = []
+    for p in phases:
+        montant_verse = Versement.objects.filter(phase=p).aggregate(
+            s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+        phases_data.append({
+            "phase": p,
+            "montant_verse": montant_verse,
+            "montant_verse_fmt": _fmt(montant_verse),
+            "montant_prevu_fmt": _fmt(p.montant_prevu),
+            "pct": round(float(montant_verse) / float(p.montant_prevu) * 100, 1) if p.montant_prevu > 0 else 0,
+        })
+
+    projets = Projet.objects.all().order_by("nom")
+    ctx = {
+        "page": "phases_versement",
+        "phases_data": phases_data,
+        "projets": projets,
+        "projet_filter": projet_id,
+        "total_phases": phases.count(),
+    }
+    return render(request, "lamane/phases_versement.html", ctx)
+
+
+@login_required
+def phase_versement_create_view(request):
+    form = PhaseVersementForm(request.POST or None)
+    if form.is_valid():
+        p = form.save()
+        return _success(request, f"Phase \u00ab {p} \u00bb creee.", "ui_phases_versement")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouvelle phase de versement",
+                   "action": "Creer", "page": "phases_versement",
+                   "back_url": "/phases-versement/"})
+
+
+@login_required
+def phase_versement_edit_view(request, pk):
+    p = get_object_or_404(PhaseVersement, pk=pk)
+    form = PhaseVersementForm(request.POST or None, instance=p)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Phase modifiee.", "ui_phases_versement")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier \u2014 {p}",
+                   "action": "Enregistrer", "page": "phases_versement",
+                   "back_url": "/phases-versement/", "obj": p})
+
+
+@login_required
+def phase_versement_delete_view(request, pk):
+    p = get_object_or_404(PhaseVersement, pk=pk)
+    if request.method == "POST":
+        nom = str(p)
+        p.delete()
+        return _success(request, f"Phase \u00ab {nom} \u00bb supprimee.", "ui_phases_versement")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": p, "titre": str(p), "page": "phases_versement",
+                   "back_url": "/phases-versement/"})
 

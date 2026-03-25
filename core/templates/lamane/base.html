@@ -333,6 +333,15 @@
     <a href="{% url 'ui_types_projets' %}" class="nav-item {% if page == 'types_projets' %}active{% endif %}">
       <i class="fas fa-tags"></i><span>Types de projets</span>
     </a>
+    <a href="{% url 'ui_categories' %}" class="nav-item {% if page == 'categories' %}active{% endif %}">
+      <i class="fas fa-layer-group"></i><span>Categories materiaux</span>
+    </a>
+    <a href="{% url 'ui_etapes_standard' %}" class="nav-item {% if page == 'etapes_standard' %}active{% endif %}">
+      <i class="fas fa-list-ol"></i><span>Etapes standard</span>
+    </a>
+    <a href="{% url 'ui_phases_versement' %}" class="nav-item {% if page == 'phases_versement' %}active{% endif %}">
+      <i class="fas fa-tasks"></i><span>Phases versement</span>
+    </a>
     <a href="/admin/" class="nav-item" target="_blank">
       <i class="fas fa-sliders"></i><span>Administration</span>
     </a>
@@ -386,7 +395,7 @@
           <span id="themeLabel" style="margin-left:auto;font-size:11px;color:var(--text-muted);">☀️ Light</span>
         </button>
         <div class="dropdown-divider"></div>
-        <a href="/admin/logout/" class="dropdown-item text-red">
+        <a href="{% url 'ui_logout' %}" class="dropdown-item text-red">
           <i class="fas fa-sign-out-alt"></i> Déconnexion
         </a>
       </div>

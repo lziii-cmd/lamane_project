@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deconnecte — LAMANE BTP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-main: #070b16;
+      --bg-card: #0f1629;
+      --bg-card2: #141b30;
+      --border: rgba(255,255,255,0.07);
+      --gold: #f0a500;
+      --gold-light: #ffc84a;
+      --gold-dark: #c47f00;
+      --blue: #1e6fff;
+      --green: #00c48c;
+      --red: #ff4757;
+      --purple: #a55eea;
+      --text-primary: #f0f4ff;
+      --text-secondary: rgba(240,244,255,0.55);
+      --text-muted: rgba(240,244,255,0.3);
+      --input-bg: rgba(255,255,255,0.06);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-pattern::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(240,165,0,0.06) 0%, transparent 70%);
+      top: -200px;
+      left: -200px;
+      animation: float 18s ease-in-out infinite;
+    }
+    .bg-pattern::after {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(165,94,234,0.05) 0%, transparent 70%);
+      bottom: -150px;
+      right: -150px;
+      animation: float 22s ease-in-out infinite reverse;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-30px) rotate(3deg); }
+    }
+
+    .logout-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 460px;
+      padding: 20px;
+    }
+
+    .logout-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 44px 40px;
+      box-shadow: var(--shadow);
+      text-align: center;
+      animation: fadeUp 0.5s ease forwards;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Animated check icon */
+    .logout-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      border-radius: 50%;
+      background: rgba(0,196,140,0.1);
+      border: 2px solid rgba(0,196,140,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.2s forwards;
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+    .logout-icon i {
+      font-size: 32px;
+      color: var(--green);
+    }
+
+    .logout-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      animation: fadeUp 0.5s ease 0.3s forwards;
+      opacity: 0;
+    }
+
+    .logout-message {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 32px;
+      animation: fadeUp 0.5s ease 0.4s forwards;
+      opacity: 0;
+    }
+
+    /* Buttons */
+    .logout-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: fadeUp 0.5s ease 0.5s forwards;
+      opacity: 0;
+    }
+
+    .btn-reconnect {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #000;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-decoration: none;
+    }
+    .btn-reconnect:hover {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(240,165,0,0.3);
+    }
+    .btn-reconnect:active { transform: translateY(0); }
+
+    /* Separator */
+    .separator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .separator::before, .separator::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .logout-info {
+      margin-top: 24px;
+      padding: 14px 18px;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      text-align: left;
+      animation: fadeUp 0.5s ease 0.6s forwards;
+      opacity: 0;
+    }
+    .logout-info i {
+      color: var(--blue);
+      font-size: 16px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    .logout-info p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Logo footer */
+    .logout-footer {
+      margin-top: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      animation: fadeUp 0.5s ease 0.7s forwards;
+      opacity: 0;
+    }
+    .footer-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(240,165,0,0.2);
+    }
+    .footer-text {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .footer-text strong {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+
+<div class="logout-container">
+  <div class="logout-card">
+    <!-- Success icon -->
+    <div class="logout-icon">
+      <i class="fas fa-check"></i>
+    </div>
+
+    <h1 class="logout-title">Vous etes deconnecte</h1>
+
+    <p class="logout-message">
+      Votre session a ete fermee avec succes.<br>
+      Souhaitez-vous vous reconnecter ?
+    </p>
+
+    <div class="logout-actions">
+      <a href="{% url 'ui_login' %}" class="btn-reconnect">
+        <i class="fas fa-sign-in-alt"></i> Se reconnecter
+      </a>
+    </div>
+
+    <div class="logout-info">
+      <i class="fas fa-info-circle"></i>
+      <p>
+        Pour des raisons de securite, nous vous recommandons de fermer votre navigateur
+        si vous utilisez un ordinateur partage.
+      </p>
+    </div>
+  </div>
+
+  <div class="logout-footer">
+    <div class="footer-logo">&#127959;</div>
+    <div class="footer-text">
+      <strong>LAMANE SARL</strong> — Systeme de gestion BTP
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -92,6 +92,21 @@ class Versement(models.Model):
             count = Versement.objects.filter(projet=self.projet).count() + 1
             self.libelle = f"Versement {count} - {self.projet.nom}"
 
+        # Auto-generer le numero de facture
+        if not self.numero_facture:
+            year = timezone.now().year
+            last = Versement.objects.filter(
+                numero_facture__startswith=f"FAC-{year}"
+            ).order_by("-numero_facture").first()
+            if last and last.numero_facture:
+                try:
+                    seq = int(last.numero_facture.split("-")[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = 1
+            else:
+                seq = 1
+            self.numero_facture = f"FAC-{year}-{seq:04d}"
+
         super().save(*args, **kwargs)
 
         if not self.facture_pdf:
@@ -100,7 +115,7 @@ class Versement(models.Model):
                 super().save(update_fields=['facture_pdf'])
             except Exception as e:
                 import traceback
-                print("[FACTURE] Erreur de génération:", e)
+                print("[FACTURE] Erreur de generation:", e)
                 traceback.print_exc()
 
 

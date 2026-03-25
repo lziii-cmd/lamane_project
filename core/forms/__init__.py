@@ -75,6 +75,32 @@ class EmployeForm(LamaneForm):
                 self.fields[f].required = False
 
 
+# ─── ETAPE STANDARD ──────────────────────────────────────────────────────────
+
+class EtapeStandardForm(LamaneForm):
+    class Meta:
+        model = EtapeStandard
+        fields = ["nom", "ordre", "groupe", "multi_niveau"]
+
+
+# ─── PHASE DE VERSEMENT ──────────────────────────────────────────────────────
+
+class PhaseVersementForm(LamaneForm):
+    class Meta:
+        model = PhaseVersement
+        fields = ["projet", "etape_standard", "libelle", "niveau", "montant_prevu", "echeance", "ordre"]
+        widgets = {
+            "echeance": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["etape_standard"].required = False
+        self.fields["libelle"].required = False
+        self.fields["niveau"].required = False
+        self.fields["echeance"].required = False
+
+
 # ─── CATEGORIE MATERIAU ────────────────────────────────────────────────────────
 
 class CategorieMaterielForm(LamaneForm):

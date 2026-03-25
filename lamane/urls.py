@@ -13,6 +13,11 @@ urlpatterns = [
     # ── Admin ─────────────────────────────────────────────────────────────
     path('admin/', admin.site.urls),
 
+    # ── Authentification ──────────────────────────────────────────────────
+    path('connexion/', views_html.login_view, name='ui_login'),
+    path('deconnexion/', views_html.logout_view, name='ui_logout'),
+    path('deconnecte/', views_html.logged_out_view, name='ui_logged_out'),
+
     # ── API JSON ──────────────────────────────────────────────────────────
     path('api/', include('core.api.urls')),
     path('api/', include('core.urls')),
@@ -102,6 +107,24 @@ urlpatterns = [
 
     # ── Bilans financiers ─────────────────────────────────────────────────
     path('bilans/', views_html.bilans_view, name='ui_bilans'),
+
+    # ── Categories materiaux ─────────────────────────────────────────────
+    path('categories/', views_html.categories_view, name='ui_categories'),
+    path('categories/nouveau/', views_html.categorie_create_view, name='ui_categorie_create'),
+    path('categories/<str:pk>/modifier/', views_html.categorie_edit_view, name='ui_categorie_edit'),
+    path('categories/<str:pk>/supprimer/', views_html.categorie_delete_view, name='ui_categorie_delete'),
+
+    # ── Etapes standard ──────────────────────────────────────────────────
+    path('etapes-standard/', views_html.etapes_standard_view, name='ui_etapes_standard'),
+    path('etapes-standard/nouveau/', views_html.etape_standard_create_view, name='ui_etape_standard_create'),
+    path('etapes-standard/<int:pk>/modifier/', views_html.etape_standard_edit_view, name='ui_etape_standard_edit'),
+    path('etapes-standard/<int:pk>/supprimer/', views_html.etape_standard_delete_view, name='ui_etape_standard_delete'),
+
+    # ── Phases de versement ──────────────────────────────────────────────
+    path('phases-versement/', views_html.phases_versement_view, name='ui_phases_versement'),
+    path('phases-versement/nouveau/', views_html.phase_versement_create_view, name='ui_phase_versement_create'),
+    path('phases-versement/<int:pk>/modifier/', views_html.phase_versement_edit_view, name='ui_phase_versement_edit'),
+    path('phases-versement/<int:pk>/supprimer/', views_html.phase_versement_delete_view, name='ui_phase_versement_delete'),
 
     # ── Profil utilisateur ────────────────────────────────────────────────
     path('profil/', views_html.profil_view, name='ui_profil'),

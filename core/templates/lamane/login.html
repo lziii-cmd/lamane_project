@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — LAMANE BTP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-main: #070b16;
+      --bg-card: #0f1629;
+      --border: rgba(255,255,255,0.07);
+      --gold: #f0a500;
+      --gold-light: #ffc84a;
+      --gold-dark: #c47f00;
+      --blue: #1e6fff;
+      --purple: #a55eea;
+      --green: #00c48c;
+      --red: #ff4757;
+      --text-primary: #f0f4ff;
+      --text-secondary: rgba(240,244,255,0.55);
+      --text-muted: rgba(240,244,255,0.3);
+      --input-bg: rgba(255,255,255,0.06);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-pattern::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(240,165,0,0.08) 0%, transparent 70%);
+      top: -200px;
+      right: -200px;
+      animation: float 15s ease-in-out infinite;
+    }
+    .bg-pattern::after {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(30,111,255,0.06) 0%, transparent 70%);
+      bottom: -150px;
+      left: -150px;
+      animation: float 20s ease-in-out infinite reverse;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-30px) rotate(3deg); }
+    }
+
+    .login-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 36px;
+      box-shadow: var(--shadow);
+      animation: fadeUp 0.5s ease forwards;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Logo */
+    .login-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 6px 20px rgba(240,165,0,0.3);
+    }
+    .logo-text strong {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: 1px;
+      display: block;
+    }
+    .logo-text small {
+      font-size: 11px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .login-title {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+    }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 18px;
+      position: relative;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px 12px 42px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+      border-color: rgba(240,165,0,0.5);
+      box-shadow: 0 0 0 3px rgba(240,165,0,0.1);
+    }
+    .form-input:focus + i,
+    .form-input:focus ~ i { color: var(--gold); }
+    .form-input::placeholder { color: var(--text-muted); }
+
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #000;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 8px;
+    }
+    .btn-login:hover {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(240,165,0,0.3);
+    }
+    .btn-login:active { transform: translateY(0); }
+
+    /* Error */
+    .error-msg {
+      background: rgba(255,71,87,0.12);
+      border: 1px solid rgba(255,71,87,0.25);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--red);
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    /* Footer */
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .login-footer a { color: var(--gold); text-decoration: none; }
+    .login-footer a:hover { text-decoration: underline; }
+
+    /* Security badge */
+    .security-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .security-badge i { color: var(--green); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+
+<div class="login-container">
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="logo-icon">&#127959;</div>
+      <div class="logo-text">
+        <strong>LAMANE</strong>
+        <small>BTP Management</small>
+      </div>
+    </div>
+
+    <div class="login-title">Connectez-vous pour acceder au systeme</div>
+
+    {% if error %}
+    <div class="error-msg">
+      <i class="fas fa-exclamation-circle"></i>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" autocomplete="on">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+      <div class="form-group">
+        <label for="id_username">Nom d'utilisateur</label>
+        <div class="input-wrapper">
+          <input type="text" id="id_username" name="username" class="form-input"
+                 placeholder="Entrez votre identifiant" required autofocus autocomplete="username">
+          <i class="fas fa-user"></i>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="id_password">Mot de passe</label>
+        <div class="input-wrapper">
+          <input type="password" id="id_password" name="password" class="form-input"
+                 placeholder="Entrez votre mot de passe" required autocomplete="current-password">
+          <i class="fas fa-lock"></i>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login">
+        <i class="fas fa-sign-in-alt"></i> Se connecter
+      </button>
+    </form>
+
+    <div class="security-badge">
+      <i class="fas fa-shield-alt"></i>
+      Connexion securisee — LAMANE SARL, Dakar
+    </div>
+  </div>
+
+  <div class="login-footer">
+    &copy; 2025 LAMANE SARL — Systeme de gestion BTP
+  </div>
+</div>
+
+</body>
+</html>

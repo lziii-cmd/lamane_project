@@ -1,0 +1,107 @@
+{% extends "lamane/base.html" %}
+{% block title %}Etapes standard{% endblock %}
+{% block page_title %}Etapes standard{% endblock %}
+{% block page_sub %}{{ etapes|length }} etape{{ etapes|length|pluralize }} · {{ total_gros }} gros oeuvre · {{ total_second }} second oeuvre{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <div></div>
+  <a href="{% url 'ui_etape_standard_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouvelle etape
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- KPIs -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-list-ol"></i></div>
+    <div class="kpi-value">{{ etapes|length }}</div>
+    <div class="kpi-label">Total etapes</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--orange);--icon-bg:rgba(255,121,63,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hammer"></i></div>
+    <div class="kpi-value">{{ total_gros }}</div>
+    <div class="kpi-label">Gros oeuvre</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-paint-roller"></i></div>
+    <div class="kpi-value">{{ total_second }}</div>
+    <div class="kpi-label">Second oeuvre</div>
+  </div>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list-ol text-gold"></i> Catalogue des etapes de construction</div>
+    <span class="badge badge-yellow">{{ etapes|length }} etape{{ etapes|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Ordre</th>
+          <th>Nom de l'etape</th>
+          <th>Groupe</th>
+          <th>Multi-niveau</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in etapes %}
+        <tr>
+          <td>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(240,165,0,0.12);color:var(--gold);font-weight:700;font-size:14px;">
+              {{ e.ordre }}
+            </span>
+          </td>
+          <td class="bold">{{ e.nom }}</td>
+          <td>
+            {% if e.groupe == "gros" %}
+            <span class="badge badge-orange"><span class="badge-dot" style="background:var(--orange);"></span> Gros oeuvre</span>
+            {% else %}
+            <span class="badge badge-blue"><span class="badge-dot" style="background:var(--blue-light);"></span> Second oeuvre</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if e.multi_niveau %}
+            <span class="badge badge-green"><i class="fas fa-check" style="font-size:10px;"></i> Oui</span>
+            {% else %}
+            <span class="text-muted text-sm">Non</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:6px;justify-content:flex-end;">
+              <a href="{% url 'ui_etape_standard_edit' e.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+                <i class="fas fa-edit"></i> Modifier
+              </a>
+              <a href="{% url 'ui_etape_standard_delete' e.pk %}" class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);">
+                <i class="fas fa-trash-alt"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;">&#128736;</div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucune etape standard</div>
+            <div style="font-size:12px;margin-bottom:18px;">Definissez les etapes types du cycle de construction BTP.</div>
+            <a href="{% url 'ui_etape_standard_create' %}" class="btn btn-primary" style="font-size:13px;">
+              <i class="fas fa-plus"></i> Creer une etape
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

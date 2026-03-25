@@ -188,6 +188,11 @@ CORS_ALLOWED_ORIGINS = [
 
 
 
+# ── Authentification ──────────────────────────────────────────────────────────
+LOGIN_URL = '/connexion/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/deconnecte/'
+
 COMPANY = {
     "name": "LAMANE SARL",
     "ninea": "NINEA 123456769",
