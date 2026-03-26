@@ -17,6 +17,10 @@ from core.models import (
     MarcheTravaux, AvancementChantier,
     SousTraitant, ContratSousTraitance,
     BonSortie, LigneBonSortie,
+    CompteComptable, EcritureComptable, LigneEcriture,
+    CompteBancaire, TransactionBancaire,
+    DocumentProjet, BordereauPrix, LigneBordereau, DecompteGD,
+    ProfilUtilisateur,
 )
 
 
@@ -314,3 +318,144 @@ LigneBonSortieFormSet = inlineformset_factory(
     min_num=1,
     validate_min=True,
 )
+
+
+# ─── COMPTABILITE ─────────────────────────────────────────────────────────
+
+class CompteComptableForm(LamaneForm):
+    class Meta:
+        model = CompteComptable
+        fields = ["code", "libelle", "type_compte", "classe", "actif"]
+
+
+class EcritureComptableForm(LamaneForm):
+    class Meta:
+        model = EcritureComptable
+        fields = ["date_ecriture", "libelle", "journal", "projet"]
+        widgets = {
+            "date_ecriture": forms.DateInput(attrs={"type": "date"}),
+        }
+
+
+class LigneEcritureForm(LamaneForm):
+    class Meta:
+        model = LigneEcriture
+        fields = ["compte", "libelle", "debit", "credit"]
+
+
+LigneEcritureFormSet = inlineformset_factory(
+    EcritureComptable, LigneEcriture,
+    form=LigneEcritureForm,
+    fields=["compte", "libelle", "debit", "credit"],
+    extra=4,
+    can_delete=True,
+    min_num=2,
+    validate_min=True,
+)
+
+
+# ─── COMPTES BANCAIRES ───────────────────────────────────────────────────
+
+class CompteBancaireForm(LamaneForm):
+    class Meta:
+        model = CompteBancaire
+        fields = ["nom", "type_compte", "banque", "numero_compte", "solde_initial", "actif"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["banque"].required = False
+        self.fields["numero_compte"].required = False
+
+
+class TransactionBancaireForm(LamaneForm):
+    class Meta:
+        model = TransactionBancaire
+        fields = [
+            "compte", "type_transaction", "montant",
+            "date_transaction", "libelle", "projet",
+            "compte_destination",
+        ]
+        widgets = {
+            "date_transaction": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["projet"].required = False
+        self.fields["compte_destination"].required = False
+
+
+# ─── DOCUMENTS BTP ────────────────────────────────────────────────────────
+
+class DocumentProjetForm(LamaneForm):
+    class Meta:
+        model = DocumentProjet
+        fields = ["projet", "type_document", "titre", "description",
+                  "fichier", "date_document"]
+        widgets = {
+            "date_document": forms.DateInput(attrs={"type": "date"}),
+            "description": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["description"].required = False
+
+
+class BordereauPrixForm(LamaneForm):
+    class Meta:
+        model = BordereauPrix
+        fields = ["projet", "numero", "version", "date_edition", "statut"]
+        widgets = {
+            "date_edition": forms.DateInput(attrs={"type": "date"}),
+        }
+
+
+class LigneBordereauForm(LamaneForm):
+    class Meta:
+        model = LigneBordereau
+        fields = ["numero_prix", "designation", "unite", "quantite", "prix_unitaire"]
+
+
+LigneBordereauFormSet = inlineformset_factory(
+    BordereauPrix, LigneBordereau,
+    form=LigneBordereauForm,
+    fields=["numero_prix", "designation", "unite", "quantite", "prix_unitaire"],
+    extra=5,
+    can_delete=True,
+    min_num=1,
+    validate_min=True,
+)
+
+
+class DecompteGDForm(LamaneForm):
+    class Meta:
+        model = DecompteGD
+        fields = [
+            "projet", "marche",
+            "montant_travaux", "montant_avenants",
+            "montant_penalites", "montant_retenue_garantie",
+            "montant_avances", "montant_acomptes",
+            "observations",
+        ]
+        widgets = {
+            "observations": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["marche"].required = False
+        self.fields["observations"].required = False
+
+
+# ─── PROFIL UTILISATEUR ──────────────────────────────────────────────────
+
+class ProfilUtilisateurForm(LamaneForm):
+    class Meta:
+        model = ProfilUtilisateur
+        fields = ["role", "telephone", "photo"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["telephone"].required = False
+        self.fields["photo"].required = False

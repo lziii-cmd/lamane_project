@@ -1,0 +1,76 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}DGD — {{ dgd.projet.nom }}{% endblock %}
+{% block page_title %}Decompte General Definitif{% endblock %}
+{% block page_sub %}{{ dgd.projet.nom }}{% endblock %}
+
+{% block content %}
+<div class="mb-4 animate-fade-up">
+  <a href="{% url 'ui_dgd_list' %}" class="btn btn-ghost" style="font-size:13px;">
+    <i class="fas fa-arrow-left"></i> Retour DGD
+  </a>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-plus-circle text-gold"></i> Montants</div>
+    </div>
+    <div style="padding:20px;">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Montant des travaux</span>
+          <span class="bold" style="font-variant-numeric:tabular-nums;">{{ dgd.montant_travaux|floatformat:0|intcomma }} FCFA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Avenants</span>
+          <span class="bold" style="font-variant-numeric:tabular-nums;">{{ dgd.montant_avenants|floatformat:0|intcomma }} FCFA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:2px solid var(--gold);">
+          <span class="bold" style="color:var(--gold);">MONTANT TOTAL</span>
+          <span class="bold" style="font-size:18px;color:var(--gold);font-variant-numeric:tabular-nums;">{{ dgd.montant_total|floatformat:0|intcomma }} FCFA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-minus-circle text-gold"></i> Deductions & paiements</div>
+    </div>
+    <div style="padding:20px;">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Penalites de retard</span>
+          <span class="bold" style="color:var(--red);font-variant-numeric:tabular-nums;">-{{ dgd.montant_penalites|floatformat:0|intcomma }} FCFA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Retenue de garantie</span>
+          <span class="bold" style="color:var(--red);font-variant-numeric:tabular-nums;">-{{ dgd.montant_retenue_garantie|floatformat:0|intcomma }} FCFA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Avances versees</span>
+          <span class="bold" style="font-variant-numeric:tabular-nums;">{{ dgd.montant_avances|floatformat:0|intcomma }} FCFA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Acomptes payes</span>
+          <span class="bold" style="font-variant-numeric:tabular-nums;">{{ dgd.montant_acomptes|floatformat:0|intcomma }} FCFA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:2px solid var(--gold);">
+          <span class="bold" style="color:var(--gold);">SOLDE A PAYER</span>
+          <span class="bold" style="font-size:18px;color:{% if dgd.solde_a_payer > 0 %}var(--green){% else %}var(--red){% endif %};font-variant-numeric:tabular-nums;">{{ dgd.solde_a_payer|floatformat:0|intcomma }} FCFA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if dgd.observations %}
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-comment text-gold"></i> Observations</div>
+  </div>
+  <div style="padding:20px;">{{ dgd.observations }}</div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ doc.titre }}{% endblock %}
+{% block page_title %}{{ doc.titre }}{% endblock %}
+{% block page_sub %}{{ doc.get_type_document_display }} · {{ doc.projet.nom }}{% endblock %}
+
+{% block content %}
+<div class="mb-4 animate-fade-up">
+  <a href="{% url 'ui_documents_btp' %}" class="btn btn-ghost" style="font-size:13px;">
+    <i class="fas fa-arrow-left"></i> Retour documents
+  </a>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-file text-gold"></i> {{ doc.titre }}</div>
+    {% if doc.type_document == "pv_reunion" %}<span class="badge badge-blue">PV Reunion</span>
+    {% elif doc.type_document == "pv_reception" %}<span class="badge badge-green">PV Reception</span>
+    {% elif doc.type_document == "plan" %}<span class="badge badge-purple">Plan</span>
+    {% elif doc.type_document == "attachement" %}<span class="badge badge-yellow">Attachement</span>
+    {% elif doc.type_document == "photo" %}<span class="badge badge-cyan">Photo</span>
+    {% elif doc.type_document == "rapport" %}<span class="badge badge-orange">Rapport</span>
+    {% else %}<span class="badge badge-red">Autre</span>{% endif %}
+  </div>
+  <div style="padding:20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div>
+        <div class="text-muted text-sm">Projet</div>
+        <div class="bold">{{ doc.projet.nom }}</div>
+      </div>
+      <div>
+        <div class="text-muted text-sm">Date du document</div>
+        <div>{{ doc.date_document|date:"d/m/Y" }}</div>
+      </div>
+      <div>
+        <div class="text-muted text-sm">Auteur</div>
+        <div>{% if doc.auteur %}{{ doc.auteur.get_full_name|default:doc.auteur.username }}{% else %}—{% endif %}</div>
+      </div>
+      <div>
+        <div class="text-muted text-sm">Date ajout</div>
+        <div>{{ doc.date_creation|date:"d/m/Y H:i" }}</div>
+      </div>
+    </div>
+    {% if doc.description %}
+    <div style="margin-bottom:20px;">
+      <div class="text-muted text-sm">Description</div>
+      <div style="padding:12px;background:var(--bg-card2);border-radius:8px;border:1px solid var(--border);margin-top:6px;">
+        {{ doc.description }}
+      </div>
+    </div>
+    {% endif %}
+    {% if doc.fichier %}
+    <div style="display:flex;gap:12px;">
+      <a href="{{ doc.fichier.url }}" class="btn btn-primary" target="_blank">
+        <i class="fas fa-download"></i> Telecharger le fichier
+      </a>
+      <a href="{% url 'ui_document_btp_delete' doc.pk %}" class="btn" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);">
+        <i class="fas fa-trash-alt"></i> Supprimer
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

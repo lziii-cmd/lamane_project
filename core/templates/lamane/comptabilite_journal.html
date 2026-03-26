@@ -1,0 +1,118 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Journal comptable{% endblock %}
+{% block page_title %}Journal comptable{% endblock %}
+{% block page_sub %}{{ total_ecritures }} ecriture{{ total_ecritures|pluralize }} comptable{{ total_ecritures|pluralize }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <select name="journal" class="filter-select" onchange="this.form.submit()">
+      <option value="">Tous les journaux</option>
+      {% for code, label in journals %}
+      <option value="{{ code }}" {% if journal_filter == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <a href="{% url 'ui_ecriture_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouvelle ecriture
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-book"></i></div>
+    <div class="kpi-value">{{ total_ecritures }}</div>
+    <div class="kpi-label">Ecritures</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);--icon-bg:rgba(0,196,140,0.12);">
+    <div class="kpi-icon"><i class="fas fa-arrow-down"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ total_debit }} F</div>
+    <div class="kpi-label">Total debits</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--red);--icon-bg:rgba(255,71,87,0.12);">
+    <div class="kpi-icon"><i class="fas fa-arrow-up"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ total_credit }} F</div>
+    <div class="kpi-label">Total credits</div>
+  </div>
+</div>
+
+<!-- Navigation comptabilite -->
+<div class="mb-4 animate-fade-up" style="display:flex;gap:8px;flex-wrap:wrap;">
+  <a href="{% url 'ui_comptabilite_journal' %}" class="btn btn-primary" style="font-size:12px;"><i class="fas fa-book"></i> Journal</a>
+  <a href="{% url 'ui_comptabilite_grand_livre' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-book-open"></i> Grand livre</a>
+  <a href="{% url 'ui_comptabilite_balance' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-scale-balanced"></i> Balance</a>
+  <a href="{% url 'ui_comptabilite_plan' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-sitemap"></i> Plan comptable</a>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-book text-gold"></i> Journal des ecritures</div>
+    <span class="badge badge-blue">{{ total_ecritures }} ecriture{{ total_ecritures|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>N° Piece</th>
+          <th>Date</th>
+          <th>Libelle</th>
+          <th>Journal</th>
+          <th>Projet</th>
+          <th style="text-align:right;">Debit</th>
+          <th style="text-align:right;">Credit</th>
+          <th style="text-align:center;">Eq.</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in ecritures %}
+        <tr>
+          <td class="bold">{{ e.numero_piece }}</td>
+          <td>{{ e.date_ecriture|date:"d/m/Y" }}</td>
+          <td>{{ e.libelle|truncatewords:8 }}</td>
+          <td>
+            {% if e.journal == "AC" %}<span class="badge badge-blue">Achats</span>
+            {% elif e.journal == "VT" %}<span class="badge badge-green">Ventes</span>
+            {% elif e.journal == "BQ" %}<span class="badge badge-purple">Banque</span>
+            {% elif e.journal == "CA" %}<span class="badge badge-yellow">Caisse</span>
+            {% else %}<span class="badge badge-red">OD</span>{% endif %}
+          </td>
+          <td>{% if e.projet %}{{ e.projet.nom|truncatewords:3 }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;">{{ e.total_debit|floatformat:0|intcomma }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;">{{ e.total_credit|floatformat:0|intcomma }}</td>
+          <td style="text-align:center;">
+            {% if e.est_equilibree %}<i class="fas fa-check-circle" style="color:var(--green);"></i>
+            {% else %}<i class="fas fa-exclamation-circle" style="color:var(--red);"></i>{% endif %}
+          </td>
+          <td style="text-align:right;">
+            <a href="{% url 'ui_ecriture_detail' e.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;">&#128214;</div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucune ecriture comptable</div>
+            <div style="font-size:12px;margin-bottom:18px;">Les ecritures sont generees automatiquement lors des achats et versements.</div>
+            <a href="{% url 'ui_ecriture_create' %}" class="btn btn-primary" style="font-size:13px;">
+              <i class="fas fa-plus"></i> Saisir une ecriture
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Bordereaux de prix{% endblock %}
+{% block page_title %}Bordereaux de prix{% endblock %}
+{% block page_sub %}{{ total_bordereaux }} bordereau{{ total_bordereaux|pluralize:"x" }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{% url 'ui_documents_btp' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-folder-open"></i> Documents</a>
+    <a href="{% url 'ui_bordereaux' %}" class="btn btn-primary" style="font-size:12px;"><i class="fas fa-table-list"></i> Bordereaux</a>
+    <a href="{% url 'ui_dgd_list' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-file-invoice-dollar"></i> DGD</a>
+  </div>
+  <a href="{% url 'ui_bordereau_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouveau bordereau
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-table-list text-gold"></i> Bordereaux de prix</div>
+    <span class="badge badge-blue">{{ total_bordereaux }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Numero</th>
+          <th>Projet</th>
+          <th>Version</th>
+          <th>Date edition</th>
+          <th>Statut</th>
+          <th style="text-align:right;">Total HT</th>
+          <th style="text-align:center;">Lignes</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bordereaux %}
+        <tr>
+          <td class="bold">{{ b.numero }}</td>
+          <td>{{ b.projet.nom|truncatewords:3 }}</td>
+          <td><span class="badge badge-blue">v{{ b.version }}</span></td>
+          <td>{{ b.date_edition|date:"d/m/Y" }}</td>
+          <td>
+            {% if b.statut == "brouillon" %}<span class="badge badge-yellow">Brouillon</span>
+            {% elif b.statut == "valide" %}<span class="badge badge-green">Valide</span>
+            {% else %}<span class="badge badge-red">Annule</span>{% endif %}
+          </td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">{{ b.total_ht|floatformat:0|intcomma }} F</td>
+          <td style="text-align:center;"><span class="badge badge-blue">{{ b.lignes.count }}</span></td>
+          <td style="text-align:right;">
+            <a href="{% url 'ui_bordereau_detail' b.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;"><i class="fas fa-table-list"></i></div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucun bordereau de prix</div>
+            <a href="{% url 'ui_bordereau_create' %}" class="btn btn-primary" style="font-size:13px;margin-top:12px;">
+              <i class="fas fa-plus"></i> Creer un bordereau
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Bordereau {{ bordereau.numero }}{% endblock %}
+{% block page_title %}Bordereau {{ bordereau.numero }}{% endblock %}
+{% block page_sub %}{{ bordereau.projet.nom }} · Version {{ bordereau.version }}{% endblock %}
+
+{% block content %}
+<div class="mb-4 animate-fade-up">
+  <a href="{% url 'ui_bordereaux' %}" class="btn btn-ghost" style="font-size:13px;">
+    <i class="fas fa-arrow-left"></i> Retour bordereaux
+  </a>
+</div>
+
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ total_ht }} F</div>
+    <div class="kpi-label">Total HT</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-list"></i></div>
+    <div class="kpi-value">{{ lignes|length }}</div>
+    <div class="kpi-label">Postes</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:{% if bordereau.statut == 'valide' %}var(--green){% elif bordereau.statut == 'annule' %}var(--red){% else %}var(--orange){% endif %};--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{{ bordereau.get_statut_display }}</div>
+    <div class="kpi-label">Statut</div>
+  </div>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-table-list text-gold"></i> Detail des postes</div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>N° Prix</th>
+          <th>Designation</th>
+          <th>Unite</th>
+          <th style="text-align:right;">Quantite</th>
+          <th style="text-align:right;">Prix unitaire</th>
+          <th style="text-align:right;">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in lignes %}
+        <tr>
+          <td class="bold">{{ l.numero_prix }}</td>
+          <td>{{ l.designation }}</td>
+          <td>{{ l.unite }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;">{{ l.quantite|floatformat:2 }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;">{{ l.prix_unitaire|floatformat:0|intcomma }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">{{ l.montant_total|floatformat:0|intcomma }} F</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">
+            Aucun poste dans ce bordereau.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if lignes %}
+      <tfoot>
+        <tr style="font-weight:700;border-top:2px solid var(--gold);background:var(--bg-card2);">
+          <td colspan="5" class="bold">TOTAL HT</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--gold);">{{ total_ht }} FCFA</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

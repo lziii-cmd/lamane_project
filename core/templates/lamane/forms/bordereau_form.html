@@ -1,0 +1,82 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Bordereau de prix avec detail des postes{% endblock %}
+
+{% block content %}
+<div class="mb-4 animate-fade-up">
+  <a href="{{ back_url }}" class="btn btn-ghost" style="font-size:13px;">
+    <i class="fas fa-arrow-left"></i> Retour
+  </a>
+</div>
+
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}
+{{ formset.management_form }}
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-edit text-gold"></i> Informations du bordereau</div>
+  </div>
+  <div style="padding:20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:var(--red);font-size:12px;margin-top:4px;">{{ field.errors.0 }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list text-gold"></i> Postes du bordereau</div>
+    <button type="button" class="btn btn-ghost" style="font-size:12px;" onclick="addLigneBDP()">
+      <i class="fas fa-plus"></i> Ajouter un poste
+    </button>
+  </div>
+  <div style="padding:20px;">
+    <div style="display:grid;grid-template-columns:1fr 2.5fr 0.8fr 1fr 1fr 40px;gap:8px;padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);margin-bottom:8px;">
+      <div>N° Prix</div><div>Designation</div><div>Unite</div><div>Quantite</div><div>Prix unit.</div><div></div>
+    </div>
+    <div id="lignes-bdp-container">
+    {% for lf in formset %}
+    <div class="ligne-row" style="display:grid;grid-template-columns:1fr 2.5fr 0.8fr 1fr 1fr 40px;gap:8px;align-items:center;padding:10px 14px;background:var(--bg-card2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;">
+      <div style="margin-bottom:0;">{{ lf.numero_prix }}</div>
+      <div style="margin-bottom:0;">{{ lf.designation }}</div>
+      <div style="margin-bottom:0;">{{ lf.unite }}</div>
+      <div style="margin-bottom:0;">{{ lf.quantite }}</div>
+      <div style="margin-bottom:0;">{{ lf.prix_unitaire }}</div>
+      <div>{% if lf.DELETE %}<label style="cursor:pointer;color:var(--red);">{{ lf.DELETE }}<i class="fas fa-trash-alt" style="font-size:12px;"></i></label>{% endif %}</div>
+      {{ lf.id }}
+    </div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;justify-content:flex-end;gap:12px;">
+  <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+  <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {{ action }}</button>
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addLigneBDP() {
+  const container = document.getElementById('lignes-bdp-container');
+  const totalForms = document.getElementById('id_lignes-TOTAL_FORMS');
+  const idx = parseInt(totalForms.value);
+  const template = container.querySelector('.ligne-row:last-child');
+  if (!template) return;
+  const newRow = template.cloneNode(true);
+  newRow.innerHTML = newRow.innerHTML.replace(new RegExp('lignes-\\d+', 'g'), 'lignes-' + idx);
+  newRow.querySelectorAll('input, select').forEach(el => { if (el.type !== 'hidden') el.value = ''; if (el.type === 'checkbox') el.checked = false; });
+  container.appendChild(newRow);
+  totalForms.value = idx + 1;
+}
+</script>
+{% endblock %}

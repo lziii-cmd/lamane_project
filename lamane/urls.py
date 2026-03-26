@@ -128,6 +128,37 @@ urlpatterns = [
 
     # ── Profil utilisateur ────────────────────────────────────────────────
     path('profil/', views_html.profil_view, name='ui_profil'),
+
+    # ── Comptabilité ────────────────────────────────────────────────────
+    path('comptabilite/journal/', views_html.comptabilite_journal_view, name='ui_comptabilite_journal'),
+    path('comptabilite/grand-livre/', views_html.comptabilite_grand_livre_view, name='ui_comptabilite_grand_livre'),
+    path('comptabilite/balance/', views_html.comptabilite_balance_view, name='ui_comptabilite_balance'),
+    path('comptabilite/plan-comptable/', views_html.comptabilite_plan_view, name='ui_comptabilite_plan'),
+    path('comptabilite/ecritures/nouveau/', views_html.ecriture_create_view, name='ui_ecriture_create'),
+    path('comptabilite/ecritures/<str:pk>/', views_html.ecriture_detail_view, name='ui_ecriture_detail'),
+
+    # ── Trésorerie / Comptes bancaires ─────────────────────────────────
+    path('tresorerie/', views_html.tresorerie_view, name='ui_tresorerie'),
+    path('tresorerie/comptes/nouveau/', views_html.compte_bancaire_create_view, name='ui_compte_bancaire_create'),
+    path('tresorerie/comptes/<str:pk>/', views_html.compte_bancaire_detail_view, name='ui_compte_bancaire_detail'),
+    path('tresorerie/comptes/<str:pk>/modifier/', views_html.compte_bancaire_edit_view, name='ui_compte_bancaire_edit'),
+    path('tresorerie/transactions/nouveau/', views_html.transaction_create_view, name='ui_transaction_create'),
+
+    # ── Documents BTP ──────────────────────────────────────────────────
+    path('documents-btp/', views_html.documents_btp_view, name='ui_documents_btp'),
+    path('documents-btp/nouveau/', views_html.document_btp_create_view, name='ui_document_btp_create'),
+    path('documents-btp/bordereaux/', views_html.bordereaux_view, name='ui_bordereaux'),
+    path('documents-btp/bordereaux/nouveau/', views_html.bordereau_create_view, name='ui_bordereau_create'),
+    path('documents-btp/bordereaux/<str:pk>/', views_html.bordereau_detail_view, name='ui_bordereau_detail'),
+    path('documents-btp/dgd/', views_html.dgd_list_view, name='ui_dgd_list'),
+    path('documents-btp/dgd/nouveau/', views_html.dgd_create_view, name='ui_dgd_create'),
+    path('documents-btp/dgd/<str:pk>/', views_html.dgd_detail_view, name='ui_dgd_detail'),
+    path('documents-btp/<str:pk>/', views_html.document_btp_detail_view, name='ui_document_btp_detail'),
+    path('documents-btp/<str:pk>/supprimer/', views_html.document_btp_delete_view, name='ui_document_btp_delete'),
+
+    # ── Gestion utilisateurs ───────────────────────────────────────────
+    path('utilisateurs/', views_html.utilisateurs_view, name='ui_utilisateurs'),
+    path('utilisateurs/<int:pk>/profil/', views_html.profil_edit_view, name='ui_profil_edit'),
 ]
 
 if settings.DEBUG:

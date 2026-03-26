@@ -179,6 +179,11 @@ class ContratSousTraitance(models.Model):
                 for c in [p, p.with_suffix(p.suffix.swapcase())] + \
                           [p.with_suffix(e) for e in ['.png','.PNG','.jpg','.JPG']]:
                     if c.exists():
+                        # proportional needs both w and h
+                        if w and not h:
+                            h = w
+                        if h and not w:
+                            w = h
                         return RLImage(str(c), width=w, height=h, kind='proportional')
             except Exception:
                 pass

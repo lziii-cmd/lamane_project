@@ -1,0 +1,149 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Tresorerie{% endblock %}
+{% block page_title %}Tresorerie{% endblock %}
+{% block page_sub %}{{ total_comptes }} compte{{ total_comptes|pluralize }} · Solde total : {{ solde_total }} FCFA{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <div style="display:flex;gap:8px;">
+    <a href="{% url 'ui_compte_bancaire_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Nouveau compte
+    </a>
+    <a href="{% url 'ui_transaction_create' %}" class="btn btn-ghost">
+      <i class="fas fa-exchange-alt"></i> Nouvelle transaction
+    </a>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Solde total -->
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-wallet"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ solde_total }} F</div>
+    <div class="kpi-label">Solde total</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-university"></i></div>
+    <div class="kpi-value">{{ total_comptes }}</div>
+    <div class="kpi-label">Comptes actifs</div>
+  </div>
+</div>
+
+<!-- Comptes -->
+<div class="card mb-6 animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-university text-gold"></i> Comptes bancaires & Caisses</div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom du compte</th>
+          <th>Type</th>
+          <th>Banque / Operateur</th>
+          <th style="text-align:right;">Solde actuel</th>
+          <th style="text-align:center;">Transactions</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cd in comptes_data %}
+        <tr>
+          <td class="bold">{{ cd.compte.nom }}</td>
+          <td>
+            {% if cd.compte.type_compte == "banque" %}<span class="badge badge-blue">Banque</span>
+            {% elif cd.compte.type_compte == "caisse" %}<span class="badge badge-yellow">Caisse</span>
+            {% else %}<span class="badge badge-purple">Mobile Money</span>{% endif %}
+          </td>
+          <td>{{ cd.compte.banque|default:"—" }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:{% if cd.solde_raw >= 0 %}var(--green){% else %}var(--red){% endif %};">
+            {{ cd.solde }} FCFA
+          </td>
+          <td style="text-align:center;">
+            <span class="badge badge-blue">{{ cd.nb_transactions }}</span>
+          </td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:6px;justify-content:flex-end;">
+              <a href="{% url 'ui_compte_bancaire_detail' cd.compte.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+                <i class="fas fa-eye"></i>
+              </a>
+              <a href="{% url 'ui_compte_bancaire_edit' cd.compte.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+                <i class="fas fa-edit"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;"><i class="fas fa-university"></i></div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucun compte bancaire</div>
+            <div style="font-size:12px;margin-bottom:18px;">Ajoutez vos comptes bancaires, caisses et portefeuilles mobile money.</div>
+            <a href="{% url 'ui_compte_bancaire_create' %}" class="btn btn-primary" style="font-size:13px;">
+              <i class="fas fa-plus"></i> Ajouter un compte
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Dernieres transactions -->
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-exchange-alt text-gold"></i> Dernieres transactions</div>
+    <a href="{% url 'ui_transaction_create' %}" class="btn btn-ghost" style="font-size:12px;">
+      <i class="fas fa-plus"></i> Nouvelle
+    </a>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Compte</th>
+          <th>Type</th>
+          <th>Libelle</th>
+          <th>Projet</th>
+          <th style="text-align:right;">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in dernieres_tx %}
+        <tr>
+          <td>{{ tx.date_transaction|date:"d/m/Y" }}</td>
+          <td class="bold">{{ tx.compte.nom }}</td>
+          <td>
+            {% if tx.type_transaction == "entree" %}<span class="badge badge-green">Entree</span>
+            {% elif tx.type_transaction == "sortie" %}<span class="badge badge-red">Sortie</span>
+            {% else %}<span class="badge badge-blue">Virement</span>{% endif %}
+          </td>
+          <td>{{ tx.libelle|truncatewords:6 }}</td>
+          <td>{% if tx.projet %}{{ tx.projet.nom|truncatewords:3 }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:{% if tx.type_transaction == 'entree' %}var(--green){% elif tx.type_transaction == 'sortie' %}var(--red){% else %}var(--blue){% endif %};">
+            {% if tx.type_transaction == "entree" %}+{% elif tx.type_transaction == "sortie" %}-{% endif %}{{ tx.montant|floatformat:0|intcomma }} F
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">
+            Aucune transaction enregistree.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

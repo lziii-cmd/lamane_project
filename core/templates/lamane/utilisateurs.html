@@ -1,0 +1,113 @@
+{% extends "lamane/base.html" %}
+{% block title %}Utilisateurs{% endblock %}
+{% block page_title %}Gestion des utilisateurs{% endblock %}
+{% block page_sub %}{{ total_users }} utilisateur{{ total_users|pluralize }} · Roles et permissions{% endblock %}
+
+{% block content %}
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-users"></i></div>
+    <div class="kpi-value">{{ total_users }}</div>
+    <div class="kpi-label">Utilisateurs</div>
+  </div>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-user-shield text-gold"></i> Utilisateurs et roles</div>
+    <span class="badge badge-blue">{{ total_users }} utilisateur{{ total_users|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th style="text-align:center;">Actif</th>
+          <th style="text-align:center;">Staff</th>
+          <th>Derniere connexion</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ud in users_data %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;font-size:14px;">
+                {{ ud.user.username|slice:":1"|upper }}
+              </div>
+              <div>
+                <div class="bold">{{ ud.user.get_full_name|default:ud.user.username }}</div>
+                <div class="text-muted text-sm">@{{ ud.user.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ ud.user.email|default:"—" }}</td>
+          <td>
+            {% if ud.role == "direction" %}<span class="badge badge-gold">Direction</span>
+            {% elif ud.role == "comptable" %}<span class="badge badge-blue">Comptable</span>
+            {% elif ud.role == "chef_chantier" %}<span class="badge badge-orange">Chef chantier</span>
+            {% elif ud.role == "gestionnaire" %}<span class="badge badge-purple">Gestionnaire</span>
+            {% elif ud.role == "admin" %}<span class="badge badge-red">Admin</span>
+            {% else %}<span class="badge badge-yellow">Non defini</span>{% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if ud.user.is_active %}<i class="fas fa-check-circle" style="color:var(--green);"></i>
+            {% else %}<i class="fas fa-times-circle" style="color:var(--red);"></i>{% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if ud.user.is_staff %}<i class="fas fa-check-circle" style="color:var(--blue);"></i>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if ud.user.last_login %}{{ ud.user.last_login|date:"d/m/Y H:i" }}
+            {% else %}<span class="text-muted">Jamais</span>{% endif %}
+          </td>
+          <td style="text-align:right;">
+            <a href="{% url 'ui_profil_edit' ud.user.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+              <i class="fas fa-edit"></i> Role
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card mt-4 animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-info-circle text-gold"></i> Roles disponibles</div>
+  </div>
+  <div style="padding:20px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+      <div style="padding:14px;background:var(--bg-card2);border-radius:10px;border:1px solid var(--border);">
+        <div class="bold" style="color:var(--gold);margin-bottom:4px;"><i class="fas fa-crown"></i> Direction</div>
+        <div class="text-sm text-muted">Acces complet a toutes les fonctionnalites</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:10px;border:1px solid var(--border);">
+        <div class="bold" style="color:var(--blue);margin-bottom:4px;"><i class="fas fa-calculator"></i> Comptable</div>
+        <div class="text-sm text-muted">Comptabilite, tresorerie, achats, versements</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:10px;border:1px solid var(--border);">
+        <div class="bold" style="color:var(--orange);margin-bottom:4px;"><i class="fas fa-hard-hat"></i> Chef chantier</div>
+        <div class="text-sm text-muted">Avancement chantier, bons de sortie, documents</div>
+      </div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:10px;border:1px solid var(--border);">
+        <div class="bold" style="color:var(--purple);margin-bottom:4px;"><i class="fas fa-boxes"></i> Gestionnaire stock</div>
+        <div class="text-sm text-muted">Materiaux, achats, bons de sortie, categories</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

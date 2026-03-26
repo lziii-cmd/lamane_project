@@ -1,0 +1,109 @@
+{% extends "lamane/base.html" %}
+{% block title %}Documents BTP{% endblock %}
+{% block page_title %}Documents BTP{% endblock %}
+{% block page_sub %}{{ total_documents }} document{{ total_documents|pluralize }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <select name="type" class="filter-select" onchange="this.form.submit()">
+      <option value="">Tous les types</option>
+      {% for code, label in types %}
+      <option value="{{ code }}" {% if type_filter == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="projet" class="filter-select" onchange="this.form.submit()">
+      <option value="">Tous les projets</option>
+      {% for p in projets %}
+      <option value="{{ p.pk }}" {% if projet_filter == p.pk|slugify %}selected{% endif %}>{{ p.nom }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <div style="display:flex;gap:8px;">
+    <a href="{% url 'ui_document_btp_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Nouveau document
+    </a>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 animate-fade-up" style="padding:12px 16px;border-radius:10px;background:{% if 'success' in msg.tags %}rgba(0,196,140,0.12){% else %}rgba(255,80,80,0.12){% endif %};border:1px solid {% if 'success' in msg.tags %}rgba(0,196,140,0.3){% else %}rgba(255,80,80,0.3){% endif %};color:{% if 'success' in msg.tags %}var(--green){% else %}#ff5050{% endif %};">
+  <i class="fas fa-{% if 'success' in msg.tags %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Sous-navigation docs BTP -->
+<div class="mb-4 animate-fade-up" style="display:flex;gap:8px;flex-wrap:wrap;">
+  <a href="{% url 'ui_documents_btp' %}" class="btn btn-primary" style="font-size:12px;"><i class="fas fa-folder-open"></i> Documents</a>
+  <a href="{% url 'ui_bordereaux' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-table-list"></i> Bordereaux</a>
+  <a href="{% url 'ui_dgd_list' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-file-invoice-dollar"></i> DGD</a>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-folder-open text-gold"></i> Documents du projet</div>
+    <span class="badge badge-blue">{{ total_documents }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Titre</th>
+          <th>Projet</th>
+          <th>Date</th>
+          <th>Auteur</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in documents %}
+        <tr>
+          <td>
+            {% if doc.type_document == "pv_reunion" %}<span class="badge badge-blue">PV Reunion</span>
+            {% elif doc.type_document == "pv_reception" %}<span class="badge badge-green">PV Reception</span>
+            {% elif doc.type_document == "plan" %}<span class="badge badge-purple">Plan</span>
+            {% elif doc.type_document == "attachement" %}<span class="badge badge-yellow">Attachement</span>
+            {% elif doc.type_document == "photo" %}<span class="badge badge-cyan">Photo</span>
+            {% elif doc.type_document == "rapport" %}<span class="badge badge-orange">Rapport</span>
+            {% else %}<span class="badge badge-red">Autre</span>{% endif %}
+          </td>
+          <td class="bold">{{ doc.titre|truncatewords:6 }}</td>
+          <td>{{ doc.projet.nom|truncatewords:3 }}</td>
+          <td>{{ doc.date_document|date:"d/m/Y" }}</td>
+          <td>{% if doc.auteur %}{{ doc.auteur.get_full_name|default:doc.auteur.username }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td style="text-align:right;">
+            <div style="display:flex;gap:6px;justify-content:flex-end;">
+              <a href="{% url 'ui_document_btp_detail' doc.pk %}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">
+                <i class="fas fa-eye"></i>
+              </a>
+              {% if doc.fichier %}
+              <a href="{{ doc.fichier.url }}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" target="_blank">
+                <i class="fas fa-download"></i>
+              </a>
+              {% endif %}
+              <a href="{% url 'ui_document_btp_delete' doc.pk %}" class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);">
+                <i class="fas fa-trash-alt"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:14px;"><i class="fas fa-folder-open"></i></div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Aucun document BTP</div>
+            <div style="font-size:12px;margin-bottom:18px;">Ajoutez des PV, plans, attachements et rapports de chantier.</div>
+            <a href="{% url 'ui_document_btp_create' %}" class="btn btn-primary" style="font-size:13px;">
+              <i class="fas fa-plus"></i> Ajouter un document
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

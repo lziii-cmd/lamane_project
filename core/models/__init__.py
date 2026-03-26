@@ -27,3 +27,13 @@ from .avancement_chantier import AvancementChantier
 from .sous_traitant import SousTraitant, ContratSousTraitance
 from .situation_mensuelle import SituationMensuelle
 from .bon_sortie import BonSortie, LigneBonSortie
+
+# ── Comptabilité & Finance ────────────────────────────────────────────────
+from .compte_comptable import CompteComptable, EcritureComptable, LigneEcriture
+from .compte_bancaire import CompteBancaire, TransactionBancaire
+
+# ── Documents BTP ─────────────────────────────────────────────────────────
+from .document_btp import DocumentProjet, BordereauPrix, LigneBordereau, DecompteGD
+
+# ── Gestion utilisateurs ─────────────────────────────────────────────────
+from .profil_utilisateur import ProfilUtilisateur

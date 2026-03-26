@@ -1,0 +1,111 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Grand livre{% endblock %}
+{% block page_title %}Grand livre{% endblock %}
+{% block page_sub %}{% if compte_selectionne %}{{ compte_selectionne.code }} — {{ compte_selectionne.libelle }}{% else %}Selectionnez un compte{% endif %}{% endblock %}
+
+{% block content %}
+<!-- Navigation comptabilite -->
+<div class="mb-4 animate-fade-up" style="display:flex;gap:8px;flex-wrap:wrap;">
+  <a href="{% url 'ui_comptabilite_journal' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-book"></i> Journal</a>
+  <a href="{% url 'ui_comptabilite_grand_livre' %}" class="btn btn-primary" style="font-size:12px;"><i class="fas fa-book-open"></i> Grand livre</a>
+  <a href="{% url 'ui_comptabilite_balance' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-scale-balanced"></i> Balance</a>
+  <a href="{% url 'ui_comptabilite_plan' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-sitemap"></i> Plan comptable</a>
+</div>
+
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <select name="compte" class="filter-select" onchange="this.form.submit()" style="min-width:320px;">
+      <option value="">-- Choisir un compte --</option>
+      {% for c in comptes %}
+      <option value="{{ c.pk }}" {% if compte_id == c.pk|slugify %}selected{% endif %}>{{ c.code }} — {{ c.libelle }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% if compte_selectionne %}
+<div class="kpi-grid mb-6 animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);--icon-bg:rgba(240,165,0,0.12);">
+    <div class="kpi-icon"><i class="fas fa-hashtag"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ compte_selectionne.code }}</div>
+    <div class="kpi-label">Code</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);--icon-bg:rgba(30,111,255,0.12);">
+    <div class="kpi-icon"><i class="fas fa-list"></i></div>
+    <div class="kpi-value">{{ lignes|length }}</div>
+    <div class="kpi-label">Mouvements</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--purple);--icon-bg:rgba(165,94,234,0.12);">
+    <div class="kpi-icon"><i class="fas fa-tag"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{{ compte_selectionne.get_type_compte_display }}</div>
+    <div class="kpi-label">Type</div>
+  </div>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-book-open text-gold"></i> Mouvements — {{ compte_selectionne.code }}</div>
+    <span class="badge badge-blue">{{ lignes|length }} ligne{{ lignes|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>N° Piece</th>
+          <th>Libelle</th>
+          <th style="text-align:right;">Debit</th>
+          <th style="text-align:right;">Credit</th>
+          <th style="text-align:right;">Solde</th>
+        </tr>
+      </thead>
+      <tbody id="grand-livre-body">
+        {% for l in lignes %}
+        <tr>
+          <td>{{ l.ecriture.date_ecriture|date:"d/m/Y" }}</td>
+          <td class="bold">{{ l.ecriture.numero_piece }}</td>
+          <td>{{ l.libelle|default:l.ecriture.libelle|truncatewords:8 }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;" data-debit="{{ l.debit }}">{{ l.debit|floatformat:0|intcomma }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;" data-credit="{{ l.credit }}">{{ l.credit|floatformat:0|intcomma }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;" class="solde-cell"></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:48px;color:var(--text-muted);">
+            Aucun mouvement sur ce compte.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card animate-fade-up">
+  <div style="text-align:center;padding:64px;color:var(--text-muted);">
+    <div style="font-size:48px;margin-bottom:16px;"><i class="fas fa-book-open"></i></div>
+    <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Grand livre</div>
+    <div style="font-size:13px;">Selectionnez un compte dans la liste ci-dessus pour voir ses mouvements.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let solde = 0;
+  document.querySelectorAll('#grand-livre-body tr').forEach(function(row) {
+    const dCell = row.querySelector('[data-debit]');
+    const cCell = row.querySelector('[data-credit]');
+    const sCell = row.querySelector('.solde-cell');
+    if (dCell && cCell && sCell) {
+      solde += parseFloat(dCell.dataset.debit || 0) - parseFloat(cCell.dataset.credit || 0);
+      sCell.textContent = new Intl.NumberFormat('fr-FR').format(Math.round(solde));
+      sCell.style.color = solde >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+  });
+});
+</script>
+{% endblock %}

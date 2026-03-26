@@ -1,0 +1,126 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Ecriture {{ ecriture.numero_piece }}{% endblock %}
+{% block page_title %}{{ ecriture.numero_piece }}{% endblock %}
+{% block page_sub %}{{ ecriture.libelle }}{% endblock %}
+
+{% block content %}
+<div class="mb-4 animate-fade-up">
+  <a href="{% url 'ui_comptabilite_journal' %}" class="btn btn-ghost" style="font-size:13px;">
+    <i class="fas fa-arrow-left"></i> Retour au journal
+  </a>
+</div>
+
+<div class="grid-2 mb-6 animate-fade-up">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-info-circle text-gold"></i> Informations</div>
+    </div>
+    <div style="padding:20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div class="text-muted text-sm">N° Piece</div>
+          <div class="bold" style="font-size:16px;color:var(--gold);">{{ ecriture.numero_piece }}</div>
+        </div>
+        <div>
+          <div class="text-muted text-sm">Date</div>
+          <div class="bold">{{ ecriture.date_ecriture|date:"d/m/Y" }}</div>
+        </div>
+        <div>
+          <div class="text-muted text-sm">Journal</div>
+          <div>
+            {% if ecriture.journal == "AC" %}<span class="badge badge-blue">Achats</span>
+            {% elif ecriture.journal == "VT" %}<span class="badge badge-green">Ventes</span>
+            {% elif ecriture.journal == "BQ" %}<span class="badge badge-purple">Banque</span>
+            {% elif ecriture.journal == "CA" %}<span class="badge badge-yellow">Caisse</span>
+            {% else %}<span class="badge badge-red">OD</span>{% endif %}
+          </div>
+        </div>
+        <div>
+          <div class="text-muted text-sm">Validee</div>
+          <div>
+            {% if ecriture.validee %}<span class="badge badge-green"><i class="fas fa-check"></i> Oui</span>
+            {% else %}<span class="badge badge-yellow">En attente</span>{% endif %}
+          </div>
+        </div>
+        <div style="grid-column:span 2;">
+          <div class="text-muted text-sm">Libelle</div>
+          <div>{{ ecriture.libelle }}</div>
+        </div>
+        {% if ecriture.projet %}
+        <div style="grid-column:span 2;">
+          <div class="text-muted text-sm">Projet</div>
+          <div><a href="{% url 'ui_projet_detail' ecriture.projet.pk %}">{{ ecriture.projet.nom }}</a></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-calculator text-gold"></i> Totaux</div>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:16px;justify-content:center;">
+      <div style="text-align:center;">
+        <div class="text-muted text-sm">Total debit</div>
+        <div style="font-size:24px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;">{{ ecriture.total_debit|floatformat:0|intcomma }} FCFA</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="text-muted text-sm">Total credit</div>
+        <div style="font-size:24px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;">{{ ecriture.total_credit|floatformat:0|intcomma }} FCFA</div>
+      </div>
+      <div style="text-align:center;padding-top:12px;border-top:2px solid var(--border);">
+        {% if ecriture.est_equilibree %}
+        <span class="badge badge-green" style="font-size:14px;padding:8px 16px;"><i class="fas fa-check-circle"></i> Ecriture equilibree</span>
+        {% else %}
+        <span class="badge badge-red" style="font-size:14px;padding:8px 16px;"><i class="fas fa-exclamation-triangle"></i> DESEQUILIBRE</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list text-gold"></i> Lignes de l'ecriture</div>
+    <span class="badge badge-blue">{{ lignes|length }} ligne{{ lignes|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Compte</th>
+          <th>Libelle</th>
+          <th style="text-align:right;">Debit</th>
+          <th style="text-align:right;">Credit</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in lignes %}
+        <tr>
+          <td>
+            <span class="bold" style="color:var(--gold);font-family:monospace;">{{ l.compte.code }}</span>
+            <span class="text-muted text-sm" style="margin-left:6px;">{{ l.compte.libelle }}</span>
+          </td>
+          <td>{{ l.libelle|default:"—" }}</td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;{% if l.debit > 0 %}color:var(--green);font-weight:600;{% endif %}">
+            {% if l.debit > 0 %}{{ l.debit|floatformat:0|intcomma }}{% endif %}
+          </td>
+          <td style="text-align:right;font-variant-numeric:tabular-nums;{% if l.credit > 0 %}color:var(--red);font-weight:600;{% endif %}">
+            {% if l.credit > 0 %}{{ l.credit|floatformat:0|intcomma }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:700;border-top:2px solid var(--gold);background:var(--bg-card2);">
+          <td colspan="2" class="bold">TOTAUX</td>
+          <td style="text-align:right;color:var(--green);font-variant-numeric:tabular-nums;">{{ ecriture.total_debit|floatformat:0|intcomma }}</td>
+          <td style="text-align:right;color:var(--red);font-variant-numeric:tabular-nums;">{{ ecriture.total_credit|floatformat:0|intcomma }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

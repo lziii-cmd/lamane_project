@@ -1,0 +1,107 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Saisie manuelle d'une ecriture comptable{% endblock %}
+
+{% block content %}
+<div class="mb-4 animate-fade-up">
+  <a href="{{ back_url }}" class="btn btn-ghost" style="font-size:13px;">
+    <i class="fas fa-arrow-left"></i> Retour
+  </a>
+</div>
+
+<form method="post" novalidate class="animate-fade-up">{% csrf_token %}
+{{ formset.management_form }}
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-edit text-gold"></i> En-tete de l'ecriture</div>
+  </div>
+  <div style="padding:20px;">
+    {% if form.non_field_errors %}
+    <div style="padding:12px;border-radius:8px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);margin-bottom:16px;">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:var(--red);font-size:12px;margin-top:4px;">{{ field.errors.0 }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-list text-gold"></i> Lignes de l'ecriture</div>
+    <button type="button" class="btn btn-ghost" style="font-size:12px;" onclick="addLigne()">
+      <i class="fas fa-plus"></i> Ajouter une ligne
+    </button>
+  </div>
+  <div style="padding:20px;">
+    {% if formset.non_form_errors %}
+    <div style="padding:12px;border-radius:8px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--red);margin-bottom:16px;">
+      {{ formset.non_form_errors }}
+    </div>
+    {% endif %}
+
+    <div style="display:grid;grid-template-columns:2.5fr 2fr 1fr 1fr 40px;gap:8px;padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);margin-bottom:8px;">
+      <div>Compte</div>
+      <div>Libelle</div>
+      <div>Debit</div>
+      <div>Credit</div>
+      <div></div>
+    </div>
+
+    <div id="lignes-container">
+    {% for ligne_form in formset %}
+    <div class="ligne-row" style="display:grid;grid-template-columns:2.5fr 2fr 1fr 1fr 40px;gap:8px;align-items:center;padding:10px 14px;background:var(--bg-card2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;">
+      <div class="form-group" style="margin-bottom:0;">{{ ligne_form.compte }}</div>
+      <div class="form-group" style="margin-bottom:0;">{{ ligne_form.libelle }}</div>
+      <div class="form-group" style="margin-bottom:0;">{{ ligne_form.debit }}</div>
+      <div class="form-group" style="margin-bottom:0;">{{ ligne_form.credit }}</div>
+      <div>
+        {% if ligne_form.DELETE %}
+        <label style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:#ff4757;border-radius:8px;cursor:pointer;">
+          {{ ligne_form.DELETE }} <i class="fas fa-trash-alt" style="font-size:12px;"></i>
+        </label>
+        {% endif %}
+      </div>
+      {{ ligne_form.id }}
+    </div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;justify-content:flex-end;gap:12px;">
+  <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+  <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {{ action }}</button>
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addLigne() {
+  const container = document.getElementById('lignes-container');
+  const totalForms = document.getElementById('id_lignes-TOTAL_FORMS');
+  const idx = parseInt(totalForms.value);
+  const template = container.querySelector('.ligne-row:last-child');
+  if (!template) return;
+  const newRow = template.cloneNode(true);
+  newRow.innerHTML = newRow.innerHTML.replace(new RegExp('lignes-\\d+', 'g'), 'lignes-' + idx);
+  // Clear values
+  newRow.querySelectorAll('input, select').forEach(function(el) {
+    if (el.type !== 'hidden') el.value = '';
+    if (el.type === 'checkbox') el.checked = false;
+  });
+  container.appendChild(newRow);
+  totalForms.value = idx + 1;
+}
+</script>
+{% endblock %}

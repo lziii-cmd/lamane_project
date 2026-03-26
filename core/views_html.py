@@ -18,6 +18,10 @@ from core.models import (
     LigneAchat, PhaseVersement, ProjetEmploye,
     Materiel, CategorieMateriel, BonSortie, LigneBonSortie,
     EtapeStandard,
+    CompteComptable, EcritureComptable, LigneEcriture,
+    CompteBancaire, TransactionBancaire,
+    DocumentProjet, BordereauPrix, LigneBordereau, DecompteGD,
+    ProfilUtilisateur,
 )
 from core.forms import (
     ProjetForm, TypeProjetForm, ProprietaireForm, EmployeForm,
@@ -27,6 +31,15 @@ from core.forms import (
     SousTraitantForm, ContratSousTraitanceForm,
     BonSortieForm, LigneBonSortieFormSet,
     EtapeStandardForm, PhaseVersementForm,
+    CompteComptableForm, EcritureComptableForm, LigneEcritureFormSet,
+    CompteBancaireForm, TransactionBancaireForm,
+    DocumentProjetForm, BordereauPrixForm, LigneBordereauFormSet,
+    DecompteGDForm, ProfilUtilisateurForm,
+)
+from core.services.comptabilite import (
+    generer_ecriture_achat,
+    generer_ecriture_versement,
+    generer_ecriture_sous_traitance,
 )
 
 
@@ -837,6 +850,11 @@ def achat_create_view(request):
             achat.save(update_fields=["bon_entree_pdf"])
         except Exception as e:
             print(f"[BON ENTREE] Erreur PDF: {e}")
+        # Écriture comptable automatique
+        try:
+            generer_ecriture_achat(achat)
+        except Exception as e:
+            print(f"[COMPTA] Erreur écriture achat: {e}")
         return _success(request,
                         f"Achat enregistré — Bon d'entrée généré automatiquement.",
                         "ui_achats")
@@ -888,6 +906,11 @@ def versement_create_view(request):
             msg += " — Facture PDF generee automatiquement."
         else:
             msg += " — Attention : la facture PDF n'a pas pu etre generee."
+        # Écriture comptable automatique
+        try:
+            generer_ecriture_versement(v)
+        except Exception as e:
+            print(f"[COMPTA] Erreur écriture versement: {e}")
         messages.success(request, msg)
         return redirect("ui_versement_detail", pk=v.pk)
     return render(request, "lamane/forms/versement_form.html",
@@ -1360,6 +1383,11 @@ def contrat_st_create_view(request):
             c.save(update_fields=["contrat_pdf"])
         except Exception:
             pass  # PDF generation optional
+        # Écriture comptable automatique
+        try:
+            generer_ecriture_sous_traitance(c)
+        except Exception as e:
+            print(f"[COMPTA] Erreur écriture sous-traitance: {e}")
         return _success(request, "Contrat créé — PDF généré.", "ui_sous_traitants")
     return render(request, "lamane/forms/generic_form.html",
                   {"form": form, "title": "Nouveau contrat de sous-traitance",
@@ -1656,4 +1684,428 @@ def phase_versement_delete_view(request, pk):
     return render(request, "lamane/forms/confirm_delete.html",
                   {"obj": p, "titre": str(p), "page": "phases_versement",
                    "back_url": "/phases-versement/"})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  MODULE COMPTABILITÉ
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+def comptabilite_journal_view(request):
+    """Journal comptable — liste des écritures."""
+    journal_filter = request.GET.get("journal", "")
+    qs = EcritureComptable.objects.select_related("projet").prefetch_related("lignes__compte")
+
+    if journal_filter:
+        qs = qs.filter(journal=journal_filter)
+
+    ecritures = qs[:200]
+    totaux = qs.aggregate(
+        total_debit=Coalesce(Sum("lignes__debit"), Decimal("0")),
+        total_credit=Coalesce(Sum("lignes__credit"), Decimal("0")),
+    )
+    ctx = {
+        "page": "comptabilite",
+        "ecritures": ecritures,
+        "journal_filter": journal_filter,
+        "journals": EcritureComptable.JOURNAL_CHOICES,
+        "total_ecritures": qs.count(),
+        "total_debit": _fmt(totaux["total_debit"]),
+        "total_credit": _fmt(totaux["total_credit"]),
+    }
+    return render(request, "lamane/comptabilite_journal.html", ctx)
+
+
+@login_required
+def comptabilite_grand_livre_view(request):
+    """Grand livre — mouvements par compte."""
+    compte_id = request.GET.get("compte", "")
+    comptes = CompteComptable.objects.filter(actif=True)
+    lignes = []
+    compte_selectionne = None
+
+    if compte_id:
+        compte_selectionne = get_object_or_404(CompteComptable, pk=compte_id)
+        lignes = LigneEcriture.objects.filter(
+            compte=compte_selectionne
+        ).select_related("ecriture", "ecriture__projet").order_by("ecriture__date_ecriture")
+
+    ctx = {
+        "page": "comptabilite",
+        "comptes": comptes,
+        "lignes": lignes,
+        "compte_selectionne": compte_selectionne,
+        "compte_id": compte_id,
+    }
+    return render(request, "lamane/comptabilite_grand_livre.html", ctx)
+
+
+@login_required
+def comptabilite_balance_view(request):
+    """Balance des comptes — synthèse débit/crédit par compte."""
+    comptes = CompteComptable.objects.filter(actif=True).annotate(
+        total_debit=Coalesce(Sum("lignes_ecriture__debit"), Decimal("0")),
+        total_credit=Coalesce(Sum("lignes_ecriture__credit"), Decimal("0")),
+    ).order_by("code")
+
+    balance_data = []
+    for c in comptes:
+        solde = c.total_debit - c.total_credit
+        if c.total_debit > 0 or c.total_credit > 0:
+            balance_data.append({
+                "compte": c,
+                "debit": _fmt(c.total_debit),
+                "credit": _fmt(c.total_credit),
+                "solde_debiteur": _fmt(solde) if solde > 0 else "",
+                "solde_crediteur": _fmt(abs(solde)) if solde < 0 else "",
+                "solde_raw": solde,
+            })
+
+    total_d = sum(c.total_debit for c in comptes)
+    total_c = sum(c.total_credit for c in comptes)
+
+    ctx = {
+        "page": "comptabilite",
+        "balance_data": balance_data,
+        "total_debit": _fmt(total_d),
+        "total_credit": _fmt(total_c),
+    }
+    return render(request, "lamane/comptabilite_balance.html", ctx)
+
+
+@login_required
+def comptabilite_plan_view(request):
+    """Plan comptable SYSCOHADA — vue de tous les comptes."""
+    classe_filter = request.GET.get("classe", "")
+    qs = CompteComptable.objects.all()
+    if classe_filter:
+        qs = qs.filter(classe=int(classe_filter))
+
+    comptes_par_classe = {}
+    for c in qs:
+        comptes_par_classe.setdefault(c.classe, []).append(c)
+
+    ctx = {
+        "page": "comptabilite",
+        "comptes_par_classe": dict(sorted(comptes_par_classe.items())),
+        "classe_filter": classe_filter,
+        "classes": CompteComptable.CLASSE_CHOICES,
+        "total_comptes": qs.count(),
+    }
+    return render(request, "lamane/comptabilite_plan.html", ctx)
+
+
+@login_required
+def ecriture_create_view(request):
+    """Créer une écriture comptable manuelle."""
+    form = EcritureComptableForm(request.POST or None)
+    formset = LigneEcritureFormSet(request.POST or None, prefix="lignes")
+    if request.method == "POST" and form.is_valid() and formset.is_valid():
+        ecriture = form.save()
+        formset.instance = ecriture
+        formset.save()
+        return _success(request,
+                        f"Écriture {ecriture.numero_piece} créée.",
+                        "ui_comptabilite_journal")
+    return render(request, "lamane/forms/ecriture_form.html",
+                  {"form": form, "formset": formset,
+                   "title": "Nouvelle écriture comptable",
+                   "action": "Enregistrer", "page": "comptabilite",
+                   "back_url": "/comptabilite/journal/"})
+
+
+@login_required
+def ecriture_detail_view(request, pk):
+    """Détail d'une écriture comptable."""
+    ecriture = get_object_or_404(
+        EcritureComptable.objects.prefetch_related("lignes__compte"),
+        pk=pk
+    )
+    ctx = {
+        "page": "comptabilite",
+        "ecriture": ecriture,
+        "lignes": ecriture.lignes.all(),
+    }
+    return render(request, "lamane/ecriture_detail.html", ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  MODULE TRÉSORERIE / COMPTES BANCAIRES
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+def tresorerie_view(request):
+    """Dashboard trésorerie — vue d'ensemble des comptes."""
+    comptes = CompteBancaire.objects.filter(actif=True)
+    comptes_data = []
+    solde_total = Decimal("0")
+    for c in comptes:
+        solde = c.solde_actuel
+        solde_total += solde
+        nb_tx = c.transactions.count()
+        comptes_data.append({
+            "compte": c,
+            "solde": _fmt(solde),
+            "solde_raw": solde,
+            "nb_transactions": nb_tx,
+        })
+
+    # Dernières transactions
+    dernieres_tx = TransactionBancaire.objects.select_related(
+        "compte", "projet"
+    ).order_by("-date_transaction")[:20]
+
+    ctx = {
+        "page": "tresorerie",
+        "comptes_data": comptes_data,
+        "solde_total": _fmt(solde_total),
+        "solde_total_raw": solde_total,
+        "dernieres_tx": dernieres_tx,
+        "total_comptes": comptes.count(),
+    }
+    return render(request, "lamane/tresorerie.html", ctx)
+
+
+@login_required
+def compte_bancaire_create_view(request):
+    form = CompteBancaireForm(request.POST or None)
+    if form.is_valid():
+        c = form.save()
+        return _success(request, f"Compte « {c.nom} » créé.", "ui_tresorerie")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau compte bancaire",
+                   "action": "Créer", "page": "tresorerie",
+                   "back_url": "/tresorerie/"})
+
+
+@login_required
+def compte_bancaire_edit_view(request, pk):
+    c = get_object_or_404(CompteBancaire, pk=pk)
+    form = CompteBancaireForm(request.POST or None, instance=c)
+    if form.is_valid():
+        form.save()
+        return _success(request, "Compte modifié.", "ui_tresorerie")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": f"Modifier — {c.nom}",
+                   "action": "Enregistrer", "page": "tresorerie",
+                   "back_url": "/tresorerie/", "obj": c})
+
+
+@login_required
+def compte_bancaire_detail_view(request, pk):
+    """Détail d'un compte bancaire avec ses transactions."""
+    compte = get_object_or_404(CompteBancaire, pk=pk)
+    transactions = compte.transactions.select_related("projet").order_by("-date_transaction")
+    ctx = {
+        "page": "tresorerie",
+        "compte": compte,
+        "transactions": transactions,
+        "solde": _fmt(compte.solde_actuel),
+    }
+    return render(request, "lamane/compte_bancaire_detail.html", ctx)
+
+
+@login_required
+def transaction_create_view(request):
+    form = TransactionBancaireForm(request.POST or None)
+    if form.is_valid():
+        tx = form.save()
+        return _success(request,
+                        f"Transaction enregistrée — {tx.montant} XOF",
+                        "ui_tresorerie")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouvelle transaction",
+                   "action": "Enregistrer", "page": "tresorerie",
+                   "back_url": "/tresorerie/"})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  MODULE DOCUMENTS BTP
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+def documents_btp_view(request):
+    """Liste des documents BTP."""
+    type_filter = request.GET.get("type", "")
+    projet_filter = request.GET.get("projet", "")
+    qs = DocumentProjet.objects.select_related("projet", "auteur")
+
+    if type_filter:
+        qs = qs.filter(type_document=type_filter)
+    if projet_filter:
+        qs = qs.filter(projet_id=projet_filter)
+
+    projets = Projet.objects.all()
+    ctx = {
+        "page": "documents_btp",
+        "documents": qs[:100],
+        "total_documents": qs.count(),
+        "type_filter": type_filter,
+        "projet_filter": projet_filter,
+        "types": DocumentProjet.TYPE_CHOICES,
+        "projets": projets,
+    }
+    return render(request, "lamane/documents_btp.html", ctx)
+
+
+@login_required
+def document_btp_create_view(request):
+    form = DocumentProjetForm(request.POST or None, request.FILES or None)
+    if form.is_valid():
+        doc = form.save(commit=False)
+        doc.auteur = request.user
+        doc.save()
+        return _success(request, f"Document « {doc.titre} » ajouté.", "ui_documents_btp")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau document BTP",
+                   "action": "Ajouter", "page": "documents_btp",
+                   "back_url": "/documents-btp/"})
+
+
+@login_required
+def document_btp_detail_view(request, pk):
+    doc = get_object_or_404(DocumentProjet.objects.select_related("projet", "auteur"), pk=pk)
+    ctx = {"page": "documents_btp", "doc": doc}
+    return render(request, "lamane/document_btp_detail.html", ctx)
+
+
+@login_required
+def document_btp_delete_view(request, pk):
+    doc = get_object_or_404(DocumentProjet, pk=pk)
+    if request.method == "POST":
+        doc.delete()
+        return _success(request, "Document supprimé.", "ui_documents_btp")
+    return render(request, "lamane/forms/confirm_delete.html",
+                  {"obj": doc, "titre": doc.titre, "page": "documents_btp",
+                   "back_url": "/documents-btp/"})
+
+
+# ── Bordereaux de prix ────────────────────────────────────────────────────
+
+@login_required
+def bordereaux_view(request):
+    """Liste des bordereaux de prix."""
+    qs = BordereauPrix.objects.select_related("projet").prefetch_related("lignes")
+    ctx = {
+        "page": "documents_btp",
+        "bordereaux": qs,
+        "total_bordereaux": qs.count(),
+    }
+    return render(request, "lamane/bordereaux.html", ctx)
+
+
+@login_required
+def bordereau_create_view(request):
+    form = BordereauPrixForm(request.POST or None)
+    formset = LigneBordereauFormSet(request.POST or None, prefix="lignes")
+    if request.method == "POST" and form.is_valid() and formset.is_valid():
+        bdp = form.save()
+        formset.instance = bdp
+        formset.save()
+        return _success(request, f"Bordereau {bdp.numero} créé.", "ui_bordereaux")
+    return render(request, "lamane/forms/bordereau_form.html",
+                  {"form": form, "formset": formset,
+                   "title": "Nouveau bordereau de prix",
+                   "action": "Créer", "page": "documents_btp",
+                   "back_url": "/documents-btp/bordereaux/"})
+
+
+@login_required
+def bordereau_detail_view(request, pk):
+    bdp = get_object_or_404(
+        BordereauPrix.objects.select_related("projet").prefetch_related("lignes"),
+        pk=pk
+    )
+    ctx = {
+        "page": "documents_btp",
+        "bordereau": bdp,
+        "lignes": bdp.lignes.all(),
+        "total_ht": _fmt(bdp.total_ht),
+    }
+    return render(request, "lamane/bordereau_detail.html", ctx)
+
+
+# ── Décompte Général Définitif ────────────────────────────────────────────
+
+@login_required
+def dgd_list_view(request):
+    """Liste des DGD."""
+    qs = DecompteGD.objects.select_related("projet", "marche")
+    ctx = {
+        "page": "documents_btp",
+        "dgds": qs,
+        "total_dgds": qs.count(),
+    }
+    return render(request, "lamane/dgd_list.html", ctx)
+
+
+@login_required
+def dgd_create_view(request):
+    form = DecompteGDForm(request.POST or None)
+    if form.is_valid():
+        dgd = form.save()
+        return _success(request, f"DGD créé pour {dgd.projet.nom}.", "ui_dgd_list")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form, "title": "Nouveau Décompte Général Définitif",
+                   "action": "Créer", "page": "documents_btp",
+                   "back_url": "/documents-btp/dgd/"})
+
+
+@login_required
+def dgd_detail_view(request, pk):
+    dgd = get_object_or_404(DecompteGD.objects.select_related("projet", "marche"), pk=pk)
+    ctx = {
+        "page": "documents_btp",
+        "dgd": dgd,
+    }
+    return render(request, "lamane/dgd_detail.html", ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  GESTION UTILISATEURS / PROFILS
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+def utilisateurs_view(request):
+    """Liste des utilisateurs avec leurs profils et rôles."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    users = User.objects.all().select_related("profil" if hasattr(User, "profil") else None)
+    users_data = []
+    for u in users:
+        try:
+            profil = u.profil
+        except ProfilUtilisateur.DoesNotExist:
+            profil = None
+        users_data.append({
+            "user": u,
+            "profil": profil,
+            "role_display": profil.get_role_display() if profil else "—",
+            "role": profil.role if profil else "",
+        })
+    ctx = {
+        "page": "utilisateurs",
+        "users_data": users_data,
+        "total_users": len(users_data),
+        "roles": ProfilUtilisateur.ROLE_CHOICES,
+    }
+    return render(request, "lamane/utilisateurs.html", ctx)
+
+
+@login_required
+def profil_edit_view(request, pk):
+    """Modifier le profil/rôle d'un utilisateur."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    user_obj = get_object_or_404(User, pk=pk)
+    profil, _ = ProfilUtilisateur.objects.get_or_create(user=user_obj)
+    form = ProfilUtilisateurForm(request.POST or None, request.FILES or None, instance=profil)
+    if form.is_valid():
+        form.save()
+        return _success(request, f"Profil de {user_obj.username} mis à jour.", "ui_utilisateurs")
+    return render(request, "lamane/forms/generic_form.html",
+                  {"form": form,
+                   "title": f"Profil — {user_obj.get_full_name() or user_obj.username}",
+                   "action": "Enregistrer", "page": "utilisateurs",
+                   "back_url": "/utilisateurs/"})
 

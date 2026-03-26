@@ -1,0 +1,90 @@
+{% extends "lamane/base.html" %}
+{% block title %}Plan comptable SYSCOHADA{% endblock %}
+{% block page_title %}Plan comptable SYSCOHADA{% endblock %}
+{% block page_sub %}{{ total_comptes }} compte{{ total_comptes|pluralize }} · Norme UEMOA / Senegal{% endblock %}
+
+{% block content %}
+<!-- Navigation comptabilite -->
+<div class="mb-4 animate-fade-up" style="display:flex;gap:8px;flex-wrap:wrap;">
+  <a href="{% url 'ui_comptabilite_journal' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-book"></i> Journal</a>
+  <a href="{% url 'ui_comptabilite_grand_livre' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-book-open"></i> Grand livre</a>
+  <a href="{% url 'ui_comptabilite_balance' %}" class="btn btn-ghost" style="font-size:12px;"><i class="fas fa-scale-balanced"></i> Balance</a>
+  <a href="{% url 'ui_comptabilite_plan' %}" class="btn btn-primary" style="font-size:12px;"><i class="fas fa-sitemap"></i> Plan comptable</a>
+</div>
+
+<div class="flex items-center justify-between mb-6 animate-fade-up">
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <select name="classe" class="filter-select" onchange="this.form.submit()">
+      <option value="">Toutes les classes</option>
+      {% for val, label in classes %}
+      <option value="{{ val }}" {% if classe_filter == val|slugify %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <span class="badge badge-gold" style="font-size:13px;">{{ total_comptes }} comptes</span>
+</div>
+
+{% for classe_num, comptes in comptes_par_classe.items %}
+<div class="card mb-4 animate-fade-up">
+  <div class="card-header" style="cursor:pointer;" onclick="this.parentElement.querySelector('.table-wrapper').classList.toggle('hidden')">
+    <div class="card-title">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:rgba(240,165,0,0.12);color:var(--gold);font-weight:800;font-size:16px;margin-right:8px;">
+        {{ classe_num }}
+      </span>
+      {% if classe_num == 1 %}Comptes de ressources durables
+      {% elif classe_num == 2 %}Comptes d'actif immobilise
+      {% elif classe_num == 3 %}Comptes de stocks
+      {% elif classe_num == 4 %}Comptes de tiers
+      {% elif classe_num == 5 %}Comptes de tresorerie
+      {% elif classe_num == 6 %}Comptes de charges
+      {% elif classe_num == 7 %}Comptes de produits
+      {% endif %}
+    </div>
+    <span class="badge badge-blue">{{ comptes|length }} compte{{ comptes|length|pluralize }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Libelle</th>
+          <th>Type</th>
+          <th style="text-align:center;">Actif</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in comptes %}
+        <tr>
+          <td>
+            <span class="bold" style="font-family:monospace;font-size:14px;color:var(--gold);">{{ c.code }}</span>
+          </td>
+          <td>{{ c.libelle }}</td>
+          <td>
+            {% if c.type_compte == "actif" %}<span class="badge badge-green">Actif</span>
+            {% elif c.type_compte == "passif" %}<span class="badge badge-blue">Passif</span>
+            {% elif c.type_compte == "charge" %}<span class="badge badge-red">Charge</span>
+            {% elif c.type_compte == "produit" %}<span class="badge badge-purple">Produit</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if c.actif %}<i class="fas fa-check-circle" style="color:var(--green);"></i>
+            {% else %}<i class="fas fa-times-circle" style="color:var(--red);"></i>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% if not comptes_par_classe %}
+<div class="card animate-fade-up">
+  <div style="text-align:center;padding:64px;color:var(--text-muted);">
+    <div style="font-size:48px;margin-bottom:16px;"><i class="fas fa-sitemap"></i></div>
+    <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Plan comptable vide</div>
+    <div style="font-size:13px;">Executez la commande <code>python manage.py setup_comptabilite</code> pour initialiser les comptes SYSCOHADA.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
