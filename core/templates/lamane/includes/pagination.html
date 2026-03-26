@@ -1,0 +1,167 @@
+{% if page_obj.has_other_pages %}
+<nav class="pagination-nav" aria-label="Pagination">
+  <div class="pagination-info">
+    Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+    <span class="pagination-total">({{ page_obj.paginator.count }} résultat{{ page_obj.paginator.count|pluralize }})</span>
+  </div>
+  <ul class="pagination-list">
+    {# Previous button #}
+    {% if page_obj.has_previous %}
+    <li>
+      <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+         class="pagination-btn" aria-label="Page précédente">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% else %}
+    <li>
+      <span class="pagination-btn pagination-disabled" aria-disabled="true">
+        <i class="fas fa-chevron-left"></i>
+      </span>
+    </li>
+    {% endif %}
+
+    {# Page numbers with ellipsis #}
+    {% with total=page_obj.paginator.num_pages current=page_obj.number %}
+
+      {# Always show first page #}
+      {% if current > 3 %}
+      <li>
+        <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page=1"
+           class="pagination-btn">1</a>
+      </li>
+      {% if current > 4 %}
+      <li><span class="pagination-ellipsis">&hellip;</span></li>
+      {% endif %}
+      {% endif %}
+
+      {# Pages around current #}
+      {% for p in page_obj.paginator.page_range %}
+        {% if p >= current|add:"-2" and p <= current|add:"2" %}
+        <li>
+          {% if p == current %}
+          <span class="pagination-btn pagination-active" aria-current="page">{{ p }}</span>
+          {% else %}
+          <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ p }}"
+             class="pagination-btn">{{ p }}</a>
+          {% endif %}
+        </li>
+        {% endif %}
+      {% endfor %}
+
+      {# Always show last page #}
+      {% if current < total|add:"-2" %}
+      {% if current < total|add:"-3" %}
+      <li><span class="pagination-ellipsis">&hellip;</span></li>
+      {% endif %}
+      <li>
+        <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ total }}"
+           class="pagination-btn">{{ total }}</a>
+      </li>
+      {% endif %}
+
+    {% endwith %}
+
+    {# Next button #}
+    {% if page_obj.has_next %}
+    <li>
+      <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+         class="pagination-btn" aria-label="Page suivante">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+    {% else %}
+    <li>
+      <span class="pagination-btn pagination-disabled" aria-disabled="true">
+        <i class="fas fa-chevron-right"></i>
+      </span>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+
+<style>
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.pagination-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.pagination-total {
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+.pagination-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: all var(--transition);
+  cursor: pointer;
+}
+.pagination-btn:hover:not(.pagination-disabled):not(.pagination-active) {
+  background: rgba(201, 168, 76, 0.1);
+  border-color: rgba(201, 168, 76, 0.25);
+  color: var(--gold-light);
+}
+.pagination-active {
+  background: rgba(201, 168, 76, 0.15);
+  border-color: rgba(201, 168, 76, 0.3);
+  color: var(--gold);
+  font-weight: 600;
+  cursor: default;
+}
+.pagination-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+@media (max-width: 640px) {
+  .pagination-nav {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  .pagination-list {
+    justify-content: center;
+  }
+}
+</style>
+{% endif %}

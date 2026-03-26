@@ -3,7 +3,7 @@ from django.urls import path
 from core.api.dashboard_views import dashboard_stats
 
 from django.urls import path
-from core.views import projets_list, projet_detail
+from core.views_api import projets_list, projet_detail
 
 urlpatterns = [
     path("dashboard/stats/", dashboard_stats),
