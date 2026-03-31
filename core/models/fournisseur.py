@@ -12,7 +12,7 @@ class Fournisseur(BaseModel):
     # Bloc Personne Physique
     prenom = models.CharField("Prénom", max_length=100, blank=True)
     nom = models.CharField("Nom", max_length=100, blank=True)
-    numero_identite = models.CharField("N° Pièce d’identité", max_length=100, unique=True, blank=True)
+    numero_identite = models.CharField("N° Pièce d’identité", max_length=100, unique=True, blank=True, null=True)
     sexe = models.CharField("Sexe", max_length=10, choices=(("H", "Homme"), ("F", "Femme")), blank=True)
     photo_identite = models.ImageField(upload_to="fournisseurs/photos", blank=True, null=True)
 
