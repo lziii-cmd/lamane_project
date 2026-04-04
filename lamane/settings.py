@@ -97,6 +97,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.user_profil',
+                'core.context_processors.global_filters',
             ],
              "libraries": {
                 "admin_list": "django.contrib.admin.templatetags.admin_list",

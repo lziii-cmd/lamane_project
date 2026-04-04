@@ -103,11 +103,21 @@
     .topbar { position:fixed; left:var(--sidebar-w); right:0; top:0; height:var(--nav-h); background:var(--bg-topbar); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; gap:14px; z-index:90; }
     .topbar-title { font-size:17px; font-weight:700; }
     .topbar-sub { font-size:11px; color:var(--text-secondary); }
-    .topbar-search { flex:1; max-width:320px; margin-left:auto; position:relative; }
+    .topbar-search { flex:0 0 auto; max-width:220px; position:relative; }
     .topbar-search input { width:100%; background:var(--input-bg); border:1px solid var(--border); border-radius:25px; padding:8px 16px 8px 38px; color:var(--text-primary); font-size:13px; outline:none; transition:border-color var(--transition); font-family:inherit; }
     .topbar-search input:focus { border-color:rgba(201,168,76,0.4); }
     .topbar-search i { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:12px; }
     .topbar-actions { display:flex; gap:8px; align-items:center; }
+
+    /* ── Filtres globaux topbar ──────────────────────────────────── */
+    .topbar-filters { display:flex; gap:8px; align-items:center; margin-left:auto; }
+    .topbar-filters .filter-group { display:flex; align-items:center; gap:4px; }
+    .topbar-filters label { color:var(--text-muted); font-size:12px; }
+    .topbar-filters select { background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:6px 10px; color:var(--text-primary); font-size:12px; font-family:inherit; outline:none; cursor:pointer; transition:border-color var(--transition); max-width:200px; }
+    .topbar-filters select:focus { border-color:rgba(201,168,76,0.5); }
+    .topbar-filters select option { background:var(--bg-card); color:var(--text-primary); }
+    .filter-clear { background:none; border:none; color:var(--red); cursor:pointer; font-size:14px; padding:4px 6px; border-radius:6px; transition:all var(--transition); }
+    .filter-clear:hover { background:rgba(255,82,82,0.15); }
     .topbar-btn { width:36px; height:36px; border-radius:10px; background:var(--input-bg); border:1px solid var(--border); color:var(--text-secondary); display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; transition:all var(--transition); text-decoration:none; }
     .topbar-btn:hover { background:rgba(255,255,255,0.12); color:var(--text-primary); }
     .status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 4px rgba(76,175,130,0.3); flex-shrink:0; }
@@ -397,6 +407,34 @@
     <div class="topbar-sub">{% block page_sub %}Vue d'ensemble{% endblock %}</div>
   </div>
 
+  <!-- ── FILTRES GLOBAUX PROJET / ANNÉE ──────────────────────────────── -->
+  <form method="post" action="{% url 'set_global_filter' %}" class="topbar-filters" id="globalFilterForm">
+    {% csrf_token %}
+    <div class="filter-group">
+      <label for="filtreProjet"><i class="fas fa-building"></i></label>
+      <select name="filtre_projet" id="filtreProjet" onchange="document.getElementById('globalFilterForm').submit()">
+        <option value="">Tous les projets</option>
+        {% for pid, pnom in gf_projets %}
+        <option value="{{ pid }}" {% if gf_projet_id == pid|slugify or gf_projet_id == pid|stringformat:"s" %}selected{% endif %}>{{ pnom }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filtreAnnee"><i class="fas fa-calendar-alt"></i></label>
+      <select name="filtre_annee" id="filtreAnnee" onchange="document.getElementById('globalFilterForm').submit()">
+        <option value="">Toutes les années</option>
+        {% for a in gf_annees %}
+        <option value="{{ a }}" {% if gf_annee == a|stringformat:"s" %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if gf_projet_id or gf_annee %}
+    <button type="button" class="filter-clear" title="Réinitialiser les filtres" onclick="clearFilters()">
+      <i class="fas fa-times-circle"></i>
+    </button>
+    {% endif %}
+  </form>
+
   <div class="topbar-search">
     <i class="fas fa-search"></i>
     <input type="text" placeholder="Rechercher…" id="globalSearch" autocomplete="off">
@@ -458,6 +496,13 @@ function toggleTheme() {
   localStorage.setItem('lamane-theme', isLight ? 'light' : 'dark');
   const lbl = document.getElementById('themeLabel');
   if (lbl) lbl.textContent = isLight ? '🌙 Dark' : '☀️ Light';
+}
+
+/* ── GLOBAL FILTERS ──────────────────────────────────────────────────── */
+function clearFilters() {
+  document.getElementById('filtreProjet').value = '';
+  document.getElementById('filtreAnnee').value = '';
+  document.getElementById('globalFilterForm').submit();
 }
 
 /* ── USER DROPDOWN ────────────────────────────────────────────────────── */

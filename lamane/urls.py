@@ -22,6 +22,9 @@ urlpatterns = [
     path('api/', include('core.api.urls')),
     path('api/', include('core.urls')),
 
+    # ── Filtre global projet / année ────────────────────────────────────
+    path('set-filter/', views_html.set_global_filter, name='set_global_filter'),
+
     # ── Dashboard ────────────────────────────────────────────────────────
     path('', views_html.dashboard_view, name='ui_dashboard'),
 

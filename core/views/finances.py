@@ -17,7 +17,9 @@ from core.forms import AchatForm, LigneAchatFormSet, VersementForm
 from core.permissions import role_required
 from core.pagination import paginate_queryset
 from core.services.comptabilite import generer_ecriture_achat, generer_ecriture_versement
-from core.views._helpers import _fmt, _success
+from core.views._helpers import (
+    _fmt, _success, apply_achat_filters, apply_versement_filters,
+)
 
 __all__ = [
     "finances_view", "achats_list_view", "achat_detail_view",
@@ -32,16 +34,18 @@ __all__ = [
 def finances_view(request):
     from calendar import monthrange
     today = timezone.now().date()
-    agg = Achat.objects.aggregate(
+    achats_qs = apply_achat_filters(Achat.objects.all(), request)
+    versements_qs = apply_versement_filters(Versement.objects.all(), request)
+    agg = achats_qs.aggregate(
         total_ht=Coalesce(Sum("total_ht"), Decimal("0")),
         total_tva=Coalesce(Sum("total_tva"), Decimal("0")),
         total_ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
     )
-    total_versements = Versement.objects.aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
-    modes = Achat.objects.values("mode_paiement").annotate(
+    total_versements = versements_qs.aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+    modes = achats_qs.values("mode_paiement").annotate(
         total=Coalesce(Sum("total_ttc"), Decimal("0")), count=Count("id")
     ).order_by("-total")
-    top_fournisseurs = Achat.objects.values(
+    top_fournisseurs = achats_qs.values(
         "fournisseur__entreprise", "fournisseur__nom", "fournisseur__prenom"
     ).annotate(total=Coalesce(Sum("total_ttc"), Decimal("0")), count=Count("id")).order_by("-total")[:10]
 
@@ -52,10 +56,10 @@ def finances_view(request):
         start = today.replace(year=y, month=m, day=1)
         end   = today.replace(year=y, month=m, day=monthrange(y, m)[1])
         monthly_labels.append(start.strftime("%b %Y"))
-        monthly_ttc.append(float(Achat.objects.filter(date_achat__range=[start, end]).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]))
-        monthly_verse.append(float(Versement.objects.filter(date_versement__range=[start, end]).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]))
+        monthly_ttc.append(float(achats_qs.filter(date_achat__range=[start, end]).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]))
+        monthly_verse.append(float(versements_qs.filter(date_versement__range=[start, end]).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]))
 
-    top_projets = Achat.objects.values("projet__nom").annotate(total=Coalesce(Sum("total_ttc"), Decimal("0"))).order_by("-total")[:8]
+    top_projets = achats_qs.values("projet__nom").annotate(total=Coalesce(Sum("total_ttc"), Decimal("0"))).order_by("-total")[:8]
 
     total_st = ContratSousTraitance.objects.aggregate(
         s=Coalesce(Sum("montant"), Decimal("0")))["s"]
@@ -70,8 +74,8 @@ def finances_view(request):
         "solde": _fmt(abs(float(total_versements) - total_depenses)),
         "solde_positif": float(total_versements) >= total_depenses,
         "modes": list(modes), "top_fournisseurs": list(top_fournisseurs),
-        "recent_achats": Achat.objects.select_related("fournisseur", "projet").order_by("-date_achat")[:15],
-        "recent_versements": Versement.objects.select_related("projet", "phase").order_by("-date_versement")[:10],
+        "recent_achats": achats_qs.select_related("fournisseur", "projet").order_by("-date_achat")[:15],
+        "recent_versements": versements_qs.select_related("projet", "phase").order_by("-date_versement")[:10],
         "situations_stats": SituationMensuelle.objects.aggregate(
             total_brut=Coalesce(Sum("montant_brut_cumule"), Decimal("0")),
             total_net=Coalesce(Sum("montant_a_payer"), Decimal("0")),
@@ -94,7 +98,9 @@ def finances_view(request):
 def achats_list_view(request):
     q             = request.GET.get("q", "")
     mode_filter   = request.GET.get("mode", "")
-    achats = Achat.objects.select_related("fournisseur", "projet").order_by("-date_achat")
+    achats = apply_achat_filters(
+        Achat.objects.select_related("fournisseur", "projet"), request
+    ).order_by("-date_achat")
     if q:
         achats = achats.filter(
             Q(projet__nom__icontains=q) | Q(fournisseur__entreprise__icontains=q)
@@ -103,7 +109,7 @@ def achats_list_view(request):
     if mode_filter:
         achats = achats.filter(mode_paiement=mode_filter)
 
-    agg = Achat.objects.aggregate(
+    agg = achats.aggregate(
         total_ht=Coalesce(Sum("total_ht"), Decimal("0")),
         total_ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
         count=Count("id"),
@@ -191,7 +197,9 @@ def achat_delete_view(request, pk):
 def versements_view(request):
     q           = request.GET.get("q", "")
     type_filter = request.GET.get("type", "")
-    versements  = Versement.objects.select_related("projet").order_by("-date_versement")
+    versements  = apply_versement_filters(
+        Versement.objects.select_related("projet"), request
+    ).order_by("-date_versement")
     if q:
         versements = versements.filter(
             Q(projet__nom__icontains=q) | Q(libelle__icontains=q) | Q(reference_paiement__icontains=q)
@@ -199,8 +207,8 @@ def versements_view(request):
     if type_filter:
         versements = versements.filter(type_versement=type_filter)
 
-    agg = Versement.objects.aggregate(total=Coalesce(Sum("montant"), Decimal("0")), count=Count("id"))
-    types_stats = Versement.objects.values("type_versement").annotate(
+    agg = versements.aggregate(total=Coalesce(Sum("montant"), Decimal("0")), count=Count("id"))
+    types_stats = versements.values("type_versement").annotate(
         total=Coalesce(Sum("montant"), Decimal("0")), count=Count("id")
     ).order_by("-total")
 
@@ -275,9 +283,11 @@ def bilans_view(request):
     from calendar import monthrange
     today = timezone.now().date()
 
-    projets = Projet.objects.prefetch_related(
-        "achats", "versements", "contrats_sous_traitance"
-    ).all()
+    from core.views._helpers import apply_projet_filters
+    projets = apply_projet_filters(
+        Projet.objects.prefetch_related("achats", "versements", "contrats_sous_traitance"),
+        request
+    )
     pl_data = []
     total_st_global = Decimal("0")
 

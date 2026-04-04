@@ -12,7 +12,9 @@ from core.models import (
     Projet, Achat, Versement, MarcheTravaux,
     AvancementChantier, SousTraitant, Employe, Proprietaire,
 )
-from core.views._helpers import _fmt
+from core.views._helpers import (
+    _fmt, apply_achat_filters, apply_versement_filters, apply_projet_filters,
+)
 
 __all__ = ["dashboard_view"]
 
@@ -22,18 +24,23 @@ def dashboard_view(request):
     from calendar import monthrange
     today = timezone.now().date()
 
-    total_projets = Projet.objects.count()
-    en_cours      = Projet.objects.filter(statut="En cours").count()
-    termines      = Projet.objects.filter(statut="Terminé").count()
-    en_attente    = Projet.objects.filter(statut="En attente").count()
-    en_pause      = Projet.objects.filter(statut="En pause").count()
+    # Querysets filtrés par sélection globale
+    projets_qs    = apply_projet_filters(Projet.objects.all(), request)
+    achats_qs     = apply_achat_filters(Achat.objects.all(), request)
+    versements_qs = apply_versement_filters(Versement.objects.all(), request)
 
-    agg = Achat.objects.aggregate(
+    total_projets = projets_qs.count()
+    en_cours      = projets_qs.filter(statut="En cours").count()
+    termines      = projets_qs.filter(statut="Terminé").count()
+    en_attente    = projets_qs.filter(statut="En attente").count()
+    en_pause      = projets_qs.filter(statut="En pause").count()
+
+    agg = achats_qs.aggregate(
         total_ht=Coalesce(Sum("total_ht"), Decimal("0")),
         total_tva=Coalesce(Sum("total_tva"), Decimal("0")),
         total_ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
     )
-    total_versements  = Versement.objects.aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+    total_versements  = versements_qs.aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
     solde             = float(total_versements) - float(agg["total_ttc"])
     total_marches     = MarcheTravaux.objects.count()
     montant_total_mch = MarcheTravaux.objects.aggregate(s=Coalesce(Sum("montant_marche"), Decimal("0")))["s"]
@@ -47,8 +54,8 @@ def dashboard_view(request):
         y = today.year if (today.month - i) > 0 else today.year - 1
         start = today.replace(year=y, month=m, day=1)
         end   = today.replace(year=y, month=m, day=monthrange(y, m)[1])
-        va = Achat.objects.filter(date_achat__range=[start, end]).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
-        vv = Versement.objects.filter(date_versement__range=[start, end]).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+        va = achats_qs.filter(date_achat__range=[start, end]).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
+        vv = versements_qs.filter(date_versement__range=[start, end]).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
         monthly_labels.append(start.strftime("%b %Y"))
         monthly_achats.append(float(va))
         monthly_versements_list.append(float(vv))
@@ -66,12 +73,12 @@ def dashboard_view(request):
         "total_sous_traitants": SousTraitant.objects.count(),
         "total_employes": Employe.objects.count(),
         "total_clients": Proprietaire.objects.count(),
-        "total_achats_count": Achat.objects.count(),
-        "total_versements_count": Versement.objects.count(),
+        "total_achats_count": achats_qs.count(),
+        "total_versements_count": versements_qs.count(),
         "statuts_data_json": json.dumps(statuts_data),
         "monthly_labels_json": json.dumps(monthly_labels),
         "monthly_achats_json": json.dumps(monthly_achats),
         "monthly_versements_json": json.dumps(monthly_versements_list),
-        "recent_achats": Achat.objects.select_related("fournisseur", "projet").order_by("-date_achat")[:8],
+        "recent_achats": achats_qs.select_related("fournisseur", "projet").order_by("-date_achat")[:8],
     }
     return render(request, "lamane/dashboard.html", ctx)
