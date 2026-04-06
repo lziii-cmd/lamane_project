@@ -37,11 +37,14 @@
 </style>
 
 <!-- Barre retour -->
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
   <a href="{% url 'ui_metre_list' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
     <i class="fas fa-arrow-left"></i> Retour
   </a>
-  <div style="display:flex;gap:8px;">
+  <div style="display:flex;gap:8px;align-items:center;">
+    <a href="{% url 'ui_metre_recap' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-table"></i> Recapitulatif
+    </a>
     <span class="badge badge-blue" id="scaleStatus">
       {% if plan.echelle_definie %}Echelle: 1px = {{ plan.ratio_pixel_metre|floatformat:4 }}m{% else %}Echelle non definie{% endif %}
     </span>
@@ -95,8 +98,13 @@
 
     <!-- Types d'elements -->
     <div class="card" style="padding:14px;flex:1;overflow-y:auto;">
-      <div class="card-title" style="font-size:13px;margin-bottom:10px;">
-        <i class="fas fa-palette" style="color:var(--blue);margin-right:6px;"></i> Elements
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="font-size:13px;">
+          <i class="fas fa-palette" style="color:var(--blue);margin-right:6px;"></i> Elements
+        </div>
+        <a href="{% url 'ui_metre_type_element_create' %}" class="tool-btn" style="font-size:10px;padding:4px 8px;" title="Ajouter un element">
+          <i class="fas fa-plus"></i>
+        </a>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;" id="typesList">
         {% for te in types_elements %}
@@ -112,7 +120,7 @@
     </div>
 
     <!-- Traces -->
-    <div class="card" style="padding:14px;max-height:250px;overflow-y:auto;">
+    <div class="card" style="padding:14px;max-height:350px;overflow-y:auto;">
       <div class="card-title" style="font-size:13px;margin-bottom:10px;">
         <i class="fas fa-list" style="color:var(--green);margin-right:6px;"></i> Traces (<span id="traceCount">0</span>)
       </div>
@@ -826,6 +834,18 @@ async function refreshTraces() {
   } catch(e) { console.error(e); }
 }
 
+function toggleGroup(gid) {
+  const el = document.getElementById(gid);
+  const icon = document.getElementById(gid + '_icon');
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    if (icon) icon.style.transform = 'rotate(90deg)';
+  } else {
+    el.style.display = 'none';
+    if (icon) icon.style.transform = 'rotate(0deg)';
+  }
+}
+
 function undoLast() {
   if (TRACES.length > 0) {
     const last = TRACES[TRACES.length - 1];
@@ -871,7 +891,9 @@ function updateTracesList() {
   }
 
   let html = '';
+  let groupIdx = 0;
   for (const [typeId, g] of Object.entries(groups)) {
+    const gid = 'traceGroup_' + groupIdx;
     // Total du groupe
     let totalQty = '';
     if (g.unite === 'ml') totalQty = `${g.totalLongueur.toFixed(2)} ml`;
@@ -881,15 +903,17 @@ function updateTracesList() {
     else totalQty = `${g.totalQuantite}`;
     const totalMontant = g.totalMontant ? Number(g.totalMontant).toLocaleString('fr-FR') + ' F' : '';
 
-    html += `<div style="margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid var(--border);margin-bottom:4px;">
+    html += `<div style="margin-bottom:6px;">
+      <div onclick="toggleGroup('${gid}')" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+        <i class="fas fa-chevron-right" id="${gid}_icon" style="font-size:9px;color:var(--text-muted);transition:transform 0.2s;width:10px;"></i>
         <div style="width:14px;height:14px;border-radius:4px;background:${g.couleur};flex-shrink:0;"></div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:12px;">${g.nom}</div>
           <div style="font-size:11px;color:var(--gold);font-weight:600;">${totalQty} ${totalMontant ? '— ' + totalMontant : ''}</div>
         </div>
-        <span style="font-size:10px;color:var(--text-muted);">${g.traces.length}x</span>
-      </div>`;
+        <span style="font-size:10px;color:var(--text-muted);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:10px;">${g.traces.length}</span>
+      </div>
+      <div id="${gid}" style="display:none;margin-top:3px;">`;
 
     // Traces individuelles
     for (const t of g.traces) {
@@ -900,15 +924,16 @@ function updateTracesList() {
       else if (t.unite === 'u') qty = `${Math.round(t.quantite)} U`;
       else qty = `${t.quantite}`;
 
-      html += `<div class="trace-item" data-id="${t.id}" style="margin-left:12px;padding:5px 10px;">
+      html += `<div class="trace-item" data-id="${t.id}" style="margin-left:16px;padding:5px 10px;">
         <div style="width:8px;height:8px;border-radius:2px;background:${t.couleur};flex-shrink:0;opacity:0.6;"></div>
         <div style="flex:1;min-width:0;">
-          <div style="color:var(--text-muted);font-size:10px;">${qty}</div>
+          <div style="color:var(--text-secondary);font-size:10px;">${qty}</div>
         </div>
-        <span class="del-btn" onclick="deleteTrace('${t.id}')" title="Supprimer"><i class="fas fa-times"></i></span>
+        <span class="del-btn" onclick="event.stopPropagation();deleteTrace('${t.id}')" title="Supprimer"><i class="fas fa-times"></i></span>
       </div>`;
     }
-    html += '</div>';
+    html += '</div></div>';
+    groupIdx++;
   }
   list.innerHTML = html;
 }
