@@ -574,15 +574,9 @@
         <i class="fas fa-globe-africa"></i>
         <h3>Votre projet depuis l'etranger</h3>
         <p>Suivez votre investissement en temps reel grace a notre plateforme digitale. Transparence totale, de la premiere pierre a la remise des cles.</p>
-        {% if request.user.is_authenticated %}
-        <a href="{% url 'ui_dashboard' %}" class="v-btn-primary" style="margin-top:24px;">
-          <i class="fas fa-rocket"></i> Espace gestion
+        <a href="https://deckouway-app.web.app/login" class="v-btn-primary" style="margin-top:24px;">
+          <i class="fas fa-rocket"></i> Gerer votre projet
         </a>
-        {% else %}
-        <a href="{% url 'ui_login' %}" class="v-btn-primary" style="margin-top:24px;">
-          <i class="fas fa-rocket"></i> Demarrer mon projet
-        </a>
-        {% endif %}
       </div>
     </div>
   </div>
