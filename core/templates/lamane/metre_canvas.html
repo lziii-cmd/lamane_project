@@ -1,0 +1,817 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Metre — {{ plan.nom }}{% endblock %}
+{% block page_title %}{{ plan.nom }}{% endblock %}
+{% block page_sub %}{{ projet.nom }} — Editeur de metre{% endblock %}
+
+{% block content %}
+<style>
+  .metre-layout { display:grid; grid-template-columns:280px 1fr; gap:16px; height:calc(100vh - var(--nav-h) - 80px); }
+  .metre-sidebar { display:flex; flex-direction:column; gap:12px; overflow-y:auto; }
+  .metre-canvas-wrap { position:relative; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; }
+  .canvas-toolbar { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; background:var(--bg-card2); }
+  .tool-btn { padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:var(--input-bg); color:var(--text-secondary); font-size:12px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all var(--transition); font-family:inherit; }
+  .tool-btn:hover { background:rgba(255,255,255,0.1); color:var(--text-primary); }
+  .tool-btn.active { background:rgba(184,160,106,0.15); border-color:var(--gold); color:var(--gold); }
+  .tool-sep { width:1px; height:24px; background:var(--border); margin:0 4px; }
+  .canvas-container { flex:1; position:relative; overflow:hidden; cursor:crosshair; }
+  #pdfCanvas { position:absolute; top:0; left:0; }
+  #drawCanvas { position:absolute; top:0; left:0; z-index:10; }
+  .type-chip { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); cursor:pointer; transition:all var(--transition); font-size:12px; }
+  .type-chip:hover { background:rgba(255,255,255,0.06); }
+  .type-chip.selected { border-color:var(--gold); background:rgba(184,160,106,0.1); }
+  .type-color { width:18px; height:18px; border-radius:5px; flex-shrink:0; border:2px solid rgba(255,255,255,0.15); }
+  .trace-item { padding:8px 12px; border-radius:8px; border:1px solid var(--border-light); font-size:11px; display:flex; align-items:center; gap:8px; transition:all var(--transition); cursor:pointer; }
+  .trace-item:hover { background:rgba(255,255,255,0.05); }
+  .trace-item .del-btn { margin-left:auto; color:var(--red); cursor:pointer; opacity:0.5; font-size:12px; }
+  .trace-item .del-btn:hover { opacity:1; }
+  .echelle-form { display:flex; align-items:center; gap:8px; padding:10px; background:rgba(184,160,106,0.08); border:1px solid rgba(184,160,106,0.2); border-radius:var(--radius-sm); }
+  .echelle-form input { width:80px; background:var(--input-bg); border:1px solid var(--border); border-radius:6px; padding:5px 8px; color:var(--text-primary); font-size:12px; text-align:center; font-family:inherit; }
+  .zoom-info { font-size:11px; color:var(--text-muted); padding:0 8px; }
+  @media (max-width:1100px) {
+    .metre-layout { grid-template-columns:1fr; height:auto; }
+    .metre-sidebar { max-height:300px; }
+  }
+</style>
+
+<!-- Barre retour -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+  <a href="{% url 'ui_metre_list' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
+    <i class="fas fa-arrow-left"></i> Retour
+  </a>
+  <div style="display:flex;gap:8px;">
+    <span class="badge badge-blue" id="scaleStatus">
+      {% if plan.echelle_definie %}Echelle: 1px = {{ plan.ratio_pixel_metre|floatformat:4 }}m{% else %}Echelle non definie{% endif %}
+    </span>
+  </div>
+</div>
+
+<div class="metre-layout">
+  <!-- ═══ SIDEBAR GAUCHE ═══ -->
+  <div class="metre-sidebar">
+    <!-- Echelle -->
+    <div class="card" style="padding:14px;">
+      <div class="card-title" style="font-size:13px;margin-bottom:10px;">
+        <i class="fas fa-ruler" style="color:var(--gold);margin-right:6px;"></i> Echelle
+      </div>
+      {% if plan.echelle_definie %}
+        <div class="echelle-form">
+          <span style="font-size:12px;">{{ plan.echelle_pixels|floatformat:0 }} px = {{ plan.echelle_metres|floatformat:2 }} m</span>
+          <button class="tool-btn" onclick="startCalibration()" style="margin-left:auto;">
+            <i class="fas fa-redo"></i> Recalibrer
+          </button>
+        </div>
+      {% else %}
+        <div class="echelle-form" style="flex-direction:column;align-items:stretch;">
+          <p style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">
+            Tracez un segment de reference sur le plan, puis indiquez sa longueur reelle.
+          </p>
+          <button class="btn btn-primary btn-sm" onclick="startCalibration()" id="btnCalibrate">
+            <i class="fas fa-ruler"></i> Definir l'echelle
+          </button>
+        </div>
+      {% endif %}
+      <div id="calibrationPanel" style="display:none;margin-top:10px;">
+        <div class="echelle-form" style="flex-direction:column;align-items:stretch;">
+          <p style="font-size:11px;color:var(--gold);margin-bottom:6px;">
+            <i class="fas fa-info-circle"></i> Cliquez 2 points sur le plan pour tracer le segment de reference
+          </p>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="font-size:11px;white-space:nowrap;">Longueur reelle :</label>
+            <input type="number" id="realLength" value="1" step="0.01" min="0.01">
+            <span style="font-size:11px;">m</span>
+            <button class="btn btn-primary btn-sm" onclick="saveCalibration()" id="btnSaveScale" disabled>
+              <i class="fas fa-check"></i>
+            </button>
+          </div>
+          <button class="tool-btn" onclick="cancelCalibration()" style="margin-top:6px;justify-content:center;">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Types d'elements -->
+    <div class="card" style="padding:14px;flex:1;overflow-y:auto;">
+      <div class="card-title" style="font-size:13px;margin-bottom:10px;">
+        <i class="fas fa-palette" style="color:var(--blue);margin-right:6px;"></i> Elements
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;" id="typesList">
+        {% for te in types_elements %}
+        <div class="type-chip" data-id="{{ te.pk }}" onclick="selectType('{{ te.pk }}')">
+          <div class="type-color" style="background:{{ te.couleur }};"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ te.nom }}</div>
+            <div style="font-size:10px;color:var(--text-muted);">{{ te.get_outil_display }} — {{ te.get_unite_display }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Traces -->
+    <div class="card" style="padding:14px;max-height:250px;overflow-y:auto;">
+      <div class="card-title" style="font-size:13px;margin-bottom:10px;">
+        <i class="fas fa-list" style="color:var(--green);margin-right:6px;"></i> Traces (<span id="traceCount">0</span>)
+      </div>
+      <div id="tracesList" style="display:flex;flex-direction:column;gap:4px;">
+        <p class="text-muted text-xs" id="noTraces">Aucun trace</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ZONE CANVAS ═══ -->
+  <div class="metre-canvas-wrap">
+    <!-- Toolbar -->
+    <div class="canvas-toolbar">
+      <button class="tool-btn" id="toolSelect" onclick="setTool('select')" title="Selectionner">
+        <i class="fas fa-mouse-pointer"></i>
+      </button>
+      <div class="tool-sep"></div>
+      <button class="tool-btn" id="toolLigne" onclick="setTool('ligne')" title="Ligne">
+        <i class="fas fa-minus"></i> Ligne
+      </button>
+      <button class="tool-btn" id="toolRectangle" onclick="setTool('rectangle')" title="Rectangle">
+        <i class="fas fa-vector-square"></i> Rect
+      </button>
+      <button class="tool-btn" id="toolPolygone" onclick="setTool('polygone')" title="Polygone">
+        <i class="fas fa-draw-polygon"></i> Poly
+      </button>
+      <button class="tool-btn" id="toolPoint" onclick="setTool('point')" title="Point">
+        <i class="fas fa-map-marker-alt"></i> Point
+      </button>
+      <div class="tool-sep"></div>
+      <button class="tool-btn" onclick="undoLast()" title="Annuler dernier trace">
+        <i class="fas fa-undo"></i>
+      </button>
+      <button class="tool-btn" onclick="clearAll()" title="Tout effacer">
+        <i class="fas fa-eraser"></i>
+      </button>
+      <div class="tool-sep"></div>
+      <button class="tool-btn" onclick="zoomIn()" title="Zoom +"><i class="fas fa-search-plus"></i></button>
+      <button class="tool-btn" onclick="zoomOut()" title="Zoom -"><i class="fas fa-search-minus"></i></button>
+      <button class="tool-btn" onclick="zoomReset()" title="Zoom 100%"><i class="fas fa-expand"></i></button>
+      <span class="zoom-info" id="zoomLevel">100%</span>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="pdfCanvas"></canvas>
+      <canvas id="drawCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Mesure live -->
+<div id="liveMeasure" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--gold);border-radius:12px;padding:10px 20px;font-size:14px;font-weight:600;color:var(--gold);z-index:300;box-shadow:var(--shadow);">
+  <i class="fas fa-ruler-combined" style="margin-right:8px;"></i>
+  <span id="liveMeasureText">0.00 m</span>
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════
+const PLAN_PK = "{{ plan.pk }}";
+const PDF_URL = "{{ plan.fichier_pdf.url }}";
+const CSRF = "{{ csrf_token }}";
+let TYPES = JSON.parse('{{ types_json|escapejs }}');
+let TRACES = JSON.parse('{{ traces_json|escapejs }}');
+let echellePixels = {{ echelle_pixels }};
+let echelleMetres = {{ echelle_metres }};
+
+// State
+let currentTool = 'select';
+let currentTypeId = null;
+let currentType = null;
+let zoom = 1;
+let panX = 0, panY = 0;
+let isPanning = false;
+let panStart = {x:0, y:0};
+
+// Drawing state
+let isDrawing = false;
+let drawPoints = [];
+let calibrationMode = false;
+let calibrationPoints = [];
+
+// Canvases
+const container = document.getElementById('canvasContainer');
+const pdfCanvas = document.getElementById('pdfCanvas');
+const pdfCtx = pdfCanvas.getContext('2d');
+const drawCanvas = document.getElementById('drawCanvas');
+const drawCtx = drawCanvas.getContext('2d');
+
+let pdfPage = null;
+let pdfViewport = null;
+let baseWidth = 0, baseHeight = 0;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PDF RENDERING
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadPDF() {
+  try {
+    const pdf = await pdfjsLib.getDocument(PDF_URL).promise;
+    pdfPage = await pdf.getPage(1);
+    const vp = pdfPage.getViewport({scale: 1.5});
+    baseWidth = vp.width;
+    baseHeight = vp.height;
+    resizeCanvases();
+    renderPDF();
+    renderAllTraces();
+  } catch(e) {
+    console.error("Erreur PDF:", e);
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);">Erreur de chargement du PDF</div>';
+  }
+}
+
+function resizeCanvases() {
+  const w = baseWidth * zoom;
+  const h = baseHeight * zoom;
+  pdfCanvas.width = w;
+  pdfCanvas.height = h;
+  pdfCanvas.style.width = w + 'px';
+  pdfCanvas.style.height = h + 'px';
+  drawCanvas.width = w;
+  drawCanvas.height = h;
+  drawCanvas.style.width = w + 'px';
+  drawCanvas.style.height = h + 'px';
+}
+
+function renderPDF() {
+  if (!pdfPage) return;
+  const vp = pdfPage.getViewport({scale: 1.5 * zoom});
+  pdfCtx.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
+  pdfPage.render({canvasContext: pdfCtx, viewport: vp});
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ZOOM
+// ═══════════════════════════════════════════════════════════════════════════
+function zoomIn() { zoom = Math.min(zoom * 1.25, 5); applyZoom(); }
+function zoomOut() { zoom = Math.max(zoom / 1.25, 0.25); applyZoom(); }
+function zoomReset() { zoom = 1; applyZoom(); }
+
+function applyZoom() {
+  document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+  resizeCanvases();
+  renderPDF();
+  renderAllTraces();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOOLS
+// ═══════════════════════════════════════════════════════════════════════════
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('.canvas-toolbar .tool-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool' + tool.charAt(0).toUpperCase() + tool.slice(1));
+  if (btn) btn.classList.add('active');
+
+  // Reset drawing state
+  isDrawing = false;
+  drawPoints = [];
+  drawCanvas.style.cursor = tool === 'select' ? 'grab' : 'crosshair';
+  renderAllTraces();
+}
+
+function selectType(id) {
+  currentTypeId = id;
+  currentType = TYPES.find(t => t.id === id);
+  document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`.type-chip[data-id="${id}"]`)?.classList.add('selected');
+
+  // Auto-select the matching tool
+  if (currentType) {
+    setTool(currentType.outil);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALIBRATION
+// ═══════════════════════════════════════════════════════════════════════════
+function startCalibration() {
+  calibrationMode = true;
+  calibrationPoints = [];
+  document.getElementById('calibrationPanel').style.display = 'block';
+  document.getElementById('btnSaveScale').disabled = true;
+  drawCanvas.style.cursor = 'crosshair';
+  renderAllTraces();
+}
+
+function cancelCalibration() {
+  calibrationMode = false;
+  calibrationPoints = [];
+  document.getElementById('calibrationPanel').style.display = 'none';
+  renderAllTraces();
+}
+
+async function saveCalibration() {
+  if (calibrationPoints.length < 2) return;
+  const dx = calibrationPoints[1].x - calibrationPoints[0].x;
+  const dy = calibrationPoints[1].y - calibrationPoints[0].y;
+  const pixelLen = Math.sqrt(dx*dx + dy*dy);
+  const realLen = parseFloat(document.getElementById('realLength').value);
+  if (realLen <= 0 || pixelLen <= 0) return;
+
+  try {
+    const resp = await fetch(`/metres/api/plan/${PLAN_PK}/echelle/`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+      body: JSON.stringify({pixels: pixelLen, metres: realLen})
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      echellePixels = pixelLen;
+      echelleMetres = realLen;
+      document.getElementById('scaleStatus').innerHTML = `Echelle: OK (${pixelLen.toFixed(0)}px = ${realLen}m)`;
+      calibrationMode = false;
+      document.getElementById('calibrationPanel').style.display = 'none';
+      // Refresh traces from server
+      await refreshTraces();
+      renderAllTraces();
+    }
+  } catch(e) { console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MOUSE EVENTS
+// ═══════════════════════════════════════════════════════════════════════════
+function getCanvasPos(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left),
+    y: (e.clientY - rect.top)
+  };
+}
+
+// Store at base zoom (zoom=1) for consistency
+function toBaseCoords(pos) {
+  return {x: pos.x / zoom, y: pos.y / zoom};
+}
+function toScreenCoords(pos) {
+  return {x: pos.x * zoom, y: pos.y * zoom};
+}
+
+drawCanvas.addEventListener('mousedown', function(e) {
+  if (e.button === 1 || (e.button === 0 && currentTool === 'select')) {
+    isPanning = true;
+    panStart = {x: e.clientX, y: e.clientY};
+    drawCanvas.style.cursor = 'grabbing';
+    return;
+  }
+
+  const pos = getCanvasPos(e);
+  const basePos = toBaseCoords(pos);
+
+  if (calibrationMode) {
+    calibrationPoints.push(basePos);
+    if (calibrationPoints.length >= 2) {
+      document.getElementById('btnSaveScale').disabled = false;
+    }
+    renderAllTraces();
+    return;
+  }
+
+  if (!currentType) {
+    return;
+  }
+
+  if (currentTool === 'point') {
+    saveTrace({x: basePos.x, y: basePos.y}, 0, 0);
+    return;
+  }
+
+  if (currentTool === 'ligne' || currentTool === 'polygone') {
+    drawPoints.push(basePos);
+    isDrawing = true;
+    renderAllTraces();
+    return;
+  }
+
+  if (currentTool === 'rectangle') {
+    drawPoints = [basePos];
+    isDrawing = true;
+    return;
+  }
+});
+
+drawCanvas.addEventListener('mousemove', function(e) {
+  if (isPanning) {
+    const dx = e.clientX - panStart.x;
+    const dy = e.clientY - panStart.y;
+    container.scrollLeft -= dx;
+    container.scrollTop -= dy;
+    panStart = {x: e.clientX, y: e.clientY};
+    return;
+  }
+
+  if (!isDrawing && !calibrationMode) return;
+
+  const pos = getCanvasPos(e);
+  const basePos = toBaseCoords(pos);
+
+  renderAllTraces();
+
+  // Draw preview
+  drawCtx.save();
+  drawCtx.scale(zoom, zoom);
+
+  if (calibrationMode && calibrationPoints.length === 1) {
+    drawCtx.beginPath();
+    drawCtx.setLineDash([8, 4]);
+    drawCtx.strokeStyle = '#FFD700';
+    drawCtx.lineWidth = 2;
+    drawCtx.moveTo(calibrationPoints[0].x, calibrationPoints[0].y);
+    drawCtx.lineTo(basePos.x, basePos.y);
+    drawCtx.stroke();
+    drawCtx.setLineDash([]);
+
+    // Show pixel distance
+    const dx = basePos.x - calibrationPoints[0].x;
+    const dy = basePos.y - calibrationPoints[0].y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    showLiveMeasure(`${dist.toFixed(0)} px`);
+  }
+
+  if (isDrawing && currentType) {
+    const color = currentType.couleur;
+
+    if (currentTool === 'ligne' && drawPoints.length > 0) {
+      drawCtx.beginPath();
+      drawCtx.strokeStyle = color;
+      drawCtx.lineWidth = 3;
+      drawCtx.moveTo(drawPoints[drawPoints.length-1].x, drawPoints[drawPoints.length-1].y);
+      drawCtx.lineTo(basePos.x, basePos.y);
+      drawCtx.stroke();
+
+      // Live measure
+      if (echellePixels > 0) {
+        let totalLen = 0;
+        for (let i = 1; i < drawPoints.length; i++) {
+          const ddx = drawPoints[i].x - drawPoints[i-1].x;
+          const ddy = drawPoints[i].y - drawPoints[i-1].y;
+          totalLen += Math.sqrt(ddx*ddx + ddy*ddy);
+        }
+        const ddx = basePos.x - drawPoints[drawPoints.length-1].x;
+        const ddy = basePos.y - drawPoints[drawPoints.length-1].y;
+        totalLen += Math.sqrt(ddx*ddx + ddy*ddy);
+        const ratio = echellePixels / echelleMetres;
+        showLiveMeasure(`${(totalLen / ratio).toFixed(2)} m`);
+      }
+    }
+
+    if (currentTool === 'rectangle' && drawPoints.length === 1) {
+      const x = Math.min(drawPoints[0].x, basePos.x);
+      const y = Math.min(drawPoints[0].y, basePos.y);
+      const w = Math.abs(basePos.x - drawPoints[0].x);
+      const h = Math.abs(basePos.y - drawPoints[0].y);
+      drawCtx.fillStyle = color + '30';
+      drawCtx.fillRect(x, y, w, h);
+      drawCtx.strokeStyle = color;
+      drawCtx.lineWidth = 2;
+      drawCtx.strokeRect(x, y, w, h);
+
+      if (echellePixels > 0) {
+        const ratio = echellePixels / echelleMetres;
+        const area = (w * h) / (ratio * ratio);
+        showLiveMeasure(`${area.toFixed(2)} m²`);
+      }
+    }
+
+    if (currentTool === 'polygone' && drawPoints.length > 0) {
+      drawCtx.beginPath();
+      drawCtx.strokeStyle = color;
+      drawCtx.lineWidth = 2;
+      drawCtx.moveTo(drawPoints[drawPoints.length-1].x, drawPoints[drawPoints.length-1].y);
+      drawCtx.lineTo(basePos.x, basePos.y);
+      drawCtx.stroke();
+    }
+  }
+
+  drawCtx.restore();
+});
+
+drawCanvas.addEventListener('mouseup', function(e) {
+  if (isPanning) {
+    isPanning = false;
+    drawCanvas.style.cursor = currentTool === 'select' ? 'grab' : 'crosshair';
+    return;
+  }
+
+  if (currentTool === 'rectangle' && isDrawing && drawPoints.length === 1) {
+    const pos = getCanvasPos(e);
+    const basePos = toBaseCoords(pos);
+    const x = Math.min(drawPoints[0].x, basePos.x);
+    const y = Math.min(drawPoints[0].y, basePos.y);
+    const w = Math.abs(basePos.x - drawPoints[0].x);
+    const h = Math.abs(basePos.y - drawPoints[0].y);
+    if (w > 5 && h > 5) {
+      const surfPx = w * h;
+      saveTrace({x, y, width: w, height: h}, 0, surfPx);
+    }
+    isDrawing = false;
+    drawPoints = [];
+    renderAllTraces();
+  }
+});
+
+drawCanvas.addEventListener('dblclick', function(e) {
+  if (!isDrawing) return;
+
+  if (currentTool === 'ligne' && drawPoints.length >= 2) {
+    let totalLen = 0;
+    for (let i = 1; i < drawPoints.length; i++) {
+      const dx = drawPoints[i].x - drawPoints[i-1].x;
+      const dy = drawPoints[i].y - drawPoints[i-1].y;
+      totalLen += Math.sqrt(dx*dx + dy*dy);
+    }
+    saveTrace({points: drawPoints}, totalLen, 0);
+    isDrawing = false;
+    drawPoints = [];
+    renderAllTraces();
+  }
+
+  if (currentTool === 'polygone' && drawPoints.length >= 3) {
+    const surfPx = polygonArea(drawPoints);
+    saveTrace({points: drawPoints}, 0, surfPx);
+    isDrawing = false;
+    drawPoints = [];
+    renderAllTraces();
+  }
+});
+
+// Mouse wheel zoom
+drawCanvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  if (e.deltaY < 0) zoomIn();
+  else zoomOut();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DRAWING
+// ═══════════════════════════════════════════════════════════════════════════
+function renderAllTraces() {
+  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  drawCtx.save();
+  drawCtx.scale(zoom, zoom);
+
+  // Draw all saved traces
+  for (const t of TRACES) {
+    drawTrace(t);
+  }
+
+  // Draw current points
+  if (drawPoints.length > 0 && currentType) {
+    const color = currentType.couleur;
+    drawCtx.strokeStyle = color;
+    drawCtx.fillStyle = color;
+    drawCtx.lineWidth = 3;
+
+    if (currentTool === 'ligne' || currentTool === 'polygone') {
+      drawCtx.beginPath();
+      drawCtx.moveTo(drawPoints[0].x, drawPoints[0].y);
+      for (let i = 1; i < drawPoints.length; i++) {
+        drawCtx.lineTo(drawPoints[i].x, drawPoints[i].y);
+      }
+      drawCtx.stroke();
+      // Draw dots
+      for (const p of drawPoints) {
+        drawCtx.beginPath();
+        drawCtx.arc(p.x, p.y, 4, 0, Math.PI*2);
+        drawCtx.fill();
+      }
+    }
+  }
+
+  // Calibration
+  if (calibrationMode && calibrationPoints.length > 0) {
+    drawCtx.strokeStyle = '#FFD700';
+    drawCtx.fillStyle = '#FFD700';
+    drawCtx.lineWidth = 2;
+    drawCtx.setLineDash([8, 4]);
+    for (const p of calibrationPoints) {
+      drawCtx.beginPath();
+      drawCtx.arc(p.x, p.y, 5, 0, Math.PI*2);
+      drawCtx.fill();
+    }
+    if (calibrationPoints.length === 2) {
+      drawCtx.beginPath();
+      drawCtx.moveTo(calibrationPoints[0].x, calibrationPoints[0].y);
+      drawCtx.lineTo(calibrationPoints[1].x, calibrationPoints[1].y);
+      drawCtx.stroke();
+    }
+    drawCtx.setLineDash([]);
+  }
+
+  drawCtx.restore();
+}
+
+function drawTrace(t) {
+  const color = t.couleur;
+  const coords = t.coordonnees;
+
+  if (t.outil === 'ligne' && coords.points) {
+    drawCtx.beginPath();
+    drawCtx.strokeStyle = color;
+    drawCtx.lineWidth = 3;
+    drawCtx.moveTo(coords.points[0].x, coords.points[0].y);
+    for (let i = 1; i < coords.points.length; i++) {
+      drawCtx.lineTo(coords.points[i].x, coords.points[i].y);
+    }
+    drawCtx.stroke();
+    // Endpoints
+    drawCtx.fillStyle = color;
+    for (const p of coords.points) {
+      drawCtx.beginPath();
+      drawCtx.arc(p.x, p.y, 3, 0, Math.PI*2);
+      drawCtx.fill();
+    }
+  }
+
+  if (t.outil === 'rectangle') {
+    drawCtx.fillStyle = color + '25';
+    drawCtx.fillRect(coords.x, coords.y, coords.width, coords.height);
+    drawCtx.strokeStyle = color;
+    drawCtx.lineWidth = 2;
+    drawCtx.strokeRect(coords.x, coords.y, coords.width, coords.height);
+  }
+
+  if (t.outil === 'polygone' && coords.points) {
+    drawCtx.beginPath();
+    drawCtx.moveTo(coords.points[0].x, coords.points[0].y);
+    for (let i = 1; i < coords.points.length; i++) {
+      drawCtx.lineTo(coords.points[i].x, coords.points[i].y);
+    }
+    drawCtx.closePath();
+    drawCtx.fillStyle = color + '25';
+    drawCtx.fill();
+    drawCtx.strokeStyle = color;
+    drawCtx.lineWidth = 2;
+    drawCtx.stroke();
+  }
+
+  if (t.outil === 'point') {
+    drawCtx.fillStyle = color;
+    drawCtx.beginPath();
+    drawCtx.arc(coords.x, coords.y, 7, 0, Math.PI*2);
+    drawCtx.fill();
+    drawCtx.strokeStyle = '#fff';
+    drawCtx.lineWidth = 2;
+    drawCtx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATH HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function polygonArea(pts) {
+  let area = 0;
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += pts[i].x * pts[j].y;
+    area -= pts[j].x * pts[i].y;
+  }
+  return Math.abs(area / 2);
+}
+
+function showLiveMeasure(text) {
+  const el = document.getElementById('liveMeasure');
+  document.getElementById('liveMeasureText').textContent = text;
+  el.style.display = 'block';
+}
+function hideLiveMeasure() {
+  document.getElementById('liveMeasure').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════════════════════════════════
+async function saveTrace(coordonnees, longueurPx, surfacePx) {
+  if (!currentType) return;
+  hideLiveMeasure();
+
+  try {
+    const resp = await fetch(`/metres/api/plan/${PLAN_PK}/trace/`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+      body: JSON.stringify({
+        type_element_id: currentTypeId,
+        coordonnees: coordonnees,
+        longueur_pixels: longueurPx,
+        surface_pixels: surfacePx,
+      })
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      TRACES.push({
+        id: data.id,
+        type_element_id: currentTypeId,
+        nom: currentType.nom,
+        couleur: currentType.couleur,
+        outil: currentType.outil,
+        unite: currentType.unite,
+        coordonnees: coordonnees,
+        longueur_metres: data.longueur_metres,
+        surface_metres: data.surface_metres,
+        volume_metres: data.volume_metres,
+        quantite: data.quantite,
+        montant: data.montant,
+        commentaire: '',
+      });
+      renderAllTraces();
+      updateTracesList();
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function deleteTrace(id) {
+  try {
+    await fetch(`/metres/api/trace/${id}/supprimer/`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    });
+    TRACES = TRACES.filter(t => t.id !== id);
+    renderAllTraces();
+    updateTracesList();
+  } catch(e) { console.error(e); }
+}
+
+async function refreshTraces() {
+  try {
+    const resp = await fetch(`/metres/api/plan/${PLAN_PK}/traces/`);
+    const data = await resp.json();
+    TRACES = data.traces;
+    updateTracesList();
+  } catch(e) { console.error(e); }
+}
+
+function undoLast() {
+  if (TRACES.length > 0) {
+    const last = TRACES[TRACES.length - 1];
+    deleteTrace(last.id);
+  }
+}
+
+function clearAll() {
+  if (!confirm('Supprimer tous les traces de ce plan ?')) return;
+  const ids = TRACES.map(t => t.id);
+  ids.forEach(id => deleteTrace(id));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRACES LIST UI
+// ═══════════════════════════════════════════════════════════════════════════
+function updateTracesList() {
+  const list = document.getElementById('tracesList');
+  const count = document.getElementById('traceCount');
+  count.textContent = TRACES.length;
+
+  if (TRACES.length === 0) {
+    list.innerHTML = '<p class="text-muted text-xs">Aucun trace</p>';
+    return;
+  }
+
+  let html = '';
+  for (const t of TRACES) {
+    let qty = '';
+    if (t.unite === 'ml') qty = `${t.longueur_metres.toFixed(2)} ml`;
+    else if (t.unite === 'm2') qty = `${t.surface_metres.toFixed(2)} m²`;
+    else if (t.unite === 'm3') qty = `${t.volume_metres.toFixed(3)} m³`;
+    else if (t.unite === 'u') qty = `${Math.round(t.quantite)} U`;
+    else qty = `${t.quantite}`;
+
+    const montant = t.montant ? `${Number(t.montant).toLocaleString('fr-FR')} F` : '';
+
+    html += `<div class="trace-item" data-id="${t.id}">
+      <div style="width:12px;height:12px;border-radius:3px;background:${t.couleur};flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.nom}</div>
+        <div style="color:var(--text-muted);font-size:10px;">${qty} ${montant ? '— ' + montant : ''}</div>
+      </div>
+      <span class="del-btn" onclick="deleteTrace('${t.id}')" title="Supprimer"><i class="fas fa-times"></i></span>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  loadPDF();
+  updateTracesList();
+  setTool('select');
+
+  // Hide live measure when not drawing
+  drawCanvas.addEventListener('mouseleave', hideLiveMeasure);
+});
+</script>
+{% endblock %}

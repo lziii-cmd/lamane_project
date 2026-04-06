@@ -1,0 +1,67 @@
+{% extends "lamane/base.html" %}
+{% block title %}Lots de metre{% endblock %}
+{% block page_title %}Lots de metre{% endblock %}
+{% block page_sub %}Gros oeuvre, Second oeuvre, VRD...{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;margin-bottom:22px;">
+  <a href="{% url 'ui_metre_types_elements' %}" class="btn btn-ghost btn-sm">
+    <i class="fas fa-arrow-left"></i> Retour aux types
+  </a>
+</div>
+
+<div class="grid-2 animate-fade-up">
+  <!-- Formulaire ajout -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-plus" style="margin-right:8px;color:var(--gold);"></i> Ajouter un lot</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">Nom *</label>
+          <input type="text" name="nom" required class="filter-input" style="width:100%;" placeholder="Ex: Gros oeuvre">
+        </div>
+        <div class="grid-2">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">Code</label>
+            <input type="text" name="code" class="filter-input" style="width:100%;" placeholder="Ex: GO">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">Ordre</label>
+            <input type="number" name="ordre" value="0" class="filter-input" style="width:100%;">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Ajouter</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Liste -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Lots existants ({{ lots.count }})</div>
+    </div>
+    {% if lots %}
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Ordre</th><th>Code</th><th>Nom</th><th>Types</th></tr></thead>
+        <tbody>
+          {% for lot in lots %}
+          <tr>
+            <td>{{ lot.ordre }}</td>
+            <td><span class="badge badge-blue">{{ lot.code|default:"—" }}</span></td>
+            <td class="bold">{{ lot.nom }}</td>
+            <td>{{ lot.types_elements.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="text-align:center;padding:20px;color:var(--text-muted);">Aucun lot.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

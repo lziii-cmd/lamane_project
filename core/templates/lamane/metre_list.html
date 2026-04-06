@@ -1,0 +1,105 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Metre — {{ projet.nom }}{% endblock %}
+{% block page_title %}Metre sur plan{% endblock %}
+{% block page_sub %}{{ projet.nom }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 animate-fade-up" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px;">
+  <a href="{% url 'ui_projet_detail' pk=projet.pk %}" class="btn btn-ghost btn-sm">
+    <i class="fas fa-arrow-left"></i> Retour au projet
+  </a>
+  <div style="display:flex;gap:10px;">
+    <a href="{% url 'ui_metre_recap' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-table"></i> Recapitulatif
+    </a>
+    <a href="{% url 'ui_metre_plan_upload' projet_pk=projet.pk %}" class="btn btn-primary btn-sm">
+      <i class="fas fa-plus"></i> Ajouter un plan
+    </a>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--blue);">
+    <div class="kpi-icon" style="--icon-bg:rgba(107,147,184,0.12);"><i class="fas fa-file-pdf"></i></div>
+    <div class="kpi-value">{{ plans_data|length }}</div>
+    <div class="kpi-label">Plans uploades</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);">
+    <div class="kpi-icon" style="--icon-bg:rgba(90,158,122,0.12);"><i class="fas fa-draw-polygon"></i></div>
+    <div class="kpi-value">{% with total=0 %}{% for p in plans_data %}{% endfor %}{{ plans_data|length }}{% endwith %}</div>
+    <div class="kpi-label">Plans actifs</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--gold);">
+    <div class="kpi-icon" style="--icon-bg:rgba(184,160,106,0.12);"><i class="fas fa-ruler-combined"></i></div>
+    <div class="kpi-value">{{ types_elements.count }}</div>
+    <div class="kpi-label">Types d'elements</div>
+  </div>
+</div>
+
+{% if plans_data %}
+<div class="card animate-fade-up">
+  <div class="card-header">
+    <div>
+      <div class="card-title">Plans du projet</div>
+      <div class="card-subtitle">Cliquez sur un plan pour ouvrir l'editeur de metre</div>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Ordre</th>
+          <th>Nom du plan</th>
+          <th>Echelle</th>
+          <th>Nb traces</th>
+          <th>Montant total</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in plans_data %}
+        <tr>
+          <td>{{ item.plan.ordre }}</td>
+          <td class="bold">
+            <a href="{% url 'ui_metre_canvas' pk=item.plan.pk %}" style="color:var(--gold);text-decoration:none;">
+              <i class="fas fa-file-pdf" style="margin-right:6px;"></i>{{ item.plan.nom }}
+            </a>
+          </td>
+          <td>
+            {% if item.plan.echelle_definie %}
+              <span class="badge badge-green"><span class="badge-dot" style="background:var(--green);"></span> Calibree</span>
+            {% else %}
+              <span class="badge badge-yellow"><span class="badge-dot" style="background:var(--gold);"></span> A definir</span>
+            {% endif %}
+          </td>
+          <td>{{ item.nb_traces }}</td>
+          <td class="bold">{{ item.total_montant|floatformat:0|intcomma }} FCFA</td>
+          <td style="text-align:right;">
+            <a href="{% url 'ui_metre_canvas' pk=item.plan.pk %}" class="btn btn-ghost btn-sm" title="Ouvrir l'editeur">
+              <i class="fas fa-pencil-ruler"></i>
+            </a>
+            <a href="{% url 'ui_metre_plan_delete' pk=item.plan.pk %}" class="btn btn-danger btn-sm" title="Supprimer">
+              <i class="fas fa-trash-alt"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card animate-fade-up" style="text-align:center;padding:60px 20px;">
+  <div style="width:72px;height:72px;background:rgba(184,160,106,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+    <i class="fas fa-ruler-combined" style="font-size:28px;color:var(--gold);"></i>
+  </div>
+  <h3 style="font-size:18px;margin-bottom:8px;">Aucun plan de metre</h3>
+  <p style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;">Commencez par uploader un plan PDF pour effectuer le metre.</p>
+  <a href="{% url 'ui_metre_plan_upload' projet_pk=projet.pk %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Ajouter un plan PDF
+  </a>
+</div>
+{% endif %}
+{% endblock %}

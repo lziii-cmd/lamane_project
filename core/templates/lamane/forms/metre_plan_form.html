@@ -1,0 +1,41 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}{{ projet.nom }}{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;margin-bottom:22px;">
+  <a href="{% url 'ui_metre_list' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
+    <i class="fas fa-arrow-left"></i> Retour
+  </a>
+</div>
+
+<div class="card animate-fade-up" style="max-width:600px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-upload" style="margin-right:8px;color:var(--gold);"></i> Uploader un plan PDF</div>
+  </div>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">Nom du plan *</label>
+        <input type="text" name="nom" required placeholder="Ex: RDC, Etage 1, Toiture..."
+               class="filter-input" style="width:100%;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">Ordre (etage)</label>
+        <input type="number" name="ordre" value="0" class="filter-input" style="width:120px;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">Fichier PDF *</label>
+        <input type="file" name="fichier_pdf" accept=".pdf" required
+               style="color:var(--text-secondary);font-size:13px;">
+      </div>
+      <div style="border-top:1px solid var(--border-light);padding-top:16px;display:flex;gap:10px;">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Uploader</button>
+        <a href="{% url 'ui_metre_list' projet_pk=projet.pk %}" class="btn btn-ghost">Annuler</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

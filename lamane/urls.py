@@ -178,6 +178,22 @@ urlpatterns = [
     # ── Gestion utilisateurs ───────────────────────────────────────────
     path('utilisateurs/', views_html.utilisateurs_view, name='ui_utilisateurs'),
     path('utilisateurs/<int:pk>/profil/', views_html.profil_edit_view, name='ui_profil_edit'),
+
+    # ── Metre sur plan ────────────────────────────────────────────────
+    path('projets/<str:projet_pk>/metres/', views_html.metre_list_view, name='ui_metre_list'),
+    path('projets/<str:projet_pk>/metres/upload/', views_html.metre_plan_upload_view, name='ui_metre_plan_upload'),
+    path('projets/<str:projet_pk>/metres/recap/', views_html.metre_recap_view, name='ui_metre_recap'),
+    path('metres/plan/<str:pk>/', views_html.metre_canvas_view, name='ui_metre_canvas'),
+    path('metres/plan/<str:pk>/supprimer/', views_html.metre_plan_delete_view, name='ui_metre_plan_delete'),
+    path('metres/api/plan/<str:pk>/echelle/', views_html.metre_api_save_echelle, name='api_metre_echelle'),
+    path('metres/api/plan/<str:pk>/trace/', views_html.metre_api_save_trace, name='api_metre_save_trace'),
+    path('metres/api/trace/<str:pk>/supprimer/', views_html.metre_api_delete_trace, name='api_metre_delete_trace'),
+    path('metres/api/plan/<str:pk>/traces/', views_html.metre_api_get_traces, name='api_metre_get_traces'),
+    path('metres/types-elements/', views_html.metre_types_elements_view, name='ui_metre_types_elements'),
+    path('metres/types-elements/nouveau/', views_html.metre_type_element_create_view, name='ui_metre_type_element_create'),
+    path('metres/types-elements/<str:pk>/modifier/', views_html.metre_type_element_edit_view, name='ui_metre_type_element_edit'),
+    path('metres/types-elements/<str:pk>/supprimer/', views_html.metre_type_element_delete_view, name='ui_metre_type_element_delete'),
+    path('metres/lots/', views_html.metre_lots_view, name='ui_metre_lots'),
 ]
 
 if settings.DEBUG:

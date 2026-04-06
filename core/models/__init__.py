@@ -40,3 +40,6 @@ from .profil_utilisateur import ProfilUtilisateur
 
 # ── Site Vitrine ─────────────────────────────────────────────────────────
 from .vitrine import ConfigVitrine, ServiceVitrine, ProjetVitrine, TemoignageVitrine
+
+# ── Metre sur plan ───────────────────────────────────────────────────────
+from .metre import LotMetre, TypeElement, PlanMetre, TraceMetre

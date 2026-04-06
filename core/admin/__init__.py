@@ -29,3 +29,4 @@ from .etape_standard_admin import EtapeStandardAdmin
 from .fournisseur_admin import FournisseurAdmin
 from .phase_versement_admin import PhaseVersementAdmin
 from .vitrine_admin import ConfigVitrineAdmin, ServiceVitrineAdmin, ProjetVitrineAdmin, TemoignageVitrineAdmin
+from .metre_admin import LotMetreAdmin, TypeElementAdmin, PlanMetreAdmin, TraceMetreAdmin
