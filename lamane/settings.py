@@ -32,6 +32,8 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = [
     "lamane-project.onrender.com",
     ".onrender.com",
+     'migc-infra.com',
+    'www.migc-infra.com',
     "localhost",
     "127.0.0.1",
 ]
