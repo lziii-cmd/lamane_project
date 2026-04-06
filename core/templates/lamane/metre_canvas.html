@@ -1,5 +1,5 @@
 {% extends "lamane/base.html" %}
-{% load humanize %}
+{% load humanize l10n %}
 {% block title %}Metre — {{ plan.nom }}{% endblock %}
 {% block page_title %}{{ plan.nom }}{% endblock %}
 {% block page_sub %}{{ projet.nom }} — Editeur de metre{% endblock %}
@@ -192,8 +192,8 @@ const IS_PDF = FILE_URL.toLowerCase().endsWith('.pdf');
 const CSRF = "{{ csrf_token }}";
 let TYPES = JSON.parse('{{ types_json|escapejs }}');
 let TRACES = JSON.parse('{{ traces_json|escapejs }}');
-let echellePixels = {{ echelle_pixels }};
-let echelleMetres = {{ echelle_metres }};
+let echellePixels = {{ echelle_pixels|unlocalize }};
+let echelleMetres = {{ echelle_metres|unlocalize }};
 
 // State
 let currentTool = 'select';
