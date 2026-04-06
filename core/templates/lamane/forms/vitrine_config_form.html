@@ -1,0 +1,217 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Site Vitrine{% endblock %}
+
+{% block content %}
+<style>
+  .vcf { max-width: 900px; }
+  .vcf-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 20px; }
+  .vcf-section-title { font-size: 15px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; color: var(--gold); }
+  .vcf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+  .vcf-row-full { margin-bottom: 14px; }
+  .vcf-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .vcf-input, .vcf-textarea, .vcf-select {
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none;
+    transition: border-color 0.2s;
+  }
+  .vcf-input:focus, .vcf-textarea:focus { border-color: rgba(184,160,106,0.5); }
+  .vcf-textarea { min-height: 80px; resize: vertical; }
+  .vcf-file { font-size: 12px; color: var(--text-secondary); }
+  .vcf-actions { display: flex; gap: 12px; justify-content: flex-end; padding-top: 10px; }
+  .vcf-btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; }
+  .vcf-btn-save { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #000; }
+  .vcf-btn-save:hover { box-shadow: 0 4px 20px rgba(184,160,106,0.3); }
+  .vcf-btn-cancel { background: var(--input-bg); border: 1px solid var(--border); color: var(--text-secondary); }
+  @media (max-width: 768px) { .vcf-row { grid-template-columns: 1fr; } }
+</style>
+
+<form method="post" enctype="multipart/form-data" class="vcf">
+  {% csrf_token %}
+
+  <!-- ── Hero ───────────────────────────────────────────────────────── -->
+  <div class="vcf-section">
+    <div class="vcf-section-title"><i class="fas fa-image"></i> Hero Section</div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Titre principal</label>
+      <input type="text" name="hero_titre" value="{{ config.hero_titre }}" class="vcf-input">
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Sous-titre</label>
+      <textarea name="hero_sous_titre" class="vcf-textarea">{{ config.hero_sous_titre }}</textarea>
+    </div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Texte du bouton</label>
+        <input type="text" name="hero_bouton_texte" value="{{ config.hero_bouton_texte }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">Lien du bouton</label>
+        <input type="text" name="hero_bouton_lien" value="{{ config.hero_bouton_lien }}" class="vcf-input">
+      </div>
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Image de fond {% if config.hero_image %}(actuelle: {{ config.hero_image.name }}){% endif %}</label>
+      <input type="file" name="hero_image" accept="image/*" class="vcf-file">
+    </div>
+  </div>
+
+  <!-- ── Presentation ───────────────────────────────────────────────── -->
+  <div class="vcf-section">
+    <div class="vcf-section-title"><i class="fas fa-info-circle"></i> Presentation</div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Titre</label>
+      <input type="text" name="presentation_titre" value="{{ config.presentation_titre }}" class="vcf-input">
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Texte de presentation</label>
+      <textarea name="presentation_texte" class="vcf-textarea" style="min-height:120px;">{{ config.presentation_texte }}</textarea>
+    </div>
+  </div>
+
+  <!-- ── Chiffres cles ──────────────────────────────────────────────── -->
+  <div class="vcf-section">
+    <div class="vcf-section-title"><i class="fas fa-chart-bar"></i> Chiffres Cles</div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Chiffre 1 (nombre)</label>
+        <input type="text" name="stat_1_nombre" value="{{ config.stat_1_nombre }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">Chiffre 1 (label)</label>
+        <input type="text" name="stat_1_label" value="{{ config.stat_1_label }}" class="vcf-input">
+      </div>
+    </div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Chiffre 2 (nombre)</label>
+        <input type="text" name="stat_2_nombre" value="{{ config.stat_2_nombre }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">Chiffre 2 (label)</label>
+        <input type="text" name="stat_2_label" value="{{ config.stat_2_label }}" class="vcf-input">
+      </div>
+    </div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Chiffre 3 (nombre)</label>
+        <input type="text" name="stat_3_nombre" value="{{ config.stat_3_nombre }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">Chiffre 3 (label)</label>
+        <input type="text" name="stat_3_label" value="{{ config.stat_3_label }}" class="vcf-input">
+      </div>
+    </div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Chiffre 4 (nombre)</label>
+        <input type="text" name="stat_4_nombre" value="{{ config.stat_4_nombre }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">Chiffre 4 (label)</label>
+        <input type="text" name="stat_4_label" value="{{ config.stat_4_label }}" class="vcf-input">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Directeur ──────────────────────────────────────────────────── -->
+  <div class="vcf-section">
+    <div class="vcf-section-title"><i class="fas fa-user-tie"></i> Mot du Directeur</div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Nom</label>
+        <input type="text" name="directeur_nom" value="{{ config.directeur_nom }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">Titre / Poste</label>
+        <input type="text" name="directeur_titre" value="{{ config.directeur_titre }}" class="vcf-input">
+      </div>
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Message</label>
+      <textarea name="directeur_message" class="vcf-textarea" style="min-height:100px;">{{ config.directeur_message }}</textarea>
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Photo {% if config.directeur_photo %}(actuelle: {{ config.directeur_photo.name }}){% endif %}</label>
+      <input type="file" name="directeur_photo" accept="image/*" class="vcf-file">
+    </div>
+  </div>
+
+  <!-- ── Diaspora ───────────────────────────────────────────────────── -->
+  <div class="vcf-section">
+    <div class="vcf-section-title"><i class="fas fa-globe-africa"></i> Investissement Diaspora</div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Titre de la section</label>
+      <input type="text" name="diaspora_titre" value="{{ config.diaspora_titre }}" class="vcf-input">
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Description</label>
+      <textarea name="diaspora_texte" class="vcf-textarea">{{ config.diaspora_texte }}</textarea>
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Etape 1</label>
+      <input type="text" name="diaspora_etape_1" value="{{ config.diaspora_etape_1 }}" class="vcf-input">
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Etape 2</label>
+      <input type="text" name="diaspora_etape_2" value="{{ config.diaspora_etape_2 }}" class="vcf-input">
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Etape 3</label>
+      <input type="text" name="diaspora_etape_3" value="{{ config.diaspora_etape_3 }}" class="vcf-input">
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Etape 4</label>
+      <input type="text" name="diaspora_etape_4" value="{{ config.diaspora_etape_4 }}" class="vcf-input">
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Etape 5</label>
+      <input type="text" name="diaspora_etape_5" value="{{ config.diaspora_etape_5 }}" class="vcf-input">
+    </div>
+  </div>
+
+  <!-- ── Contact ────────────────────────────────────────────────────── -->
+  <div class="vcf-section">
+    <div class="vcf-section-title"><i class="fas fa-phone"></i> Contact</div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Adresse</label>
+        <input type="text" name="contact_adresse" value="{{ config.contact_adresse }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">Telephone</label>
+        <input type="text" name="contact_telephone" value="{{ config.contact_telephone }}" class="vcf-input">
+      </div>
+    </div>
+    <div class="vcf-row">
+      <div>
+        <label class="vcf-label">Email</label>
+        <input type="email" name="contact_email" value="{{ config.contact_email }}" class="vcf-input">
+      </div>
+      <div>
+        <label class="vcf-label">WhatsApp (optionnel)</label>
+        <input type="text" name="contact_whatsapp" value="{{ config.contact_whatsapp }}" class="vcf-input">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SEO & Footer ───────────────────────────────────────────────── -->
+  <div class="vcf-section">
+    <div class="vcf-section-title"><i class="fas fa-search"></i> SEO & Footer</div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Meta description (SEO)</label>
+      <textarea name="meta_description" class="vcf-textarea">{{ config.meta_description }}</textarea>
+    </div>
+    <div class="vcf-row-full">
+      <label class="vcf-label">Texte du footer</label>
+      <input type="text" name="footer_texte" value="{{ config.footer_texte }}" class="vcf-input">
+    </div>
+  </div>
+
+  <div class="vcf-actions">
+    <a href="{% url 'ui_vitrine_gestion' %}" class="vcf-btn vcf-btn-cancel">Annuler</a>
+    <button type="submit" class="vcf-btn vcf-btn-save"><i class="fas fa-check"></i> Enregistrer</button>
+  </div>
+</form>
+{% endblock %}

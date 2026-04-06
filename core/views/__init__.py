@@ -16,3 +16,4 @@ from core.views.comptabilite import *  # noqa
 from core.views.tresorerie import *    # noqa
 from core.views.documents import *     # noqa
 from core.views.config import *        # noqa
+from core.views.vitrine import *       # noqa

@@ -1,0 +1,226 @@
+{% extends "lamane/base.html" %}
+{% block title %}Gestion Site Vitrine{% endblock %}
+{% block page_title %}Site Vitrine{% endblock %}
+{% block page_sub %}Gerez le contenu de votre page d'accueil publique{% endblock %}
+
+{% block content %}
+<style>
+  .vg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .vg-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .vg-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .vg-card-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .vg-card-title i { color: var(--gold); }
+  .vg-badge { background: rgba(184,160,106,0.12); color: var(--gold); font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .vg-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; transition: all 0.2s; cursor: pointer; border: none; font-family: inherit; }
+  .vg-btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #000; }
+  .vg-btn-gold:hover { box-shadow: 0 4px 15px rgba(184,160,106,0.3); }
+  .vg-btn-outline { background: var(--input-bg); border: 1px solid var(--border); color: var(--text-secondary); }
+  .vg-btn-outline:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+  .vg-btn-sm { padding: 5px 10px; font-size: 11px; }
+  .vg-btn-red { background: rgba(184,106,106,0.15); color: var(--red); }
+
+  .vg-preview { background: var(--bg-card2); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 12px; }
+  .vg-preview-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .vg-preview-value { font-size: 14px; color: var(--text-primary); line-height: 1.5; }
+  .vg-preview-value.big { font-size: 20px; font-weight: 700; }
+
+  .vg-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--bg-card2); border: 1px solid var(--border-light); border-radius: var(--radius-sm); margin-bottom: 8px; transition: border-color 0.2s; }
+  .vg-item:hover { border-color: rgba(184,160,106,0.2); }
+  .vg-item-icon { width: 36px; height: 36px; border-radius: 9px; background: rgba(184,160,106,0.1); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .vg-item-body { flex: 1; min-width: 0; }
+  .vg-item-body strong { font-size: 13px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vg-item-body small { font-size: 11px; color: var(--text-muted); }
+  .vg-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .vg-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .vg-status-on { background: var(--green); }
+  .vg-status-off { background: var(--red); }
+
+  .vg-full { grid-column: 1 / -1; }
+  .vg-link-preview { display: inline-flex; align-items: center; gap: 8px; color: var(--blue); font-size: 13px; text-decoration: none; margin-top: 12px; }
+  .vg-link-preview:hover { text-decoration: underline; }
+
+  @media (max-width: 900px) { .vg-grid { grid-template-columns: 1fr; } }
+</style>
+
+<!-- ── Bouton voir le site + lien ──────────────────────────────────────── -->
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <div>
+    <h3 style="font-size:16px; font-weight:700;">Contenu du site vitrine</h3>
+    <p style="font-size:13px; color:var(--text-secondary);">Modifiez textes, images, services et projets affiches sur la page d'accueil publique.</p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'ui_vitrine' %}" target="_blank" class="vg-btn vg-btn-outline">
+      <i class="fas fa-external-link-alt"></i> Voir le site
+    </a>
+    <a href="{% url 'ui_vitrine_config_edit' %}" class="vg-btn vg-btn-gold">
+      <i class="fas fa-edit"></i> Modifier la config
+    </a>
+  </div>
+</div>
+
+<div class="vg-grid">
+
+  <!-- ── CONFIG HERO ──────────────────────────────────────────────────── -->
+  <div class="vg-card">
+    <div class="vg-card-header">
+      <div class="vg-card-title"><i class="fas fa-image"></i> Hero Section</div>
+    </div>
+    <div class="vg-preview">
+      <div class="vg-preview-label">Titre principal</div>
+      <div class="vg-preview-value big">{{ config.hero_titre }}</div>
+    </div>
+    <div class="vg-preview">
+      <div class="vg-preview-label">Sous-titre</div>
+      <div class="vg-preview-value">{{ config.hero_sous_titre }}</div>
+    </div>
+    <div style="display:flex; gap:12px;">
+      <div class="vg-preview" style="flex:1;">
+        <div class="vg-preview-label">Bouton CTA</div>
+        <div class="vg-preview-value">{{ config.hero_bouton_texte }}</div>
+      </div>
+      <div class="vg-preview" style="flex:1;">
+        <div class="vg-preview-label">Image</div>
+        <div class="vg-preview-value">{% if config.hero_image %}Oui{% else %}Non definie{% endif %}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CHIFFRES CLES ────────────────────────────────────────────────── -->
+  <div class="vg-card">
+    <div class="vg-card-header">
+      <div class="vg-card-title"><i class="fas fa-chart-bar"></i> Chiffres Cles</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="vg-preview">
+        <div class="vg-preview-label">{{ config.stat_1_label }}</div>
+        <div class="vg-preview-value big">{{ config.stat_1_nombre }}</div>
+      </div>
+      <div class="vg-preview">
+        <div class="vg-preview-label">{{ config.stat_2_label }}</div>
+        <div class="vg-preview-value big">{{ config.stat_2_nombre }}</div>
+      </div>
+      <div class="vg-preview">
+        <div class="vg-preview-label">{{ config.stat_3_label }}</div>
+        <div class="vg-preview-value big">{{ config.stat_3_nombre }}</div>
+      </div>
+      <div class="vg-preview">
+        <div class="vg-preview-label">{{ config.stat_4_label }}</div>
+        <div class="vg-preview-value big">{{ config.stat_4_nombre }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SERVICES ─────────────────────────────────────────────────────── -->
+  <div class="vg-card">
+    <div class="vg-card-header">
+      <div class="vg-card-title"><i class="fas fa-concierge-bell"></i> Services</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span class="vg-badge">{{ services.count }}</span>
+        <a href="{% url 'ui_vitrine_service_create' %}" class="vg-btn vg-btn-gold vg-btn-sm">
+          <i class="fas fa-plus"></i> Ajouter
+        </a>
+      </div>
+    </div>
+    {% for svc in services %}
+    <div class="vg-item">
+      <div class="vg-item-icon"><i class="{{ svc.icone }}"></i></div>
+      <div class="vg-item-body">
+        <strong>{{ svc.titre }}</strong>
+        <small>{{ svc.description|truncatewords:10 }}</small>
+      </div>
+      <span class="vg-status {% if svc.actif %}vg-status-on{% else %}vg-status-off{% endif %}" title="{% if svc.actif %}Actif{% else %}Inactif{% endif %}"></span>
+      <div class="vg-item-actions">
+        <a href="{% url 'ui_vitrine_service_edit' svc.pk %}" class="vg-btn vg-btn-outline vg-btn-sm"><i class="fas fa-pen"></i></a>
+        <a href="{% url 'ui_vitrine_service_delete' svc.pk %}" class="vg-btn vg-btn-red vg-btn-sm"><i class="fas fa-trash"></i></a>
+      </div>
+    </div>
+    {% empty %}
+    <p style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">Aucun service. Ajoutez-en un !</p>
+    {% endfor %}
+  </div>
+
+  <!-- ── PROJETS VITRINE ──────────────────────────────────────────────── -->
+  <div class="vg-card">
+    <div class="vg-card-header">
+      <div class="vg-card-title"><i class="fas fa-building"></i> Projets Vitrine</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span class="vg-badge">{{ projets.count }}</span>
+        <a href="{% url 'ui_vitrine_projet_create' %}" class="vg-btn vg-btn-gold vg-btn-sm">
+          <i class="fas fa-plus"></i> Ajouter
+        </a>
+      </div>
+    </div>
+    {% for proj in projets %}
+    <div class="vg-item">
+      <div class="vg-item-icon"><i class="fas fa-building"></i></div>
+      <div class="vg-item-body">
+        <strong>{{ proj.nom }}</strong>
+        <small>{{ proj.localisation }} &mdash; {{ proj.get_statut_display }}</small>
+      </div>
+      <span class="vg-status {% if proj.actif %}vg-status-on{% else %}vg-status-off{% endif %}"></span>
+      <div class="vg-item-actions">
+        <a href="{% url 'ui_vitrine_projet_edit' proj.pk %}" class="vg-btn vg-btn-outline vg-btn-sm"><i class="fas fa-pen"></i></a>
+        <a href="{% url 'ui_vitrine_projet_delete' proj.pk %}" class="vg-btn vg-btn-red vg-btn-sm"><i class="fas fa-trash"></i></a>
+      </div>
+    </div>
+    {% empty %}
+    <p style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">Aucun projet. Ajoutez-en un !</p>
+    {% endfor %}
+  </div>
+
+  <!-- ── TEMOIGNAGES ──────────────────────────────────────────────────── -->
+  <div class="vg-card">
+    <div class="vg-card-header">
+      <div class="vg-card-title"><i class="fas fa-quote-right"></i> Temoignages</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span class="vg-badge">{{ temoignages.count }}</span>
+        <a href="{% url 'ui_vitrine_temoignage_create' %}" class="vg-btn vg-btn-gold vg-btn-sm">
+          <i class="fas fa-plus"></i> Ajouter
+        </a>
+      </div>
+    </div>
+    {% for t in temoignages %}
+    <div class="vg-item">
+      <div class="vg-item-icon"><i class="fas fa-user"></i></div>
+      <div class="vg-item-body">
+        <strong>{{ t.nom }}</strong>
+        <small>{{ t.texte|truncatewords:8 }}</small>
+      </div>
+      <span class="vg-status {% if t.actif %}vg-status-on{% else %}vg-status-off{% endif %}"></span>
+      <div class="vg-item-actions">
+        <a href="{% url 'ui_vitrine_temoignage_edit' t.pk %}" class="vg-btn vg-btn-outline vg-btn-sm"><i class="fas fa-pen"></i></a>
+        <a href="{% url 'ui_vitrine_temoignage_delete' t.pk %}" class="vg-btn vg-btn-red vg-btn-sm"><i class="fas fa-trash"></i></a>
+      </div>
+    </div>
+    {% empty %}
+    <p style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">Aucun temoignage.</p>
+    {% endfor %}
+  </div>
+
+  <!-- ── CONTACT & DIRECTEUR ──────────────────────────────────────────── -->
+  <div class="vg-card">
+    <div class="vg-card-header">
+      <div class="vg-card-title"><i class="fas fa-address-card"></i> Contact & Directeur</div>
+    </div>
+    <div class="vg-preview">
+      <div class="vg-preview-label">Adresse</div>
+      <div class="vg-preview-value">{{ config.contact_adresse }}</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <div class="vg-preview" style="flex:1;">
+        <div class="vg-preview-label">Telephone</div>
+        <div class="vg-preview-value">{{ config.contact_telephone }}</div>
+      </div>
+      <div class="vg-preview" style="flex:1;">
+        <div class="vg-preview-label">Email</div>
+        <div class="vg-preview-value">{{ config.contact_email }}</div>
+      </div>
+    </div>
+    <div class="vg-preview">
+      <div class="vg-preview-label">Mot du directeur</div>
+      <div class="vg-preview-value">{{ config.directeur_message|truncatewords:20 }}</div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

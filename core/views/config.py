@@ -14,7 +14,7 @@ from core.forms import (
     TypeProjetForm, PhaseVersementForm, ProfilUtilisateurForm,
 )
 from core.permissions import role_required
-from core.views._helpers import _fmt, _success
+from core.views._helpers import _fmt, _success, apply_versement_filters
 
 __all__ = [
     "types_projets_view", "type_projet_create_view",
@@ -86,7 +86,7 @@ def phases_versement_view(request):
 
     phases_data = []
     for p in phases:
-        montant_verse = Versement.objects.filter(phase=p).aggregate(
+        montant_verse = apply_versement_filters(Versement.objects.filter(phase=p), request).aggregate(
             s=Coalesce(Sum("montant"), Decimal("0")))["s"]
         phases_data.append({
             "phase": p,

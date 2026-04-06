@@ -194,7 +194,7 @@ CORS_ALLOWED_ORIGINS = [
 
 # ── Authentification ──────────────────────────────────────────────────────────
 LOGIN_URL = '/connexion/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/deconnecte/'
 
 COMPANY = {

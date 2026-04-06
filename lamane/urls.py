@@ -25,8 +25,24 @@ urlpatterns = [
     # ── Filtre global projet / année ────────────────────────────────────
     path('set-filter/', views_html.set_global_filter, name='set_global_filter'),
 
+    # ── Site Vitrine (page publique) ────────────────────────────────────
+    path('', views_html.vitrine_view, name='ui_vitrine'),
+
     # ── Dashboard ────────────────────────────────────────────────────────
-    path('', views_html.dashboard_view, name='ui_dashboard'),
+    path('dashboard/', views_html.dashboard_view, name='ui_dashboard'),
+
+    # ── Gestion du site vitrine ──────────────────────────────────────────
+    path('vitrine/gestion/', views_html.vitrine_gestion_view, name='ui_vitrine_gestion'),
+    path('vitrine/gestion/config/', views_html.vitrine_config_edit_view, name='ui_vitrine_config_edit'),
+    path('vitrine/gestion/services/nouveau/', views_html.vitrine_service_create_view, name='ui_vitrine_service_create'),
+    path('vitrine/gestion/services/<str:pk>/modifier/', views_html.vitrine_service_edit_view, name='ui_vitrine_service_edit'),
+    path('vitrine/gestion/services/<str:pk>/supprimer/', views_html.vitrine_service_delete_view, name='ui_vitrine_service_delete'),
+    path('vitrine/gestion/projets/nouveau/', views_html.vitrine_projet_create_view, name='ui_vitrine_projet_create'),
+    path('vitrine/gestion/projets/<str:pk>/modifier/', views_html.vitrine_projet_edit_view, name='ui_vitrine_projet_edit'),
+    path('vitrine/gestion/projets/<str:pk>/supprimer/', views_html.vitrine_projet_delete_view, name='ui_vitrine_projet_delete'),
+    path('vitrine/gestion/temoignages/nouveau/', views_html.vitrine_temoignage_create_view, name='ui_vitrine_temoignage_create'),
+    path('vitrine/gestion/temoignages/<str:pk>/modifier/', views_html.vitrine_temoignage_edit_view, name='ui_vitrine_temoignage_edit'),
+    path('vitrine/gestion/temoignages/<str:pk>/supprimer/', views_html.vitrine_temoignage_delete_view, name='ui_vitrine_temoignage_delete'),
 
     # ── Projets (CRUD avant <str:pk>) ────────────────────────────────────
     path('projets/', views_html.projets_list_view, name='ui_projets_list'),

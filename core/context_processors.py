@@ -32,6 +32,16 @@ def global_filters(request):
     Injecte les filtres globaux projet/année dans tous les templates.
     Les valeurs sont stockées dans request.session.
     """
+    # Ne pas executer pour les utilisateurs non connectes (vitrine publique)
+    if not request.user.is_authenticated:
+        return {
+            "gf_projets": [],
+            "gf_annees": [],
+            "gf_projet_id": "",
+            "gf_annee": "",
+            "gf_projet": None,
+        }
+
     # Lire la session
     selected_projet_id = request.session.get("filtre_projet_id", "")
     selected_annee = request.session.get("filtre_annee", "")

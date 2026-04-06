@@ -14,7 +14,9 @@ from core.models import (
 )
 from core.forms import EmployeForm, ProprietaireForm, FournisseurForm
 from core.permissions import role_required
-from core.views._helpers import _fmt, _success
+from core.views._helpers import (
+    _fmt, _success, apply_achat_filters, apply_versement_filters, apply_projet_filters,
+)
 
 __all__ = [
     "rh_view", "employe_create_view", "employe_detail_view",
@@ -113,8 +115,8 @@ def clients_view(request):
 
     clients_data = []
     for c in clients:
-        projets_c    = Projet.objects.filter(proprietaire=c)
-        total_achats = Achat.objects.filter(projet__proprietaire=c).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
+        projets_c    = apply_projet_filters(Projet.objects.filter(proprietaire=c), request)
+        total_achats = apply_achat_filters(Achat.objects.filter(projet__proprietaire=c), request).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
         clients_data.append({
             "client": c, "nb_projets": projets_c.count(),
             "total_achats_fmt": _fmt(total_achats),
@@ -134,17 +136,17 @@ def clients_view(request):
 def client_detail_view(request, pk):
     from calendar import monthrange
     client  = get_object_or_404(Proprietaire, pk=pk)
-    projets = Projet.objects.filter(proprietaire=client).select_related("type_projet").order_by("-date_debut")
-    total_achats = Achat.objects.filter(projet__proprietaire=client).aggregate(
+    projets = apply_projet_filters(Projet.objects.filter(proprietaire=client), request).select_related("type_projet").order_by("-date_debut")
+    total_achats = apply_achat_filters(Achat.objects.filter(projet__proprietaire=client), request).aggregate(
         ht=Coalesce(Sum("total_ht"), Decimal("0")),
         ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
     )
-    total_verse = Versement.objects.filter(projet__proprietaire=client).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
+    total_verse = apply_versement_filters(Versement.objects.filter(projet__proprietaire=client), request).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]
 
     projets_data = []
     for p in projets:
         av = AvancementChantier.objects.filter(projet=p).order_by("-periode").first()
-        ta = Achat.objects.filter(projet=p).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
+        ta = apply_achat_filters(Achat.objects.filter(projet=p), request).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
         projets_data.append({"projet": p, "avancement": av, "total_achats": _fmt(ta)})
 
     today = timezone.now().date()
@@ -155,7 +157,7 @@ def client_detail_view(request, pk):
         start = today.replace(year=y, month=m, day=1)
         end   = today.replace(year=y, month=m, day=monthrange(y, m)[1])
         monthly_labels.append(start.strftime("%b %Y"))
-        monthly_vers.append(float(Versement.objects.filter(projet__proprietaire=client, date_versement__range=[start, end]).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]))
+        monthly_vers.append(float(apply_versement_filters(Versement.objects.filter(projet__proprietaire=client), request).filter(date_versement__range=[start, end]).aggregate(s=Coalesce(Sum("montant"), Decimal("0")))["s"]))
 
     ctx = {
         "page": "clients", "client": client, "projets_data": projets_data,
@@ -221,7 +223,7 @@ def fournisseurs_view(request):
 
     f_data = []
     for f in fournisseurs:
-        achats = Achat.objects.filter(fournisseur=f)
+        achats = apply_achat_filters(Achat.objects.filter(fournisseur=f), request)
         total  = achats.aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
         f_data.append({
             "fournisseur": f, "nb_achats": achats.count(),
@@ -252,8 +254,9 @@ def fournisseur_create_view(request):
 @role_required("comptable", "gestionnaire")
 def fournisseur_detail_view(request, pk):
     four = get_object_or_404(Fournisseur, pk=pk)
-    achats = Achat.objects.filter(fournisseur=four).select_related("projet").order_by("-date_achat")[:20]
-    total_achats = Achat.objects.filter(fournisseur=four).aggregate(
+    achats_qs = apply_achat_filters(Achat.objects.filter(fournisseur=four), request)
+    achats = achats_qs.select_related("projet").order_by("-date_achat")[:20]
+    total_achats = achats_qs.aggregate(
         ht=Coalesce(Sum("total_ht"), Decimal("0")),
         ttc=Coalesce(Sum("total_ttc"), Decimal("0")),
     )
@@ -261,7 +264,7 @@ def fournisseur_detail_view(request, pk):
         "page": "fournisseurs", "four": four, "achats": achats,
         "total_ht": _fmt(total_achats["ht"]),
         "total_ttc": _fmt(total_achats["ttc"]),
-        "nb_achats": Achat.objects.filter(fournisseur=four).count(),
+        "nb_achats": achats_qs.count(),
     }
     return render(request, "lamane/fournisseur_detail.html", ctx)
 

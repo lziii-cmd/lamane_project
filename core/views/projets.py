@@ -13,7 +13,9 @@ from core.models import (
 )
 from core.forms import ProjetForm
 from core.permissions import role_required
-from core.views._helpers import _fmt, _success
+from core.views._helpers import (
+    _fmt, _success, apply_achat_filters, apply_versement_filters, apply_projet_filters,
+)
 
 __all__ = [
     "projets_list_view", "projet_detail_view",
@@ -25,7 +27,9 @@ __all__ = [
 def projets_list_view(request):
     q             = request.GET.get("q", "")
     statut_filter = request.GET.get("statut", "")
-    projets = Projet.objects.select_related("proprietaire", "type_projet").all()
+    projets = apply_projet_filters(
+        Projet.objects.select_related("proprietaire", "type_projet").all(), request,
+    )
     if q:
         projets = projets.filter(Q(nom__icontains=q) | Q(localisation__icontains=q))
     if statut_filter:
@@ -34,7 +38,7 @@ def projets_list_view(request):
 
     projets_data = []
     for p in projets[:60]:
-        total_achats = Achat.objects.filter(projet=p).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
+        total_achats = apply_achat_filters(Achat.objects.filter(projet=p), request).aggregate(s=Coalesce(Sum("total_ttc"), Decimal("0")))["s"]
         marche       = MarcheTravaux.objects.filter(projet=p).first()
         avancement   = AvancementChantier.objects.filter(projet=p).order_by("-periode").first()
         projets_data.append({
@@ -56,8 +60,8 @@ def projets_list_view(request):
 @login_required
 def projet_detail_view(request, pk):
     projet     = get_object_or_404(Projet, pk=pk)
-    achats     = Achat.objects.filter(projet=projet).select_related("fournisseur").order_by("-date_achat")
-    versements = Versement.objects.filter(projet=projet).select_related("phase").order_by("-date_versement")
+    achats     = apply_achat_filters(Achat.objects.filter(projet=projet), request).select_related("fournisseur").order_by("-date_achat")
+    versements = apply_versement_filters(Versement.objects.filter(projet=projet), request).select_related("phase").order_by("-date_versement")
     marche     = MarcheTravaux.objects.filter(projet=projet).first()
     avancements = AvancementChantier.objects.filter(projet=projet).order_by("periode")
     situations  = SituationMensuelle.objects.filter(projet=projet).order_by("numero_situation")

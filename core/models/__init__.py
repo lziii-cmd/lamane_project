@@ -37,3 +37,6 @@ from .document_btp import DocumentProjet, BordereauPrix, LigneBordereau, Decompt
 
 # ── Gestion utilisateurs ─────────────────────────────────────────────────
 from .profil_utilisateur import ProfilUtilisateur
+
+# ── Site Vitrine ─────────────────────────────────────────────────────────
+from .vitrine import ConfigVitrine, ServiceVitrine, ProjetVitrine, TemoignageVitrine

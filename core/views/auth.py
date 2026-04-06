@@ -27,7 +27,7 @@ def login_view(request):
 def logout_view(request):
     """Déconnexion puis redirection vers la page de reconnexion."""
     logout(request)
-    return redirect("ui_logged_out")
+    return redirect("ui_vitrine")
 
 
 def logged_out_view(request):

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LAMANE — Promotion Immobiliere au Senegal</title>
+  <meta name="description" content="{{ config.meta_description }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #b8a06a;
+      --gold-light: #d4c48a;
+      --gold-dark: #96845a;
+      --dark: #070b16;
+      --dark2: #0f1629;
+      --dark3: #141b30;
+      --blue: #6b93b8;
+      --green: #5a9e7a;
+      --text: #f0f4ff;
+      --text-sec: rgba(240,244,255,0.6);
+      --text-muted: rgba(240,244,255,0.35);
+      --border: rgba(255,255,255,0.08);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAVBAR ──────────────────────────────────────────────────── */
+    .v-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(7,11,22,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s;
+    }
+    .v-nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 72px;
+    }
+    .v-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .v-logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 15px rgba(184,160,106,0.2);
+    }
+    .v-logo-text strong { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: 1px; }
+    .v-logo-text small { display: block; font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 2px; }
+
+    .v-nav-links { display: flex; gap: 32px; align-items: center; }
+    .v-nav-links a {
+      color: var(--text-sec); text-decoration: none; font-size: 14px; font-weight: 500;
+      transition: color 0.2s; position: relative;
+    }
+    .v-nav-links a:hover { color: var(--text); }
+    .v-nav-links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px;
+      background: var(--gold); transition: width 0.2s;
+    }
+    .v-nav-links a:hover::after { width: 100%; }
+
+    .v-btn-connect {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #000; padding: 10px 24px; border-radius: 50px;
+      text-decoration: none; font-size: 14px; font-weight: 700;
+      transition: all 0.3s; border: none; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(184,160,106,0.25);
+    }
+    .v-btn-connect:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(184,160,106,0.4);
+    }
+
+    /* ── HERO ────────────────────────────────────────────────────── */
+    .v-hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(160deg, var(--dark) 0%, #0a1228 50%, #0d1a35 100%);
+    }
+    .v-hero::before {
+      content: ''; position: absolute; top: -200px; right: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(184,160,106,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .v-hero::after {
+      content: ''; position: absolute; bottom: -150px; left: -150px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(107,147,184,0.06) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .v-hero-content { position: relative; z-index: 2; max-width: 800px; }
+    .v-hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(184,160,106,0.12); border: 1px solid rgba(184,160,106,0.2);
+      border-radius: 50px; padding: 8px 20px; font-size: 12px; font-weight: 600;
+      color: var(--gold-light); margin-bottom: 28px; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .v-hero h1 {
+      font-size: clamp(32px, 5vw, 56px); font-weight: 900;
+      line-height: 1.15; margin-bottom: 20px;
+      background: linear-gradient(135deg, var(--text) 0%, var(--gold-light) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .v-hero p {
+      font-size: clamp(16px, 2vw, 20px); color: var(--text-sec);
+      line-height: 1.7; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;
+    }
+    .v-hero-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .v-btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #000; padding: 14px 36px; border-radius: 50px;
+      text-decoration: none; font-size: 15px; font-weight: 700;
+      transition: all 0.3s; box-shadow: 0 4px 25px rgba(184,160,106,0.3);
+    }
+    .v-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 35px rgba(184,160,106,0.45); }
+    .v-btn-secondary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: var(--text); padding: 14px 36px; border-radius: 50px;
+      text-decoration: none; font-size: 15px; font-weight: 600;
+      transition: all 0.3s;
+    }
+    .v-btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); }
+
+    /* ── SECTIONS COMMUNES ───────────────────────────────────────── */
+    .v-section { padding: 100px 24px; }
+    .v-section-inner { max-width: 1100px; margin: 0 auto; }
+    .v-section-header { text-align: center; margin-bottom: 60px; }
+    .v-section-header h2 {
+      font-size: clamp(26px, 3.5vw, 40px); font-weight: 800; margin-bottom: 14px;
+    }
+    .v-section-header p { color: var(--text-sec); font-size: 17px; max-width: 550px; margin: 0 auto; line-height: 1.7; }
+    .v-gold-line {
+      width: 50px; height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-dark));
+      border-radius: 2px; margin: 0 auto 16px;
+    }
+
+    /* ── STATS ────────────────────────────────────────────────────── */
+    .v-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px; padding: 60px 24px;
+      background: var(--dark2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    }
+    .v-stats-inner { max-width: 1100px; margin: 0 auto; display: contents; }
+    .v-stat { text-align: center; padding: 20px; }
+    .v-stat-number {
+      font-size: 36px; font-weight: 900; color: var(--gold);
+      line-height: 1;  margin-bottom: 8px;
+    }
+    .v-stat-label { font-size: 13px; color: var(--text-sec); font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── PRESENTATION ────────────────────────────────────────────── */
+    .v-about { background: var(--dark); }
+    .v-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .v-about-text h2 { font-size: 34px; font-weight: 800; margin-bottom: 20px; }
+    .v-about-text p { color: var(--text-sec); line-height: 1.8; font-size: 16px; }
+
+    .v-about-features { display: grid; gap: 16px; margin-top: 30px; }
+    .v-feature {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--dark2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 18px;
+    }
+    .v-feature-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(184,160,106,0.12); color: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .v-feature h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .v-feature p { font-size: 13px; color: var(--text-sec); line-height: 1.5; }
+
+    /* ── SERVICES ─────────────────────────────────────────────────── */
+    .v-services { background: var(--dark2); }
+    .v-services-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .v-service-card {
+      background: var(--dark3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 30px;
+      transition: transform 0.3s, box-shadow 0.3s;
+      position: relative; overflow: hidden;
+    }
+    .v-service-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+    .v-service-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: linear-gradient(90deg, var(--gold), transparent); opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .v-service-card:hover::before { opacity: 1; }
+    .v-service-icon {
+      width: 52px; height: 52px; border-radius: 13px;
+      background: rgba(184,160,106,0.1); color: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 20px;
+    }
+    .v-service-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+    .v-service-card p { color: var(--text-sec); font-size: 14px; line-height: 1.7; }
+
+    /* ── PROJETS ──────────────────────────────────────────────────── */
+    .v-projets { background: var(--dark); }
+    .v-projets-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+    .v-projet-card {
+      background: var(--dark2); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .v-projet-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+    .v-projet-img {
+      width: 100%; height: 200px; object-fit: cover;
+      background: linear-gradient(135deg, var(--dark3), var(--dark));
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 40px;
+    }
+    .v-projet-body { padding: 24px; }
+    .v-projet-status {
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .v-status-en_cours { background: rgba(90,158,122,0.15); color: var(--green); }
+    .v-status-livre { background: rgba(184,160,106,0.15); color: var(--gold); }
+    .v-status-a_venir { background: rgba(107,147,184,0.15); color: var(--blue); }
+    .v-projet-body h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .v-projet-loc { color: var(--text-muted); font-size: 13px; margin-bottom: 12px; }
+    .v-projet-loc i { margin-right: 4px; }
+    .v-projet-body p { color: var(--text-sec); font-size: 14px; line-height: 1.6; }
+    .v-projet-points { list-style: none; margin-top: 14px; }
+    .v-projet-points li {
+      font-size: 13px; color: var(--text-sec); padding: 4px 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .v-projet-points li::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--gold); flex-shrink: 0;
+    }
+
+    /* ── DIASPORA ─────────────────────────────────────────────────── */
+    .v-diaspora { background: var(--dark2); }
+    .v-diaspora-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .v-diaspora-text h2 { font-size: 34px; font-weight: 800; margin-bottom: 18px; }
+    .v-diaspora-text > p { color: var(--text-sec); font-size: 16px; line-height: 1.8; margin-bottom: 30px; }
+    .v-steps { display: grid; gap: 16px; }
+    .v-step {
+      display: flex; gap: 16px; align-items: center;
+      background: var(--dark3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px 20px;
+      transition: border-color 0.2s;
+    }
+    .v-step:hover { border-color: rgba(184,160,106,0.25); }
+    .v-step-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(184,160,106,0.12); color: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; flex-shrink: 0;
+    }
+    .v-step span { font-size: 14px; font-weight: 500; }
+
+    .v-diaspora-visual {
+      background: var(--dark3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 40px; text-align: center;
+    }
+    .v-diaspora-visual i { font-size: 60px; color: var(--gold); margin-bottom: 20px; display: block; }
+    .v-diaspora-visual h3 { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+    .v-diaspora-visual p { color: var(--text-sec); font-size: 14px; line-height: 1.6; }
+
+    /* ── DIRECTEUR ────────────────────────────────────────────────── */
+    .v-directeur { background: var(--dark); }
+    .v-directeur-card {
+      max-width: 800px; margin: 0 auto;
+      background: var(--dark2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 40px;
+      display: flex; gap: 30px; align-items: center;
+    }
+    .v-directeur-photo {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; color: #000; flex-shrink: 0; overflow: hidden;
+    }
+    .v-directeur-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .v-directeur-text blockquote {
+      font-size: 16px; color: var(--text-sec); line-height: 1.8;
+      font-style: italic; margin-bottom: 16px;
+      border-left: 3px solid var(--gold); padding-left: 20px;
+    }
+    .v-directeur-name { font-size: 15px; font-weight: 700; }
+    .v-directeur-title { font-size: 13px; color: var(--gold); }
+
+    /* ── TEMOIGNAGES ──────────────────────────────────────────────── */
+    .v-temoignages { background: var(--dark2); }
+    .v-temoignages-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .v-temoignage-card {
+      background: var(--dark3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+    }
+    .v-temoignage-card .quote { font-size: 14px; color: var(--text-sec); line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+    .v-temoignage-footer { display: flex; align-items: center; gap: 12px; }
+    .v-temoignage-avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), #7a8aaa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; color: #fff; flex-shrink: 0;
+      overflow: hidden;
+    }
+    .v-temoignage-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .v-temoignage-info strong { font-size: 14px; display: block; }
+    .v-temoignage-info span { font-size: 12px; color: var(--text-muted); }
+
+    /* ── CONTACT / CTA ────────────────────────────────────────────── */
+    .v-cta {
+      padding: 100px 24px; text-align: center;
+      background: linear-gradient(160deg, var(--dark) 0%, #0d1a35 100%);
+      position: relative;
+    }
+    .v-cta::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+    .v-cta h2 { font-size: clamp(26px, 3.5vw, 38px); font-weight: 800; margin-bottom: 14px; }
+    .v-cta p { color: var(--text-sec); font-size: 17px; max-width: 500px; margin: 0 auto 36px; line-height: 1.7; }
+    .v-contact-info {
+      display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .v-contact-item { display: flex; align-items: center; gap: 10px; color: var(--text-sec); font-size: 14px; }
+    .v-contact-item i { color: var(--gold); font-size: 16px; }
+
+    /* ── FOOTER ───────────────────────────────────────────────────── */
+    .v-footer {
+      padding: 30px 24px; text-align: center;
+      border-top: 1px solid var(--border);
+      background: var(--dark);
+    }
+    .v-footer p { color: var(--text-muted); font-size: 13px; }
+    .v-footer a { color: var(--gold); text-decoration: none; }
+
+    /* ── MOBILE ───────────────────────────────────────────────────── */
+    .v-mobile-menu { display: none; background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; }
+
+    @media (max-width: 768px) {
+      .v-nav-links { display: none; }
+      .v-mobile-menu { display: block; }
+      .v-nav-links.open {
+        display: flex; flex-direction: column;
+        position: absolute; top: 72px; left: 0; right: 0;
+        background: var(--dark); border-bottom: 1px solid var(--border);
+        padding: 20px 24px; gap: 16px;
+      }
+      .v-about-grid, .v-diaspora-grid { grid-template-columns: 1fr; gap: 40px; }
+      .v-directeur-card { flex-direction: column; text-align: center; }
+      .v-directeur-text blockquote { border-left: none; padding-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ──────────────────────────────────────────────────────────── -->
+<nav class="v-nav">
+  <div class="v-nav-inner">
+    <a href="/" class="v-logo">
+      <div class="v-logo-icon">&#127959;</div>
+      <div class="v-logo-text">
+        <strong>LAMANE</strong>
+        <small>Promotion Immobiliere</small>
+      </div>
+    </a>
+    <button class="v-mobile-menu" onclick="document.querySelector('.v-nav-links').classList.toggle('open')">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="v-nav-links">
+      <a href="#presentation">A propos</a>
+      <a href="#services">Services</a>
+      <a href="#projets">Projets</a>
+      <a href="#diaspora">Investir</a>
+      <a href="#contact">Contact</a>
+      {% if request.user.is_authenticated %}
+      <a href="{% url 'ui_dashboard' %}" class="v-btn-connect">
+        <i class="fas fa-th-large"></i> Espace gestion
+      </a>
+      {% else %}
+      <a href="{% url 'ui_login' %}" class="v-btn-connect">
+        <i class="fas fa-sign-in-alt"></i> Se connecter
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ────────────────────────────────────────────────────────────── -->
+<section class="v-hero"{% if config.hero_image %} style="background-image: linear-gradient(rgba(7,11,22,0.8), rgba(7,11,22,0.9)), url('{{ config.hero_image.url }}'); background-size: cover; background-position: center;"{% endif %}>
+  <div class="v-hero-content">
+    <div class="v-hero-badge">
+      <i class="fas fa-star"></i> Promotion Immobiliere au Senegal
+    </div>
+    <h1>{{ config.hero_titre }}</h1>
+    <p>{{ config.hero_sous_titre }}</p>
+    <div class="v-hero-btns">
+      <a href="{{ config.hero_bouton_lien }}" class="v-btn-primary">
+        <i class="fas fa-arrow-right"></i> {{ config.hero_bouton_texte }}
+      </a>
+      <a href="#contact" class="v-btn-secondary">
+        <i class="fas fa-phone"></i> Nous contacter
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CHIFFRES CLES ──────────────────────────────────────────────────── -->
+<section class="v-stats">
+  <div class="v-stat">
+    <div class="v-stat-number">{{ config.stat_1_nombre }}</div>
+    <div class="v-stat-label">{{ config.stat_1_label }}</div>
+  </div>
+  <div class="v-stat">
+    <div class="v-stat-number">{{ config.stat_2_nombre }}</div>
+    <div class="v-stat-label">{{ config.stat_2_label }}</div>
+  </div>
+  <div class="v-stat">
+    <div class="v-stat-number">{{ config.stat_3_nombre }}</div>
+    <div class="v-stat-label">{{ config.stat_3_label }}</div>
+  </div>
+  <div class="v-stat">
+    <div class="v-stat-number">{{ config.stat_4_nombre }}</div>
+    <div class="v-stat-label">{{ config.stat_4_label }}</div>
+  </div>
+</section>
+
+<!-- ── PRESENTATION ───────────────────────────────────────────────────── -->
+<section class="v-section v-about" id="presentation">
+  <div class="v-section-inner">
+    <div class="v-about-grid">
+      <div class="v-about-text">
+        <div class="v-gold-line" style="margin:0 0 16px;"></div>
+        <h2>{{ config.presentation_titre }}</h2>
+        <p>{{ config.presentation_texte }}</p>
+      </div>
+      <div class="v-about-features">
+        <div class="v-feature">
+          <div class="v-feature-icon"><i class="fas fa-shield-alt"></i></div>
+          <div>
+            <h4>Confiance & Securite</h4>
+            <p>Investissements securises et transparents</p>
+          </div>
+        </div>
+        <div class="v-feature">
+          <div class="v-feature-icon"><i class="fas fa-cogs"></i></div>
+          <div>
+            <h4>Maitrise Technique</h4>
+            <p>Expertise en genie civil et geotechnique</p>
+          </div>
+        </div>
+        <div class="v-feature">
+          <div class="v-feature-icon"><i class="fas fa-lightbulb"></i></div>
+          <div>
+            <h4>Innovation</h4>
+            <p>Modele financier et digitalisation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SERVICES ────────────────────────────────────────────────────────── -->
+{% if services %}
+<section class="v-section v-services" id="services">
+  <div class="v-section-inner">
+    <div class="v-section-header">
+      <div class="v-gold-line"></div>
+      <h2>Nos Services</h2>
+      <p>Des solutions completes pour vos projets immobiliers</p>
+    </div>
+    <div class="v-services-grid">
+      {% for svc in services %}
+      <div class="v-service-card">
+        <div class="v-service-icon"><i class="{{ svc.icone }}"></i></div>
+        <h3>{{ svc.titre }}</h3>
+        <p>{{ svc.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ── PROJETS ─────────────────────────────────────────────────────────── -->
+{% if projets %}
+<section class="v-section v-projets" id="projets">
+  <div class="v-section-inner">
+    <div class="v-section-header">
+      <div class="v-gold-line"></div>
+      <h2>Nos Projets</h2>
+      <p>Des realisations qui temoignent de notre expertise</p>
+    </div>
+    <div class="v-projets-grid">
+      {% for proj in projets %}
+      <div class="v-projet-card">
+        {% if proj.image %}
+        <img src="{{ proj.image.url }}" alt="{{ proj.nom }}" class="v-projet-img">
+        {% else %}
+        <div class="v-projet-img"><i class="fas fa-building"></i></div>
+        {% endif %}
+        <div class="v-projet-body">
+          <span class="v-projet-status v-status-{{ proj.statut }}">
+            {% if proj.statut == 'en_cours' %}En cours{% elif proj.statut == 'livre' %}Livre{% else %}A venir{% endif %}
+          </span>
+          <h3>{{ proj.nom }}</h3>
+          <div class="v-projet-loc"><i class="fas fa-map-marker-alt"></i> {{ proj.localisation }}</div>
+          <p>{{ proj.description|truncatewords:30 }}</p>
+          {% if proj.points_forts_list %}
+          <ul class="v-projet-points">
+            {% for pt in proj.points_forts_list %}
+            <li>{{ pt }}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ── DIASPORA ────────────────────────────────────────────────────────── -->
+<section class="v-section v-diaspora" id="diaspora">
+  <div class="v-section-inner">
+    <div class="v-diaspora-grid">
+      <div class="v-diaspora-text">
+        <div class="v-gold-line" style="margin:0 0 16px;"></div>
+        <h2>{{ config.diaspora_titre }}</h2>
+        <p>{{ config.diaspora_texte }}</p>
+        <div class="v-steps">
+          <div class="v-step"><div class="v-step-num">1</div><span>{{ config.diaspora_etape_1 }}</span></div>
+          <div class="v-step"><div class="v-step-num">2</div><span>{{ config.diaspora_etape_2 }}</span></div>
+          <div class="v-step"><div class="v-step-num">3</div><span>{{ config.diaspora_etape_3 }}</span></div>
+          <div class="v-step"><div class="v-step-num">4</div><span>{{ config.diaspora_etape_4 }}</span></div>
+          <div class="v-step"><div class="v-step-num">5</div><span>{{ config.diaspora_etape_5 }}</span></div>
+        </div>
+      </div>
+      <div class="v-diaspora-visual">
+        <i class="fas fa-globe-africa"></i>
+        <h3>Votre projet depuis l'etranger</h3>
+        <p>Suivez votre investissement en temps reel grace a notre plateforme digitale. Transparence totale, de la premiere pierre a la remise des cles.</p>
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'ui_dashboard' %}" class="v-btn-primary" style="margin-top:24px;">
+          <i class="fas fa-rocket"></i> Espace gestion
+        </a>
+        {% else %}
+        <a href="{% url 'ui_login' %}" class="v-btn-primary" style="margin-top:24px;">
+          <i class="fas fa-rocket"></i> Demarrer mon projet
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MOT DU DIRECTEUR ───────────────────────────────────────────────── -->
+<section class="v-section v-directeur">
+  <div class="v-section-inner">
+    <div class="v-section-header">
+      <div class="v-gold-line"></div>
+      <h2>Mot du Fondateur</h2>
+    </div>
+    <div class="v-directeur-card">
+      <div class="v-directeur-photo">
+        {% if config.directeur_photo %}
+        <img src="{{ config.directeur_photo.url }}" alt="{{ config.directeur_nom }}">
+        {% else %}
+        <i class="fas fa-user"></i>
+        {% endif %}
+      </div>
+      <div class="v-directeur-text">
+        <blockquote>{{ config.directeur_message }}</blockquote>
+        <div class="v-directeur-name">{{ config.directeur_nom }}</div>
+        <div class="v-directeur-title">{{ config.directeur_titre }}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TEMOIGNAGES ─────────────────────────────────────────────────────── -->
+{% if temoignages %}
+<section class="v-section v-temoignages">
+  <div class="v-section-inner">
+    <div class="v-section-header">
+      <div class="v-gold-line"></div>
+      <h2>Ce que disent nos clients</h2>
+    </div>
+    <div class="v-temoignages-grid">
+      {% for t in temoignages %}
+      <div class="v-temoignage-card">
+        <div class="quote">"{{ t.texte }}"</div>
+        <div class="v-temoignage-footer">
+          <div class="v-temoignage-avatar">
+            {% if t.photo %}
+            <img src="{{ t.photo.url }}" alt="{{ t.nom }}">
+            {% else %}
+            {{ t.nom|slice:":1"|upper }}
+            {% endif %}
+          </div>
+          <div class="v-temoignage-info">
+            <strong>{{ t.nom }}</strong>
+            {% if t.titre %}<span>{{ t.titre }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ── CONTACT / CTA ──────────────────────────────────────────────────── -->
+<section class="v-cta" id="contact">
+  <h2>Pret a investir ?</h2>
+  <p>Contactez-nous pour discuter de votre projet immobilier au Senegal.</p>
+  <div class="v-contact-info">
+    <div class="v-contact-item"><i class="fas fa-map-marker-alt"></i> {{ config.contact_adresse }}</div>
+    <div class="v-contact-item"><i class="fas fa-phone"></i> {{ config.contact_telephone }}</div>
+    <div class="v-contact-item"><i class="fas fa-envelope"></i> {{ config.contact_email }}</div>
+    {% if config.contact_whatsapp %}
+    <div class="v-contact-item"><i class="fab fa-whatsapp"></i> {{ config.contact_whatsapp }}</div>
+    {% endif %}
+  </div>
+  {% if request.user.is_authenticated %}
+  <a href="{% url 'ui_dashboard' %}" class="v-btn-primary">
+    <i class="fas fa-th-large"></i> Retour a l'espace gestion
+  </a>
+  {% else %}
+  <a href="{% url 'ui_login' %}" class="v-btn-primary">
+    <i class="fas fa-sign-in-alt"></i> Se connecter a l'espace client
+  </a>
+  {% endif %}
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────────────────────── -->
+<footer class="v-footer">
+  <p>{{ config.footer_texte }} &mdash; &copy; 2026 <a href="/">LAMANE</a>. Tous droits reserves.</p>
+</footer>
+
+<script>
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const t = document.querySelector(a.getAttribute('href'));
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelector('.v-nav-links')?.classList.remove('open');
+  });
+});
+
+// Navbar bg on scroll
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('.v-nav');
+  nav.style.background = window.scrollY > 50
+    ? 'rgba(7,11,22,0.95)' : 'rgba(7,11,22,0.85)';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+{% extends "lamane/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Site Vitrine{% endblock %}
+
+{% block content %}
+<style>
+  .vif { max-width: 650px; }
+  .vif-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 20px; }
+  .vif-row { margin-bottom: 16px; }
+  .vif-row-half { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .vif-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .vif-input, .vif-textarea, .vif-select {
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none;
+    transition: border-color 0.2s;
+  }
+  .vif-input:focus, .vif-textarea:focus { border-color: rgba(184,160,106,0.5); }
+  .vif-textarea { min-height: 80px; resize: vertical; }
+  .vif-check { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .vif-check input { width: 18px; height: 18px; accent-color: var(--gold); }
+  .vif-check label { font-size: 13px; font-weight: 500; }
+  .vif-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .vif-actions { display: flex; gap: 12px; justify-content: flex-end; }
+  .vif-btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; }
+  .vif-btn-save { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #000; }
+  .vif-btn-cancel { background: var(--input-bg); border: 1px solid var(--border); color: var(--text-secondary); }
+</style>
+
+<form method="post" enctype="multipart/form-data" class="vif">
+  {% csrf_token %}
+  <div class="vif-section">
+
+    {% if item_type == "service" %}
+      <!-- ── SERVICE ──────────────────────────────────────────────── -->
+      <div class="vif-row">
+        <label class="vif-label">Titre du service</label>
+        <input type="text" name="titre" value="{{ obj.titre|default:'' }}" class="vif-input" required>
+      </div>
+      <div class="vif-row">
+        <label class="vif-label">Description</label>
+        <textarea name="description" class="vif-textarea" required>{{ obj.description|default:'' }}</textarea>
+      </div>
+      <div class="vif-row-half">
+        <div>
+          <label class="vif-label">Icone FontAwesome</label>
+          <input type="text" name="icone" value="{{ obj.icone|default:'fas fa-building' }}" class="vif-input">
+          <div class="vif-hint">Ex: fas fa-hard-hat, fas fa-chart-line, fas fa-home</div>
+        </div>
+        <div>
+          <label class="vif-label">Ordre d'affichage</label>
+          <input type="number" name="ordre" value="{{ obj.ordre|default:0 }}" class="vif-input" min="0">
+        </div>
+      </div>
+      {% if obj %}
+      <div class="vif-check">
+        <input type="checkbox" name="actif" id="actif" {% if obj.actif %}checked{% endif %}>
+        <label for="actif">Actif (visible sur le site)</label>
+      </div>
+      {% endif %}
+
+    {% elif item_type == "projet" %}
+      <!-- ── PROJET ──────────────────────────────────────────────── -->
+      <div class="vif-row">
+        <label class="vif-label">Nom du projet</label>
+        <input type="text" name="nom" value="{{ obj.nom|default:'' }}" class="vif-input" required>
+      </div>
+      <div class="vif-row">
+        <label class="vif-label">Description narrative</label>
+        <textarea name="description" class="vif-textarea" style="min-height:100px;" required>{{ obj.description|default:'' }}</textarea>
+      </div>
+      <div class="vif-row-half">
+        <div>
+          <label class="vif-label">Localisation</label>
+          <input type="text" name="localisation" value="{{ obj.localisation|default:'' }}" class="vif-input" required>
+        </div>
+        <div>
+          <label class="vif-label">Statut</label>
+          <select name="statut" class="vif-select">
+            <option value="en_cours" {% if obj.statut == 'en_cours' %}selected{% endif %}>En cours</option>
+            <option value="livre" {% if obj.statut == 'livre' %}selected{% endif %}>Livre</option>
+            <option value="a_venir" {% if obj.statut == 'a_venir' %}selected{% endif %}>A venir</option>
+          </select>
+        </div>
+      </div>
+      <div class="vif-row">
+        <label class="vif-label">Points forts (un par ligne)</label>
+        <textarea name="points_forts" class="vif-textarea">{{ obj.points_forts|default:'' }}</textarea>
+        <div class="vif-hint">Saisissez un point fort par ligne. Ex: Architecture moderne</div>
+      </div>
+      <div class="vif-row-half">
+        <div>
+          <label class="vif-label">Image {% if obj.image %}(actuelle: {{ obj.image.name }}){% endif %}</label>
+          <input type="file" name="image" accept="image/*" style="font-size:12px; color:var(--text-secondary);">
+        </div>
+        <div>
+          <label class="vif-label">Ordre d'affichage</label>
+          <input type="number" name="ordre" value="{{ obj.ordre|default:0 }}" class="vif-input" min="0">
+        </div>
+      </div>
+      {% if obj %}
+      <div class="vif-check">
+        <input type="checkbox" name="actif" id="actif" {% if obj.actif %}checked{% endif %}>
+        <label for="actif">Actif (visible sur le site)</label>
+      </div>
+      {% endif %}
+
+    {% elif item_type == "temoignage" %}
+      <!-- ── TEMOIGNAGE ──────────────────────────────────────────── -->
+      <div class="vif-row-half">
+        <div>
+          <label class="vif-label">Nom du client</label>
+          <input type="text" name="nom" value="{{ obj.nom|default:'' }}" class="vif-input" required>
+        </div>
+        <div>
+          <label class="vif-label">Titre / Profession</label>
+          <input type="text" name="titre" value="{{ obj.titre|default:'' }}" class="vif-input">
+        </div>
+      </div>
+      <div class="vif-row">
+        <label class="vif-label">Temoignage</label>
+        <textarea name="texte" class="vif-textarea" style="min-height:100px;" required>{{ obj.texte|default:'' }}</textarea>
+      </div>
+      <div class="vif-row-half">
+        <div>
+          <label class="vif-label">Photo {% if obj.photo %}(actuelle: {{ obj.photo.name }}){% endif %}</label>
+          <input type="file" name="photo" accept="image/*" style="font-size:12px; color:var(--text-secondary);">
+        </div>
+        <div>
+          <label class="vif-label">Ordre d'affichage</label>
+          <input type="number" name="ordre" value="{{ obj.ordre|default:0 }}" class="vif-input" min="0">
+        </div>
+      </div>
+      {% if obj %}
+      <div class="vif-check">
+        <input type="checkbox" name="actif" id="actif" {% if obj.actif %}checked{% endif %}>
+        <label for="actif">Actif (visible sur le site)</label>
+      </div>
+      {% endif %}
+
+    {% endif %}
+  </div>
+
+  <div class="vif-actions">
+    <a href="{% url 'ui_vitrine_gestion' %}" class="vif-btn vif-btn-cancel">Annuler</a>
+    <button type="submit" class="vif-btn vif-btn-save"><i class="fas fa-check"></i> {{ action }}</button>
+  </div>
+</form>
+{% endblock %}
