@@ -3,13 +3,6 @@ set -o errexit
 
 python manage.py migrate
 
-# Vider la base si FLUSH_DB=true (a desactiver apres usage)
-if [ "$FLUSH_DB" = "true" ]; then
-    echo "==> FLUSH_DB=true : vidage de la base de donnees..."
-    python manage.py flush --no-input
-    echo "==> Base videe avec succes."
-fi
-
 # Charger les données initiales si la base est vide
 python manage.py shell -c "
 from core.models import Projet
