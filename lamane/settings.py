@@ -29,6 +29,9 @@ SECRET_KEY = os.environ.get(
 # En dev: DEBUG=True. Sur Render: mettre DJANGO_DEBUG=False dans les env vars.
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+# Clé secrète pour la page de création d'admin (variable d'env ADMIN_SETUP_KEY)
+ADMIN_SETUP_KEY = os.environ.get('ADMIN_SETUP_KEY', 'lamane-setup-2025')
+
 ALLOWED_HOSTS = [
     "lamane-project.onrender.com",
     ".onrender.com",

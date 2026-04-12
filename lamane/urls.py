@@ -17,6 +17,7 @@ urlpatterns = [
     path('connexion/', views_html.login_view, name='ui_login'),
     path('deconnexion/', views_html.logout_view, name='ui_logout'),
     path('deconnecte/', views_html.logged_out_view, name='ui_logged_out'),
+    path('setup/<str:key>/', views_html.setup_admin_view, name='ui_setup_admin'),
 
     # ── API JSON ──────────────────────────────────────────────────────────
     path('api/', include('core.api.urls')),
