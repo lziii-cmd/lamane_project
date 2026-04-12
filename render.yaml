@@ -9,7 +9,7 @@ services:
     name: lamane-project
     runtime: python
     buildCommand: "./build.sh"
-    startCommand: "gunicorn lamane.wsgi:application"
+    startCommand: "./start.sh"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
