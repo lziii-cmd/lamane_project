@@ -337,7 +337,10 @@
       <i class="fas fa-sitemap"></i><span>Plan comptable</span>
     </a>
 
-    <div class="nav-section-label">Metre sur plan</div>
+    <div class="nav-section-label">Metre & Devis</div>
+    <a href="{% url 'ui_devis_list' %}" class="nav-item {% if page == 'devis' %}active{% endif %}">
+      <i class="fas fa-file-invoice"></i><span>Devis</span>
+    </a>
     <a href="{% url 'ui_metre_types_elements' %}" class="nav-item {% if page == 'types_elements_metre' %}active{% endif %}">
       <i class="fas fa-ruler-combined"></i><span>Types d'elements</span>
     </a>

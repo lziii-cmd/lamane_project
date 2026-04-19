@@ -38,13 +38,29 @@
 
 <!-- Barre retour -->
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-  <a href="{% url 'ui_metre_list' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
-    <i class="fas fa-arrow-left"></i> Retour
-  </a>
+  {% if plan.devis %}
+    <a href="{% url 'ui_devis_detail' pk=plan.devis.pk %}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-arrow-left"></i> Retour au devis
+    </a>
+  {% elif plan.projet %}
+    <a href="{% url 'ui_metre_list' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-arrow-left"></i> Retour
+    </a>
+  {% else %}
+    <a href="{% url 'ui_devis_list' %}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-arrow-left"></i> Retour
+    </a>
+  {% endif %}
   <div style="display:flex;gap:8px;align-items:center;">
+    {% if plan.projet %}
     <a href="{% url 'ui_metre_recap' projet_pk=projet.pk %}" class="btn btn-ghost btn-sm">
       <i class="fas fa-table"></i> Recapitulatif
     </a>
+    {% elif plan.devis %}
+    <a href="{% url 'ui_devis_detail' pk=plan.devis.pk %}" class="btn btn-ghost btn-sm">
+      <i class="fas fa-table"></i> Recapitulatif
+    </a>
+    {% endif %}
     <span class="badge badge-blue" id="scaleStatus">
       {% if plan.echelle_definie %}Echelle: 1px = {{ plan.ratio_pixel_metre|floatformat:4 }}m{% else %}Echelle non definie{% endif %}
     </span>

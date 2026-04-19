@@ -42,4 +42,4 @@ from .profil_utilisateur import ProfilUtilisateur
 from .vitrine import ConfigVitrine, ServiceVitrine, ProjetVitrine, TemoignageVitrine
 
 # ── Metre sur plan ───────────────────────────────────────────────────────
-from .metre import LotMetre, TypeElement, PlanMetre, TraceMetre
+from .metre import Devis, LotMetre, TypeElement, PlanMetre, TraceMetre

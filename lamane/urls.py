@@ -195,6 +195,18 @@ urlpatterns = [
     path('metres/types-elements/<str:pk>/modifier/', views_html.metre_type_element_edit_view, name='ui_metre_type_element_edit'),
     path('metres/types-elements/<str:pk>/supprimer/', views_html.metre_type_element_delete_view, name='ui_metre_type_element_delete'),
     path('metres/lots/', views_html.metre_lots_view, name='ui_metre_lots'),
+
+    # ── Devis ─────────────────────────────────────────────────────────
+    path('devis/', views_html.devis_list_view, name='ui_devis_list'),
+    path('devis/nouveau/', views_html.devis_create_view, name='ui_devis_create'),
+    path('devis/<str:pk>/', views_html.devis_detail_view, name='ui_devis_detail'),
+    path('devis/<str:pk>/modifier/', views_html.devis_edit_view, name='ui_devis_edit'),
+    path('devis/<str:pk>/supprimer/', views_html.devis_delete_view, name='ui_devis_delete'),
+    path('devis/<str:pk>/plans/upload/', views_html.devis_plan_upload_view, name='ui_devis_plan_upload'),
+    path('devis/<str:pk>/plans/', views_html.devis_plan_list_view, name='ui_devis_plans'),
+    path('devis/<str:pk>/recap/', views_html.devis_recap_view, name='ui_devis_recap'),
+    path('devis/<str:pk>/statut/', views_html.devis_changer_statut_view, name='ui_devis_statut'),
+    path('devis/<str:pk>/convertir/', views_html.devis_convertir_projet_view, name='ui_devis_convertir'),
 ]
 
 if settings.DEBUG:

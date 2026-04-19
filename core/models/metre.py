@@ -1,7 +1,85 @@
 # core/models/metre.py
 """Modeles pour le module Metre sur plan — LAMANE BTP."""
 from django.db import models
+from django.utils import timezone
 from core.models.base import BaseModel
+
+
+class Devis(BaseModel):
+    """Devis / estimation — independant d'un projet, peut etre converti en projet."""
+    STATUT_CHOICES = [
+        ("brouillon", "Brouillon"),
+        ("envoye", "Envoye"),
+        ("valide", "Valide"),
+        ("refuse", "Refuse"),
+    ]
+
+    reference = models.CharField(
+        "Reference", max_length=30, unique=True, blank=True,
+        help_text="Generee automatiquement (DEV-2026-001)",
+    )
+    titre = models.CharField("Titre du devis", max_length=200)
+    client_nom = models.CharField("Nom du client", max_length=200)
+    client_telephone = models.CharField("Telephone", max_length=30, blank=True, default="")
+    client_email = models.EmailField("Email", blank=True, default="")
+    localisation = models.CharField("Localisation du chantier", max_length=200, blank=True, default="")
+    description = models.TextField("Description", blank=True, default="")
+    statut = models.CharField("Statut", max_length=20, choices=STATUT_CHOICES, default="brouillon")
+
+    # Marge / coefficient
+    marge_pourcentage = models.DecimalField(
+        "Marge (%)", max_digits=5, decimal_places=2, default=15,
+        help_text="Pourcentage de marge a appliquer sur le total metre",
+    )
+
+    # Lien vers le projet (apres validation)
+    projet = models.OneToOneField(
+        "core.Projet", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="devis_source", verbose_name="Projet cree",
+    )
+
+    date_envoi = models.DateTimeField("Date d'envoi", null=True, blank=True)
+    date_validation = models.DateTimeField("Date de validation", null=True, blank=True)
+
+    class Meta:
+        ordering = ["-date_creation"]
+        verbose_name = "Devis"
+        verbose_name_plural = "Devis"
+
+    def __str__(self):
+        return f"{self.reference} — {self.titre}"
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            year = timezone.now().year
+            count = Devis.objects.filter(
+                date_creation__year=year,
+            ).count() + 1
+            self.reference = f"DEV-{year}-{count:03d}"
+        super().save(*args, **kwargs)
+
+    @property
+    def total_metre(self):
+        """Total du metre HT (somme de tous les traces de tous les plans)."""
+        total = 0
+        for plan in self.plans_metre.all():
+            for trace in plan.traces.all():
+                total += trace.montant_total
+        return total
+
+    @property
+    def total_marge(self):
+        """Montant de la marge."""
+        return self.total_metre * float(self.marge_pourcentage) / 100
+
+    @property
+    def total_ttc(self):
+        """Total TTC (metre + marge)."""
+        return self.total_metre + self.total_marge
+
+    @property
+    def nb_plans(self):
+        return self.plans_metre.count()
 
 
 class LotMetre(BaseModel):
@@ -74,6 +152,12 @@ class PlanMetre(BaseModel):
     projet = models.ForeignKey(
         "core.Projet", on_delete=models.CASCADE,
         related_name="plans_metre", verbose_name="Projet",
+        null=True, blank=True,
+    )
+    devis = models.ForeignKey(
+        Devis, on_delete=models.CASCADE,
+        related_name="plans_metre", verbose_name="Devis",
+        null=True, blank=True,
     )
     nom = models.CharField("Nom du plan", max_length=150, help_text="Ex: RDC, Etage 1, Toiture")
     fichier_pdf = models.FileField("Fichier PDF", upload_to="metres/plans/")
@@ -95,7 +179,8 @@ class PlanMetre(BaseModel):
         verbose_name_plural = "Plans de metre"
 
     def __str__(self):
-        return f"{self.projet.nom} — {self.nom}"
+        parent = self.projet.nom if self.projet else (self.devis.reference if self.devis else "—")
+        return f"{parent} — {self.nom}"
 
     @property
     def ratio_pixel_metre(self):

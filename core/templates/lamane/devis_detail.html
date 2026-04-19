@@ -1,0 +1,156 @@
+{% extends "lamane/base.html" %}
+{% load humanize l10n %}
+{% block title %}{{ devis.reference }}{% endblock %}
+{% block page_title %}{{ devis.reference }}{% endblock %}
+{% block page_sub %}{{ devis.titre }} — {{ devis.client_nom }}{% endblock %}
+
+{% block content %}
+<!-- Actions bar -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:22px;">
+  <a href="{% url 'ui_devis_list' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Retour</a>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{% url 'ui_devis_plan_upload' pk=devis.pk %}" class="btn btn-primary btn-sm"><i class="fas fa-upload"></i> Ajouter un plan</a>
+    <a href="{% url 'ui_devis_edit' pk=devis.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-pen"></i> Modifier</a>
+    {% if devis.statut == 'brouillon' %}
+      <form method="post" action="{% url 'ui_devis_statut' pk=devis.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="statut" value="envoye">
+        <button class="btn btn-sm" style="background:rgba(107,147,184,0.15);border:1px solid rgba(107,147,184,0.3);color:var(--blue);"><i class="fas fa-paper-plane"></i> Marquer envoye</button>
+      </form>
+    {% endif %}
+    {% if devis.statut == 'envoye' %}
+      <form method="post" action="{% url 'ui_devis_statut' pk=devis.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="statut" value="valide">
+        <button class="btn btn-success btn-sm"><i class="fas fa-check"></i> Client valide</button>
+      </form>
+      <form method="post" action="{% url 'ui_devis_statut' pk=devis.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="statut" value="refuse">
+        <button class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Refuse</button>
+      </form>
+    {% endif %}
+    {% if devis.statut == 'valide' and not devis.projet %}
+      <a href="{% url 'ui_devis_convertir' pk=devis.pk %}" class="btn btn-success btn-sm"><i class="fas fa-rocket"></i> Convertir en projet</a>
+    {% endif %}
+    {% if devis.projet %}
+      <a href="{% url 'ui_projet_detail' pk=devis.projet.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-external-link-alt"></i> Voir le projet</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Info + KPIs -->
+<div class="kpi-grid animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);">
+    <div class="kpi-icon" style="--icon-bg:rgba(184,160,106,0.12);"><i class="fas fa-user"></i></div>
+    <div class="kpi-value text-sm">{{ devis.client_nom }}</div>
+    <div class="kpi-label">Client{% if devis.client_telephone %} — {{ devis.client_telephone }}{% endif %}</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:{% if devis.statut == 'brouillon' %}var(--gold){% elif devis.statut == 'envoye' %}var(--blue){% elif devis.statut == 'valide' %}var(--green){% else %}var(--red){% endif %};">
+    <div class="kpi-icon" style="--icon-bg:rgba(184,160,106,0.12);"><i class="fas fa-flag"></i></div>
+    <div class="kpi-value text-sm" style="text-transform:capitalize;">{{ devis.get_statut_display }}</div>
+    <div class="kpi-label">Statut</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--blue);">
+    <div class="kpi-icon" style="--icon-bg:rgba(107,147,184,0.12);"><i class="fas fa-file-pdf"></i></div>
+    <div class="kpi-value">{{ plans_data|length }}</div>
+    <div class="kpi-label">Plans</div>
+  </div>
+  <div class="kpi-card" style="--accent-color:var(--green);">
+    <div class="kpi-icon" style="--icon-bg:rgba(90,158,122,0.12);"><i class="fas fa-coins"></i></div>
+    <div class="kpi-value">{{ total_ttc|floatformat:0|intcomma }} <small style="font-size:12px;">F</small></div>
+    <div class="kpi-label">Total TTC (marge {{ devis.marge_pourcentage }}%)</div>
+  </div>
+</div>
+
+<!-- Plans -->
+<div class="card animate-fade-up" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="fas fa-file-pdf" style="margin-right:8px;color:var(--blue);"></i> Plans</div>
+      <div class="card-subtitle">Cliquez sur un plan pour ouvrir l'editeur de metre</div>
+    </div>
+    <a href="{% url 'ui_devis_plan_upload' pk=devis.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-plus"></i> Plan</a>
+  </div>
+  {% if plans_data %}
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Ordre</th><th>Nom</th><th>Echelle</th><th>Traces</th><th>Montant</th><th style="text-align:right;">Actions</th></tr></thead>
+      <tbody>
+        {% for item in plans_data %}
+        <tr>
+          <td>{{ item.plan.ordre }}</td>
+          <td class="bold">
+            <a href="{% url 'ui_metre_canvas' pk=item.plan.pk %}" style="color:var(--gold);text-decoration:none;">
+              <i class="fas fa-file-pdf" style="margin-right:6px;"></i>{{ item.plan.nom }}
+            </a>
+          </td>
+          <td>
+            {% if item.plan.echelle_definie %}
+              <span class="badge badge-green"><span class="badge-dot" style="background:var(--green);"></span> OK</span>
+            {% else %}
+              <span class="badge badge-yellow"><span class="badge-dot" style="background:var(--gold);"></span> A definir</span>
+            {% endif %}
+          </td>
+          <td>{{ item.nb_traces }}</td>
+          <td class="bold">{{ item.total_montant|floatformat:0|intcomma }} F</td>
+          <td style="text-align:right;">
+            <a href="{% url 'ui_metre_canvas' pk=item.plan.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-pencil-ruler"></i></a>
+            <a href="{% url 'ui_metre_plan_delete' pk=item.plan.pk %}" class="btn btn-danger btn-sm"><i class="fas fa-trash-alt"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:30px;">
+    <p class="text-muted">Aucun plan. Uploadez un plan PDF pour commencer le metre.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Recap metre -->
+{% if recap %}
+<div class="card animate-fade-up" style="margin-bottom:18px;">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-table" style="margin-right:8px;color:var(--green);"></i> Recapitulatif du metre</div>
+  </div>
+  {% for section in recap %}
+  <div style="margin-bottom:12px;">
+    <div style="font-weight:700;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;">
+      <span>{% if section.lot %}{{ section.lot.nom }}{% else %}Sans lot{% endif %}</span>
+      <span style="color:var(--gold);">{{ section.total|floatformat:0|intcomma }} F</span>
+    </div>
+    {% for ligne in section.lignes %}
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 12px;font-size:12px;">
+      <span style="width:12px;height:12px;border-radius:3px;background:{{ ligne.type_element.couleur }};"></span>
+      <span style="flex:1;">{{ ligne.type_element.nom }}</span>
+      <span style="color:var(--text-secondary);">{{ ligne.quantite }} {{ ligne.type_element.get_unite_display }}</span>
+      <span style="width:100px;text-align:right;">{{ ligne.montant|floatformat:0|intcomma }} F</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <div style="border-top:2px solid var(--border);padding-top:12px;margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+      <span>Total metre HT</span><span class="bold">{{ total_metre|floatformat:0|intcomma }} F</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;color:var(--text-secondary);">
+      <span>Marge ({{ devis.marge_pourcentage }}%)</span><span>{{ total_marge|floatformat:0|intcomma }} F</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:var(--gold);padding-top:8px;border-top:1px solid var(--border-light);">
+      <span>TOTAL TTC</span><span>{{ total_ttc|floatformat:0|intcomma }} F</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Description -->
+{% if devis.description %}
+<div class="card animate-fade-up">
+  <div class="card-header"><div class="card-title">Description</div></div>
+  <p style="font-size:13px;color:var(--text-secondary);white-space:pre-wrap;">{{ devis.description }}</p>
+</div>
+{% endif %}
+{% endblock %}

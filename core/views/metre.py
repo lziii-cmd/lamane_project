@@ -10,7 +10,7 @@ from django.db.models import Sum, F
 from django.contrib import messages
 
 from core.models import (
-    Projet, PlanMetre, TraceMetre, TypeElement, LotMetre,
+    Projet, PlanMetre, TraceMetre, TypeElement, LotMetre, Devis,
 )
 from core.permissions import role_required
 
@@ -29,6 +29,17 @@ __all__ = [
     "metre_type_element_edit_view",
     "metre_type_element_delete_view",
     "metre_lots_view",
+    # Devis
+    "devis_list_view",
+    "devis_create_view",
+    "devis_detail_view",
+    "devis_edit_view",
+    "devis_delete_view",
+    "devis_plan_upload_view",
+    "devis_plan_list_view",
+    "devis_recap_view",
+    "devis_convertir_projet_view",
+    "devis_changer_statut_view",
 ]
 
 
@@ -436,3 +447,287 @@ def metre_lots_view(request):
     lots = LotMetre.objects.all()
     ctx = {"page": "types_elements_metre", "lots": lots}
     return render(request, "lamane/metre_lots.html", ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DEVIS — CRUD
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+def devis_list_view(request):
+    """Liste de tous les devis."""
+    devis = Devis.objects.all().order_by("-date_creation")
+    statut_filter = request.GET.get("statut", "")
+    if statut_filter:
+        devis = devis.filter(statut=statut_filter)
+
+    devis_data = []
+    for d in devis:
+        devis_data.append({
+            "devis": d,
+            "nb_plans": d.nb_plans,
+            "total": d.total_metre,
+            "total_ttc": d.total_ttc,
+        })
+
+    ctx = {
+        "page": "devis",
+        "devis_data": devis_data,
+        "total_devis": Devis.objects.count(),
+        "statut_filter": statut_filter,
+    }
+    return render(request, "lamane/devis_list.html", ctx)
+
+
+@login_required
+def devis_create_view(request):
+    """Creer un nouveau devis."""
+    if request.method == "POST":
+        d = Devis.objects.create(
+            titre=request.POST.get("titre", "").strip(),
+            client_nom=request.POST.get("client_nom", "").strip(),
+            client_telephone=request.POST.get("client_telephone", "").strip(),
+            client_email=request.POST.get("client_email", "").strip(),
+            localisation=request.POST.get("localisation", "").strip(),
+            description=request.POST.get("description", "").strip(),
+            marge_pourcentage=Decimal(request.POST.get("marge_pourcentage", "15")),
+        )
+        messages.success(request, f"Devis {d.reference} cree.")
+        return redirect("ui_devis_detail", pk=d.pk)
+
+    ctx = {"page": "devis", "title": "Nouveau devis", "action": "Creer"}
+    return render(request, "lamane/forms/devis_form.html", ctx)
+
+
+@login_required
+def devis_detail_view(request, pk):
+    """Detail d'un devis avec ses plans et recap."""
+    d = get_object_or_404(Devis, pk=pk)
+    plans = PlanMetre.objects.filter(devis=d).order_by("ordre")
+
+    plans_data = []
+    for p in plans:
+        nb_traces = p.traces.count()
+        total = sum(t.montant_total for t in p.traces.all())
+        plans_data.append({"plan": p, "nb_traces": nb_traces, "total_montant": total})
+
+    # Recap par lot
+    recap = _build_recap_for_plans(plans)
+
+    ctx = {
+        "page": "devis", "devis": d,
+        "plans_data": plans_data,
+        "recap": recap["sections"],
+        "total_metre": recap["total"],
+        "total_marge": recap["total"] * float(d.marge_pourcentage) / 100,
+        "total_ttc": recap["total"] * (1 + float(d.marge_pourcentage) / 100),
+    }
+    return render(request, "lamane/devis_detail.html", ctx)
+
+
+@login_required
+def devis_edit_view(request, pk):
+    """Modifier un devis."""
+    d = get_object_or_404(Devis, pk=pk)
+    if request.method == "POST":
+        d.titre = request.POST.get("titre", d.titre).strip()
+        d.client_nom = request.POST.get("client_nom", d.client_nom).strip()
+        d.client_telephone = request.POST.get("client_telephone", "").strip()
+        d.client_email = request.POST.get("client_email", "").strip()
+        d.localisation = request.POST.get("localisation", "").strip()
+        d.description = request.POST.get("description", "").strip()
+        d.marge_pourcentage = Decimal(request.POST.get("marge_pourcentage", "15"))
+        d.save()
+        messages.success(request, "Devis modifie.")
+        return redirect("ui_devis_detail", pk=d.pk)
+
+    ctx = {"page": "devis", "title": f"Modifier — {d.reference}", "action": "Enregistrer", "obj": d}
+    return render(request, "lamane/forms/devis_form.html", ctx)
+
+
+@login_required
+def devis_delete_view(request, pk):
+    d = get_object_or_404(Devis, pk=pk)
+    if request.method == "POST":
+        d.delete()
+        messages.success(request, "Devis supprime.")
+        return redirect("ui_devis_list")
+    return render(request, "lamane/forms/confirm_delete.html", {
+        "obj": d, "titre": str(d), "page": "devis", "back_url": f"/devis/{d.pk}/",
+    })
+
+
+@login_required
+def devis_plan_upload_view(request, pk):
+    """Uploader un plan pour un devis."""
+    d = get_object_or_404(Devis, pk=pk)
+    if request.method == "POST":
+        nom = request.POST.get("nom", "").strip()
+        ordre = int(request.POST.get("ordre", 0))
+        fichier = request.FILES.get("fichier_pdf")
+        if nom and fichier:
+            PlanMetre.objects.create(devis=d, nom=nom, ordre=ordre, fichier_pdf=fichier)
+            messages.success(request, f"Plan « {nom} » ajoute.")
+            return redirect("ui_devis_detail", pk=d.pk)
+        else:
+            messages.error(request, "Nom et fichier requis.")
+
+    ctx = {"page": "devis", "devis": d, "title": "Ajouter un plan"}
+    return render(request, "lamane/forms/devis_plan_form.html", ctx)
+
+
+@login_required
+def devis_plan_list_view(request, pk):
+    """Redirige vers le detail du devis (les plans y sont affiches)."""
+    return redirect("ui_devis_detail", pk=pk)
+
+
+@login_required
+def devis_recap_view(request, pk):
+    """Recapitulatif metre d'un devis."""
+    d = get_object_or_404(Devis, pk=pk)
+    plans = PlanMetre.objects.filter(devis=d).order_by("ordre")
+    recap = _build_recap_for_plans(plans)
+
+    ctx = {
+        "page": "devis", "devis": d, "projet": None,
+        "plans": plans, "recap": recap["sections"],
+        "total_general": recap["total"],
+        "marge_pct": float(d.marge_pourcentage),
+        "total_marge": recap["total"] * float(d.marge_pourcentage) / 100,
+        "total_ttc": recap["total"] * (1 + float(d.marge_pourcentage) / 100),
+    }
+    return render(request, "lamane/devis_recap.html", ctx)
+
+
+@login_required
+def devis_changer_statut_view(request, pk):
+    """Changer le statut d'un devis (envoyer, valider, refuser)."""
+    d = get_object_or_404(Devis, pk=pk)
+    if request.method == "POST":
+        from django.utils import timezone
+        nouveau = request.POST.get("statut", "")
+        if nouveau in dict(Devis.STATUT_CHOICES):
+            d.statut = nouveau
+            if nouveau == "envoye" and not d.date_envoi:
+                d.date_envoi = timezone.now()
+            if nouveau == "valide" and not d.date_validation:
+                d.date_validation = timezone.now()
+            d.save()
+            labels = dict(Devis.STATUT_CHOICES)
+            messages.success(request, f"Statut passe a « {labels[nouveau]} ».")
+    return redirect("ui_devis_detail", pk=d.pk)
+
+
+@login_required
+def devis_convertir_projet_view(request, pk):
+    """Convertir un devis valide en projet."""
+    d = get_object_or_404(Devis, pk=pk)
+    if d.projet:
+        messages.info(request, "Ce devis est deja lie a un projet.")
+        return redirect("ui_projet_detail", pk=d.projet.pk)
+
+    if request.method == "POST":
+        from django.utils import timezone
+        from core.models import Proprietaire
+
+        # Trouver ou creer le proprietaire/client
+        # Proprietaire utilise prenom + nom separement
+        parts = d.client_nom.strip().split(" ", 1)
+        prenom_client = parts[0] if len(parts) > 1 else ""
+        nom_client = parts[1] if len(parts) > 1 else parts[0]
+
+        proprio, _ = Proprietaire.objects.get_or_create(
+            nom=nom_client,
+            defaults={
+                "prenom": prenom_client,
+                "telephone": d.client_telephone or "N/A",
+                "email": d.client_email or None,
+            },
+        )
+
+        # Creer le projet
+        projet = Projet.objects.create(
+            nom=d.titre,
+            localisation=d.localisation or "A definir",
+            statut="En attente",
+            date_debut=timezone.now().date(),
+            description=f"Cree a partir du devis {d.reference}.\n{d.description}",
+            cout_estime_lamane=Decimal(str(round(d.total_ttc, 0))),
+            proprietaire=proprio,
+        )
+
+        # Lier les plans au projet
+        for plan in d.plans_metre.all():
+            plan.projet = projet
+            plan.save()
+
+        # Lier le devis au projet
+        d.projet = projet
+        d.statut = "valide"
+        if not d.date_validation:
+            d.date_validation = timezone.now()
+        d.save()
+
+        messages.success(request, f"Projet « {projet.nom} » cree a partir du devis {d.reference}.")
+        return redirect("ui_projet_detail", pk=projet.pk)
+
+    ctx = {"page": "devis", "devis": d}
+    return render(request, "lamane/forms/devis_convertir.html", ctx)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# HELPER — Construire le recap par lot pour un queryset de plans
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _build_recap_for_plans(plans):
+    """Construit le recap par lot pour un ensemble de plans. Retourne {sections, total}."""
+    lots = LotMetre.objects.all().order_by("ordre")
+    sections = []
+    total = 0
+
+    plan_ids = [p.pk for p in plans]
+
+    for lot in lots:
+        lignes = []
+        total_lot = 0
+        types = TypeElement.objects.filter(lot=lot, actif=True)
+        for te in types:
+            traces = TraceMetre.objects.filter(plan_id__in=plan_ids, type_element=te)
+            if not traces.exists():
+                continue
+            total_quantite = sum(t.quantite for t in traces)
+            total_montant = sum(t.montant_total for t in traces)
+            total_lot += total_montant
+            lignes.append({
+                "type_element": te, "nb_traces": traces.count(),
+                "quantite": round(total_quantite, 2),
+                "prix_unitaire": float(te.prix_unitaire),
+                "montant": round(total_montant, 0),
+            })
+        if lignes:
+            sections.append({"lot": lot, "lignes": lignes, "total": total_lot})
+            total += total_lot
+
+    # Sans lot
+    types_sans = TypeElement.objects.filter(lot__isnull=True, actif=True)
+    lignes_sans = []
+    total_sans = 0
+    for te in types_sans:
+        traces = TraceMetre.objects.filter(plan_id__in=plan_ids, type_element=te)
+        if not traces.exists():
+            continue
+        total_quantite = sum(t.quantite for t in traces)
+        total_montant = sum(t.montant_total for t in traces)
+        total_sans += total_montant
+        lignes_sans.append({
+            "type_element": te, "nb_traces": traces.count(),
+            "quantite": round(total_quantite, 2),
+            "prix_unitaire": float(te.prix_unitaire),
+            "montant": round(total_montant, 0),
+        })
+    if lignes_sans:
+        sections.append({"lot": None, "lignes": lignes_sans, "total": total_sans})
+        total += total_sans
+
+    return {"sections": sections, "total": total}

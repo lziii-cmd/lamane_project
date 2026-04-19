@@ -1,0 +1,93 @@
+{% extends "lamane/base.html" %}
+{% load humanize %}
+{% block title %}Devis{% endblock %}
+{% block page_title %}Devis & Estimations{% endblock %}
+{% block page_sub %}Creez un devis, faites le metre, envoyez au client{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px;">
+  <div style="display:flex;gap:8px;">
+    <a href="{% url 'ui_devis_list' %}" class="btn btn-ghost btn-sm {% if not statut_filter %}active{% endif %}" style="{% if not statut_filter %}background:rgba(184,160,106,0.15);border-color:var(--gold);color:var(--gold);{% endif %}">Tous</a>
+    <a href="{% url 'ui_devis_list' %}?statut=brouillon" class="btn btn-ghost btn-sm {% if statut_filter == 'brouillon' %}active{% endif %}" style="{% if statut_filter == 'brouillon' %}background:rgba(184,160,106,0.15);border-color:var(--gold);color:var(--gold);{% endif %}">Brouillons</a>
+    <a href="{% url 'ui_devis_list' %}?statut=envoye" class="btn btn-ghost btn-sm {% if statut_filter == 'envoye' %}active{% endif %}" style="{% if statut_filter == 'envoye' %}background:rgba(107,147,184,0.15);border-color:var(--blue);color:var(--blue);{% endif %}">Envoyes</a>
+    <a href="{% url 'ui_devis_list' %}?statut=valide" class="btn btn-ghost btn-sm {% if statut_filter == 'valide' %}active{% endif %}" style="{% if statut_filter == 'valide' %}background:rgba(90,158,122,0.15);border-color:var(--green);color:var(--green);{% endif %}">Valides</a>
+  </div>
+  <a href="{% url 'ui_devis_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Nouveau devis
+  </a>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid animate-fade-up">
+  <div class="kpi-card" style="--accent-color:var(--gold);">
+    <div class="kpi-icon" style="--icon-bg:rgba(184,160,106,0.12);"><i class="fas fa-file-invoice"></i></div>
+    <div class="kpi-value">{{ total_devis }}</div>
+    <div class="kpi-label">Total devis</div>
+  </div>
+</div>
+
+{% if devis_data %}
+<div class="card animate-fade-up">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Titre</th>
+          <th>Client</th>
+          <th>Plans</th>
+          <th>Total metre</th>
+          <th>Total TTC</th>
+          <th>Statut</th>
+          <th>Date</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in devis_data %}
+        <tr>
+          <td class="bold">
+            <a href="{% url 'ui_devis_detail' pk=item.devis.pk %}" style="color:var(--gold);text-decoration:none;">
+              {{ item.devis.reference }}
+            </a>
+          </td>
+          <td>{{ item.devis.titre }}</td>
+          <td class="bold">{{ item.devis.client_nom }}</td>
+          <td>{{ item.nb_plans }}</td>
+          <td>{{ item.total|floatformat:0|intcomma }} F</td>
+          <td class="bold">{{ item.total_ttc|floatformat:0|intcomma }} F</td>
+          <td>
+            {% if item.devis.statut == 'brouillon' %}
+              <span class="badge badge-yellow"><span class="badge-dot" style="background:var(--gold);"></span> Brouillon</span>
+            {% elif item.devis.statut == 'envoye' %}
+              <span class="badge badge-blue"><span class="badge-dot" style="background:var(--blue);"></span> Envoye</span>
+            {% elif item.devis.statut == 'valide' %}
+              <span class="badge badge-green"><span class="badge-dot" style="background:var(--green);"></span> Valide</span>
+            {% elif item.devis.statut == 'refuse' %}
+              <span class="badge badge-red"><span class="badge-dot" style="background:var(--red);"></span> Refuse</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ item.devis.date_creation|date:"d/m/Y" }}</td>
+          <td style="text-align:right;">
+            <a href="{% url 'ui_devis_detail' pk=item.devis.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+            {% if item.devis.statut == 'valide' and not item.devis.projet %}
+              <a href="{% url 'ui_devis_convertir' pk=item.devis.pk %}" class="btn btn-success btn-sm" title="Convertir en projet"><i class="fas fa-rocket"></i></a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card animate-fade-up" style="text-align:center;padding:60px 20px;">
+  <div style="width:72px;height:72px;background:rgba(184,160,106,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+    <i class="fas fa-file-invoice" style="font-size:28px;color:var(--gold);"></i>
+  </div>
+  <h3 style="font-size:18px;margin-bottom:8px;">Aucun devis</h3>
+  <p style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;">Commencez par creer un devis pour un client.</p>
+  <a href="{% url 'ui_devis_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Creer un devis</a>
+</div>
+{% endif %}
+{% endblock %}

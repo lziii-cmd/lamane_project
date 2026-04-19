@@ -1,6 +1,13 @@
 # core/admin/metre_admin.py
 from django.contrib import admin
-from core.models import LotMetre, TypeElement, PlanMetre, TraceMetre
+from core.models import Devis, LotMetre, TypeElement, PlanMetre, TraceMetre
+
+
+@admin.register(Devis)
+class DevisAdmin(admin.ModelAdmin):
+    list_display = ("reference", "titre", "client_nom", "statut", "date_creation")
+    list_filter = ("statut",)
+    search_fields = ("reference", "titre", "client_nom")
 
 
 @admin.register(LotMetre)
